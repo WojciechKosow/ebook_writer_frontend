@@ -1,4 +1,9 @@
-import type { AuthResponse, User } from "./types";
+import type {
+  AuthResponse,
+  EbookRequestInput,
+  EbookStatusResponse,
+  User,
+} from "./types";
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8080";
@@ -120,5 +125,44 @@ export const authApi = {
       `/api/auth/reset-password?tokenId=${encodeURIComponent(tokenId)}&token=${encodeURIComponent(token)}`,
       { method: "POST", body: { newPassword } },
     );
+  },
+};
+
+// ---- Ebook endpoints -------------------------------------------------------
+
+export const ebookApi = {
+  create(token: string, input: EbookRequestInput) {
+    return request<EbookStatusResponse>("/api/ebooks", {
+      method: "POST",
+      body: input,
+      token,
+    });
+  },
+
+  get(token: string, id: string) {
+    return request<EbookStatusResponse>(`/api/ebooks/${id}`, { token });
+  },
+
+  list(token: string) {
+    return request<EbookStatusResponse[]>("/api/ebooks", { token });
+  },
+
+  /** Download the finished PDF as a Blob (needs the Authorization header). */
+  async download(token: string, id: string): Promise<Blob> {
+    const res = await fetch(`${API_URL}/api/ebooks/${id}/download`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      let message = `Download failed (${res.status})`;
+      try {
+        const obj = JSON.parse(text);
+        if (obj?.message) message = obj.message;
+      } catch {
+        /* keep default */
+      }
+      throw new ApiError(message, res.status);
+    }
+    return res.blob();
   },
 };

@@ -1,5 +1,10 @@
 import Link from "next/link";
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+import type {
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  ReactNode,
+  TextareaHTMLAttributes,
+} from "react";
 
 // ---- Button ----------------------------------------------------------------
 
@@ -77,6 +82,32 @@ export function Field({ label, error, id, className = "", ...rest }: FieldProps)
         className={`rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 ${className}`}
         {...rest}
       />
+      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+    </div>
+  );
+}
+
+// ---- Textarea field --------------------------------------------------------
+
+type TextAreaFieldProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  label: string;
+  hint?: string;
+  error?: string;
+};
+
+export function TextAreaField({ label, hint, error, id, className = "", ...rest }: TextAreaFieldProps) {
+  const areaId = id || rest.name;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={areaId} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        {label}
+      </label>
+      <textarea
+        id={areaId}
+        className={`min-h-24 rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 ${className}`}
+        {...rest}
+      />
+      {hint && !error && <p className="text-xs text-zinc-400">{hint}</p>}
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
