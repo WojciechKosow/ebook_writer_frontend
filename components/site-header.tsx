@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useCredits } from "@/lib/credits-context";
 import { BRAND } from "@/lib/brand";
 import { Button, ButtonLink } from "./ui";
+import { ThemeToggle } from "./theme-toggle";
 
 export function SiteHeader() {
   const { user, loading, logout } = useAuth();
@@ -21,6 +22,7 @@ export function SiteHeader() {
         </Link>
 
         <nav className="flex items-center gap-2">
+          <ThemeToggle />
           {loading ? null : user ? (
             <>
               {credits && credits.balance !== null && (

@@ -7,6 +7,14 @@ export const SUBSCRIPTION = {
   credits: 150,
 };
 
+// One-time credit packs for the public marketing page. Keep in sync with the
+// backend CreditPack enum (the in-app /billing page reads the real values).
+export const PACKS = [
+  { credits: 25, priceLabel: "$5" },
+  { credits: 60, priceLabel: "$9" },
+  { credits: 150, priceLabel: "$19" },
+];
+
 /** Format integer cents as a dollar string, e.g. 1900 -> "$19". */
 export function formatPrice(cents: number): string {
   const dollars = cents / 100;

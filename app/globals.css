@@ -1,26 +1,80 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: `dark:` applies when <html> has the `dark` class,
+   set by the theme toggle (and the pre-paint script). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Ink & paper palette. Light = warm paper + ink; dark = deep ink night. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf7f0;
+  --foreground: #1c1a17;
+  --paper: #fbf9f3;
+  --paper-soft: #f2ede1;
+  --ink-soft: #55504a;
+  --accent: #4f46e5;     /* ink indigo */
+  --gold: #a67c3d;       /* fountain-pen brass */
+  --hairline: #e6dfd0;
+}
+
+.dark {
+  --background: #0e0d13;
+  --foreground: #ece7dd;
+  --paper: #16141c;
+  --paper-soft: #1c1a24;
+  --ink-soft: #a39d92;
+  --accent: #8b8cf0;
+  --gold: #cba75f;
+  --hairline: #2a2733;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-paper: var(--paper);
+  --color-paper-soft: var(--paper-soft);
+  --color-ink-soft: var(--ink-soft);
+  --color-accent: var(--accent);
+  --color-gold: var(--gold);
+  --color-hairline: var(--hairline);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-fraunces);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Animated ink underline used under a hero word. */
+@keyframes ink-draw {
+  from { stroke-dashoffset: 480; }
+  to { stroke-dashoffset: 0; }
+}
+.ink-underline path {
+  stroke-dasharray: 480;
+  stroke-dashoffset: 480;
+  animation: ink-draw 1.1s ease-out 0.35s forwards;
+}
+
+/* Continuous upward scroll for the phone mockup's ebook text. */
+@keyframes book-scroll {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
+}
+.book-scroll-track { animation: book-scroll 42s linear infinite; }
+
+/* Gentle rise-in for scroll-revealed sections. */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal { opacity: 0; }
+.reveal.is-visible { animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1 !important; animation: none !important; }
+  .book-scroll-track { animation: none !important; }
+  .ink-underline path { animation: none !important; stroke-dashoffset: 0 !important; }
 }
