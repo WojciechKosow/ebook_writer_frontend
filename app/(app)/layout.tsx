@@ -4,13 +4,12 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { CreditsProvider } from "@/lib/credits-context";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import { AppShell } from "@/components/app-shell";
 import { Spinner } from "@/components/ui";
 
 /**
  * Guards the authenticated app area: waits for the session bootstrap, redirects
- * to /login if there's no user, and provides the shared chrome.
+ * to /login if there's no user, and wraps everything in the sidebar shell.
  */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,7 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex flex-1 items-center justify-center text-zinc-400">
+      <div className="flex flex-1 items-center justify-center text-ink-soft">
         <Spinner />
       </div>
     );
@@ -32,9 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <CreditsProvider>
-      <SiteHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">{children}</main>
-      <SiteFooter />
+      <AppShell>{children}</AppShell>
     </CreditsProvider>
   );
 }

@@ -5,10 +5,11 @@ import { Hero } from "@/components/landing/hero";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { Plans } from "@/components/landing/plans";
 import { Reveal } from "@/components/landing/reveal";
+import { LandingGate } from "@/components/landing/landing-gate";
 
 export default function Home() {
   return (
-    <>
+    <LandingGate>
       <SiteHeader />
 
       <main className="flex-1">
@@ -40,6 +41,6 @@ export default function Home() {
       </main>
 
       <SiteFooter />
-    </>
+    </LandingGate>
   );
 }

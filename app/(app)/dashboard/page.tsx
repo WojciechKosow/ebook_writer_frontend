@@ -16,7 +16,7 @@ function formatDate(iso: string | null): string {
 }
 
 export default function DashboardPage() {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [items, setItems] = useState<EbookStatusResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,14 +39,9 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Your ebooks
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Signed in as {user?.email}
-          </p>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          Your ebooks
+        </h1>
         <ButtonLink href="/ebooks/new">New ebook</ButtonLink>
       </div>
 
