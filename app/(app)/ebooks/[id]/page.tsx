@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
 import type { EbookStatusResponse } from "@/lib/types";
 import { StatusBadge, ProgressBar } from "@/components/ebook-ui";
@@ -16,6 +17,7 @@ export default function EbookDetailPage() {
   const params = useParams();
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
   const { token } = useAuth();
+  const credits = useCredits();
 
   const [ebook, setEbook] = useState<EbookStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,9 @@ export default function EbookDetailPage() {
         setEbook(data);
         if (!isTerminal(data.status)) {
           timer = setTimeout(poll, POLL_MS);
+        } else {
+          // Refresh the balance — a failed generation refunds its credits.
+          credits?.refresh();
         }
       } catch (err) {
         if (!active) return;
@@ -46,6 +51,7 @@ export default function EbookDetailPage() {
       active = false;
       clearTimeout(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, id]);
 
   const download = useCallback(async () => {

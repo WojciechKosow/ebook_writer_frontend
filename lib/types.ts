@@ -56,3 +56,52 @@ export interface EbookRequestInput {
   sourceMaterial: string;
 }
 
+// ---- Credits & billing -----------------------------------------------------
+
+export type CreditTransactionType =
+  | "SUBSCRIPTION_GRANT"
+  | "CREDIT_PURCHASE"
+  | "GENERATION"
+  | "GENERATION_REFUND"
+  | "SIGNUP_BONUS";
+
+export interface CreditTransaction {
+  type: CreditTransactionType;
+  amount: number;
+  balanceAfter: number;
+  description: string | null;
+  ebookId: string | null;
+  createdAt: string | null;
+}
+
+export interface CreditBalanceResponse {
+  balance: number;
+  transactions: CreditTransaction[];
+}
+
+export interface CreditPack {
+  id: string;
+  credits: number;
+  priceCents: number;
+  displayName: string;
+}
+
+export interface SubscriptionResponse {
+  active: boolean;
+  status: string;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
+}
+
+export interface CheckoutResponse {
+  orderId: string;
+  url: string;
+}
+
+export interface OrderStatus {
+  orderId: string;
+  status: string;
+  purpose: string;
+  creditsGranted: number;
+}
+

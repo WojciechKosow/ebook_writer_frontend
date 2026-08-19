@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { CreditsProvider } from "@/lib/credits-context";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Spinner } from "@/components/ui";
@@ -30,10 +31,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <>
+    <CreditsProvider>
       <SiteHeader />
       <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">{children}</main>
       <SiteFooter />
-    </>
+    </CreditsProvider>
   );
 }

@@ -1,7 +1,12 @@
 import type {
   AuthResponse,
+  CheckoutResponse,
+  CreditBalanceResponse,
+  CreditPack,
   EbookRequestInput,
   EbookStatusResponse,
+  OrderStatus,
+  SubscriptionResponse,
   User,
 } from "./types";
 
@@ -12,12 +17,14 @@ export const API_URL =
 export class ApiError extends Error {
   status: number;
   fieldErrors?: Record<string, string>;
+  body?: unknown;
 
-  constructor(message: string, status: number, fieldErrors?: Record<string, string>) {
+  constructor(message: string, status: number, fieldErrors?: Record<string, string>, body?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.fieldErrors = fieldErrors;
+    this.body = body;
   }
 }
 
@@ -64,7 +71,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
       obj && typeof obj.errors === "object"
         ? (obj.errors as Record<string, string>)
         : undefined;
-    throw new ApiError(message, res.status, fieldErrors);
+    throw new ApiError(message, res.status, fieldErrors, data);
   }
 
   return data as T;
@@ -164,5 +171,44 @@ export const ebookApi = {
       throw new ApiError(message, res.status);
     }
     return res.blob();
+  },
+};
+
+// ---- Credits & billing endpoints -------------------------------------------
+
+export const creditApi = {
+  balance(token: string) {
+    return request<CreditBalanceResponse>("/api/credits", { token });
+  },
+  packs(token: string) {
+    return request<CreditPack[]>("/api/credits/packs", { token });
+  },
+  purchase(token: string, pack: string) {
+    return request<CheckoutResponse>("/api/credits/purchase", {
+      method: "POST",
+      body: { pack },
+      token,
+    });
+  },
+};
+
+export const subscriptionApi = {
+  get(token: string) {
+    return request<SubscriptionResponse>("/api/subscription", { token });
+  },
+  checkout(token: string) {
+    return request<CheckoutResponse>("/api/subscription/checkout", { method: "POST", token });
+  },
+  cancel(token: string) {
+    return request<SubscriptionResponse>("/api/subscription/cancel", { method: "POST", token });
+  },
+  resume(token: string) {
+    return request<SubscriptionResponse>("/api/subscription/resume", { method: "POST", token });
+  },
+};
+
+export const paymentApi = {
+  order(token: string, orderId: string) {
+    return request<OrderStatus>(`/api/payments/orders/${orderId}`, { token });
   },
 };

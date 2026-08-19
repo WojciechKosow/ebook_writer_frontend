@@ -4,9 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
 import type { EbookRequestInput } from "@/lib/types";
-import { Alert, Button, Field, TextAreaField } from "@/components/ui";
+import { Alert, Button, ButtonLink, Field, TextAreaField } from "@/components/ui";
 
 const initial: EbookRequestInput = {
   topic: "",
@@ -21,11 +22,16 @@ const initial: EbookRequestInput = {
 export default function NewEbookPage() {
   const router = useRouter();
   const { token } = useAuth();
+  const credits = useCredits();
 
   const [form, setForm] = useState<EbookRequestInput>(initial);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  const cost = Math.max(1, form.approxPageCount || 0);
+  const balance = credits?.balance ?? null;
+  const insufficient = balance !== null && balance < cost;
 
   function update<K extends keyof EbookRequestInput>(key: K, value: EbookRequestInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -39,11 +45,20 @@ export default function NewEbookPage() {
     setSubmitting(true);
     try {
       const created = await ebookApi.create(token, form);
+      credits?.refresh();
       router.push(`/ebooks/${created.id}`);
     } catch (err) {
       if (err instanceof ApiError) {
-        setFieldErrors(err.fieldErrors ?? {});
-        setError(err.fieldErrors ? null : err.message);
+        if (err.status === 402) {
+          const body = err.body as { required?: number; available?: number } | undefined;
+          setError(
+            `You need ${body?.required ?? cost} credits but have ${body?.available ?? balance ?? 0}.`,
+          );
+          credits?.refresh();
+        } else {
+          setFieldErrors(err.fieldErrors ?? {});
+          setError(err.fieldErrors ? null : err.message);
+        }
       } else {
         setError("Something went wrong. Please try again.");
       }
@@ -130,10 +145,35 @@ export default function NewEbookPage() {
           hint="Optional. Paste any reference text or examples to ground the book."
         />
 
+        {/* Cost vs balance */}
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-zinc-600 dark:text-zinc-300">Estimated cost</span>
+            <span className="font-medium text-zinc-900 dark:text-zinc-50">{cost} credits</span>
+          </div>
+          <div className="mt-1 flex items-center justify-between text-sm">
+            <span className="text-zinc-600 dark:text-zinc-300">Your balance</span>
+            <span className="font-medium text-zinc-900 dark:text-zinc-50">
+              {balance === null ? "…" : `${balance} credits`}
+            </span>
+          </div>
+          {insufficient && (
+            <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                You need {cost} credits but have {balance}. Buy more to continue.
+              </p>
+            </div>
+          )}
+        </div>
+
         <div className="flex items-center gap-3">
-          <Button type="submit" loading={submitting}>
-            Generate ebook
-          </Button>
+          {insufficient ? (
+            <ButtonLink href="/billing">Buy credits</ButtonLink>
+          ) : (
+            <Button type="submit" loading={submitting} disabled={balance === null}>
+              Generate ebook — {cost} credits
+            </Button>
+          )}
           <span className="text-xs text-zinc-400">
             This can take several minutes — you can watch the progress on the next screen.
           </span>
