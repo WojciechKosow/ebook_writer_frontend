@@ -12,7 +12,7 @@ export function ThemeToggle() {
       onClick={toggle}
       aria-label="Toggle dark mode"
       title="Toggle dark mode"
-      className="inline-grid h-9 w-9 place-items-center rounded-lg border border-zinc-200 bg-white/70 text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-300 dark:hover:bg-zinc-800"
+      className="inline-grid h-9 w-9 place-items-center rounded-lg border border-hairline-2 bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
     >
       {/* Sun / moon; renders a neutral state before mount to avoid mismatch. */}
       {isDark ? (

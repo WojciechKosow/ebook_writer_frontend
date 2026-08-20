@@ -67,7 +67,7 @@ function SuccessInner() {
     <div className="mx-auto max-w-md text-center">
       {state === "pending" && (
         <div className="flex flex-col items-center gap-3 py-10">
-          <Spinner className="h-6 w-6 text-indigo-600" />
+          <Spinner className="h-6 w-6 text-accent" />
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Confirming your payment…</p>
         </div>
       )}

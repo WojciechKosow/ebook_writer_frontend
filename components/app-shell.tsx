@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useCredits } from "@/lib/credits-context";
 import { BRAND } from "@/lib/brand";
+import { Wordmark } from "./brand-mark";
 import { ThemeToggle } from "./theme-toggle";
 
 type NavItem = {
@@ -15,19 +16,16 @@ type NavItem = {
   isActive: (path: string) => boolean;
 };
 
-const NAV: NavItem[] = [
-  {
-    href: "/ebooks/new",
-    label: "New ebook",
-    icon: IconPen,
-    isActive: (p) => p === "/ebooks/new",
-  },
+const WORKSPACE: NavItem[] = [
   {
     href: "/dashboard",
-    label: "Your ebooks",
+    label: "Your library",
     icon: IconBooks,
     isActive: (p) => p === "/dashboard" || (p.startsWith("/ebooks/") && p !== "/ebooks/new"),
   },
+];
+
+const ACCOUNT: NavItem[] = [
   {
     href: "/billing",
     label: "Billing & credits",
@@ -43,7 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-full">
       {/* Sidebar (static on desktop, slide-over on mobile) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-hairline bg-paper transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-hairline bg-surface transition-transform duration-200 lg:static lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -62,12 +60,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar */}
-        <div className="flex items-center justify-between border-b border-hairline bg-paper px-4 py-3 lg:hidden">
+        <div className="flex items-center justify-between border-b border-hairline bg-surface px-4 py-3 lg:hidden">
           <button
             type="button"
             onClick={() => setOpen(true)}
             aria-label="Open menu"
-            className="grid h-9 w-9 place-items-center rounded-lg border border-hairline text-ink-soft"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-hairline text-muted"
           >
             <IconMenu className="h-5 w-5" />
           </button>
@@ -95,61 +93,66 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
     router.replace("/login");
   }
 
+  const initials = (user?.email ?? "?").charAt(0).toUpperCase();
+
   return (
     <div className="flex h-full flex-col">
       {/* Brand */}
-      <div className="flex h-16 items-center gap-2 border-b border-hairline px-5">
-        <Link href="/dashboard" onClick={onNavigate} className="flex items-center gap-2 font-semibold text-foreground">
-          <span className="grid h-7 w-7 place-items-center rounded-md bg-accent text-sm text-white">
-            {BRAND.charAt(0)}
-          </span>
-          {BRAND}
-        </Link>
+      <div className="flex h-16 items-center border-b border-hairline px-5">
+        <Wordmark href="/dashboard" onClick={onNavigate} />
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {NAV.map((item) => {
-          const active = item.isActive(pathname);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-accent/10 text-accent"
-                  : "text-ink-soft hover:bg-paper-soft hover:text-foreground"
-              }`}
-            >
-              <Icon className="h-[18px] w-[18px]" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        <Link
+          href="/ebooks/new"
+          onClick={onNavigate}
+          className="mb-2 flex items-center justify-center gap-2 rounded-xl bg-accent px-3 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:brightness-95"
+        >
+          <IconPlus className="h-4 w-4" />
+          New ebook
+        </Link>
+
+        <GroupLabel>Workspace</GroupLabel>
+        {WORKSPACE.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+        ))}
+
+        <GroupLabel>Account</GroupLabel>
+        {ACCOUNT.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+        ))}
       </nav>
 
       {/* Credits */}
       <div className="px-3">
-        <Link
-          href="/billing"
-          onClick={onNavigate}
-          className="flex items-center justify-between rounded-lg border border-hairline bg-paper-soft/60 px-3 py-2.5 text-sm hover:bg-paper-soft"
-        >
-          <span className="flex items-center gap-2 text-foreground">
-            <span className="text-accent">◆</span>
-            <span className="font-semibold">{credits?.balance ?? "…"}</span>
-            <span className="text-ink-soft">credits</span>
-          </span>
-          <span className="text-xs font-medium text-accent">Buy</span>
-        </Link>
+        <div className="rounded-xl border border-hairline bg-gradient-to-br from-accent-soft to-surface p-3.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted">Credits</span>
+            <Link
+              href="/billing"
+              onClick={onNavigate}
+              className="rounded-lg bg-accent px-2.5 py-1 text-xs font-semibold text-white transition hover:brightness-95"
+            >
+              Buy
+            </Link>
+          </div>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+              {credits?.balance ?? "…"}
+            </span>
+            <span className="text-xs font-medium text-muted">left</span>
+          </div>
+        </div>
       </div>
 
       {/* Footer: user + theme + logout */}
-      <div className="mt-4 space-y-3 border-t border-hairline px-3 py-4">
-        <div className="flex items-center justify-between px-1">
-          <p className="min-w-0 truncate text-xs text-ink-soft" title={user?.email}>
+      <div className="mt-3 border-t border-hairline p-3">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-gradient-to-br from-brass to-accent-2 text-sm font-semibold text-white">
+            {initials}
+          </span>
+          <p className="min-w-0 flex-1 truncate text-xs text-muted" title={user?.email}>
             {user?.email}
           </p>
           <ThemeToggle />
@@ -157,7 +160,7 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
         <button
           type="button"
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:bg-paper-soft hover:text-foreground"
+          className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
         >
           <IconLogout className="h-[18px] w-[18px]" />
           Log out
@@ -167,13 +170,47 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
   );
 }
 
+function GroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="px-3 pb-1.5 pt-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-faint">
+      {children}
+    </p>
+  );
+}
+
+function NavLink({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: NavItem;
+  pathname: string;
+  onNavigate: () => void;
+}) {
+  const active = item.isActive(pathname);
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+        active
+          ? "bg-accent-soft text-accent-ink"
+          : "text-muted hover:bg-surface-2 hover:text-foreground"
+      }`}
+    >
+      <Icon className="h-[18px] w-[18px]" />
+      {item.label}
+    </Link>
+  );
+}
+
 // ---- Icons -----------------------------------------------------------------
 
-function IconPen({ className = "" }: { className?: string }) {
+function IconPlus({ className = "" }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 5v14M5 12h14" />
     </svg>
   );
 }

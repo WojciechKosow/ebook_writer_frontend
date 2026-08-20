@@ -55,7 +55,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={resend}
-            className="text-left text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+            className="text-left text-sm font-medium text-accent hover:underline"
           >
             Resend verification email
           </button>
@@ -87,13 +87,13 @@ export default function LoginPage() {
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+              className="h-4 w-4 rounded border-zinc-300 text-accent focus:ring-accent"
             />
             Remember me
           </label>
           <Link
             href="/forgot-password"
-            className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+            className="text-sm font-medium text-accent hover:underline"
           >
             Forgot password?
           </Link>
@@ -106,7 +106,7 @@ export default function LoginPage() {
 
       <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
         No account?{" "}
-        <Link href="/register" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+        <Link href="/register" className="font-medium text-accent hover:underline">
           Create one
         </Link>
       </p>

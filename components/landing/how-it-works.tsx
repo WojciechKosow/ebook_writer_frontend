@@ -1,65 +1,62 @@
 import { Reveal } from "./reveal";
-import { PhoneMockup } from "./phone-mockup";
 
 const steps = [
   {
-    title: "Describe your idea",
-    body: "Topic, audience, style, language, and a rough length. One short brief is all it takes.",
+    k: "01",
+    title: "Describe your book",
+    body: "Topic, genre, audience, and length. A sentence is enough to start.",
   },
   {
-    title: "We plan the book",
-    body: "A working title, a chapter outline, and writing guidelines — structured, never generic.",
+    k: "02",
+    title: "Scrivetta writes it",
+    body: "Outline, chapters, and a consistency edit — while you watch progress fill in.",
   },
   {
-    title: "Every chapter, written & edited",
-    body: "Chapters are written in order, then an editorial pass keeps the tone and terminology consistent.",
-  },
-  {
-    title: "Read it on any device",
-    body: "A typeset PDF with a cover, table of contents, and page numbers — ready to read or sell.",
+    k: "03",
+    title: "Export & publish",
+    body: "Download a typeset PDF, or keep editing. It’s your manuscript.",
   },
 ];
 
 export function HowItWorks() {
   return (
-    <section id="how" className="border-y border-hairline bg-paper-soft/50">
-      <div className="mx-auto w-full max-w-5xl px-6 py-24">
-        <Reveal className="text-center">
-          <p className="font-[family-name:var(--font-fraunces)] text-sm uppercase tracking-[0.3em] text-gold">
-            The process
-          </p>
-          <h2 className="mt-3 font-[family-name:var(--font-fraunces)] text-4xl font-medium tracking-tight text-foreground">
+    <section id="how" className="mx-auto w-full max-w-6xl px-6 py-8">
+      <div className="rounded-3xl border border-hairline bg-surface-2 px-6 py-16 sm:px-10">
+        <Reveal className="mx-auto max-w-xl text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-accent-ink">
             How it works
+          </p>
+          <h2 className="mt-3 text-balance text-4xl font-semibold tracking-tight text-foreground">
+            Three steps to a finished book
           </h2>
         </Reveal>
 
-        <div className="mt-16 grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          {/* Steps */}
-          <ol className="relative">
-            {/* connecting line */}
-            <span
-              aria-hidden
-              className="absolute left-[15px] top-2 bottom-2 w-px bg-hairline"
-            />
-            {steps.map((step, i) => (
-              <Reveal key={step.title} delay={i * 120}>
-                <li className="relative flex gap-5 pb-9 last:pb-0">
-                  <span className="relative z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-hairline bg-paper font-[family-name:var(--font-fraunces)] text-sm font-semibold text-accent">
-                    {i + 1}
-                  </span>
-                  <div className="pt-0.5">
-                    <h3 className="font-medium text-foreground">{step.title}</h3>
-                    <p className="mt-1 text-sm leading-6 text-ink-soft">{step.body}</p>
-                  </div>
-                </li>
-              </Reveal>
-            ))}
-          </ol>
-
-          {/* Result: the phone */}
-          <Reveal delay={200}>
-            <PhoneMockup />
-          </Reveal>
+        <div className="mt-12 grid gap-4 md:grid-cols-3">
+          {steps.map((s, i) => (
+            <Reveal key={s.k} delay={i * 110}>
+              <div className="relative h-full rounded-2xl border border-hairline bg-surface p-6">
+                <span className="font-[family-name:var(--font-display)] text-2xl italic font-medium text-accent">
+                  {s.k}
+                </span>
+                <h3 className="mt-2 text-[17px] font-semibold text-foreground">{s.title}</h3>
+                <p className="mt-1.5 text-sm leading-6 text-muted">{s.body}</p>
+                {i < steps.length - 1 && (
+                  <svg
+                    className="absolute right-[-13px] top-9 hidden text-hairline-2 md:block"
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    aria-hidden
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                )}
+              </div>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>

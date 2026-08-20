@@ -43,7 +43,7 @@ function CheckEmailInner() {
 
         <Link
           href="/login"
-          className="text-center text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+          className="text-center text-sm font-medium text-accent hover:underline"
         >
           Back to log in
         </Link>
