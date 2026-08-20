@@ -5,11 +5,12 @@ import type {
   ReactNode,
   TextareaHTMLAttributes,
 } from "react";
+import { Wordmark } from "./brand-mark";
 
 // ---- Button ----------------------------------------------------------------
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "contrast";
   loading?: boolean;
 };
 
@@ -22,6 +23,7 @@ const buttonVariants: Record<string, string> = {
   secondary:
     "border border-hairline-2 bg-surface text-foreground hover:border-muted",
   ghost: "text-foreground hover:bg-surface-2",
+  contrast: "bg-foreground text-background shadow-soft hover:opacity-90",
 };
 
 export function Button({
@@ -53,7 +55,7 @@ export function ButtonLink({
   children,
 }: {
   href: string;
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "contrast";
   className?: string;
   children: ReactNode;
 }) {
@@ -66,7 +68,7 @@ export function ButtonLink({
 
 // ---- Field (label + input + error) ----------------------------------------
 
-const controlBase =
+export const controlBase =
   "rounded-xl border border-hairline-2 bg-surface px-3.5 py-2.5 text-sm text-foreground placeholder:text-faint transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25";
 
 type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
@@ -156,13 +158,16 @@ export function Spinner({ className = "" }: { className?: string }) {
 
 export function AuthCard({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-md">
-      <div className="rounded-2xl border border-hairline bg-surface p-8 shadow-soft">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+    <div className="w-full max-w-md">
+      <div className="rounded-2xl border border-hairline bg-surface p-8 shadow-soft sm:p-9">
+        <div className="flex justify-center">
+          <Wordmark href="/" />
+        </div>
+        <h1 className="mt-7 text-center text-2xl font-bold tracking-tight text-foreground">
           {title}
         </h1>
-        {subtitle && <p className="mt-1.5 text-sm text-muted">{subtitle}</p>}
-        <div className="mt-6">{children}</div>
+        {subtitle && <p className="mt-2 text-center text-sm text-muted">{subtitle}</p>}
+        <div className="mt-7">{children}</div>
       </div>
     </div>
   );

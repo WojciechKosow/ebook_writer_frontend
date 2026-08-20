@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <Button type="submit" loading={submitting}>
+          <Button type="submit" variant="contrast" loading={submitting} className="w-full py-3">
             Send reset link
           </Button>
           <Link

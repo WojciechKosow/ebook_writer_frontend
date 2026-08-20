@@ -4,7 +4,8 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { authApi, ApiError } from "@/lib/api";
-import { AuthCard, Alert, Button, ButtonLink, Field } from "@/components/ui";
+import { AuthCard, Alert, Button, ButtonLink } from "@/components/ui";
+import { PasswordField } from "@/components/auth-fields";
 
 function ResetPasswordInner() {
   const params = useSearchParams();
@@ -62,7 +63,7 @@ function ResetPasswordInner() {
       <AuthCard title="Password changed" subtitle="You can log in with your new password.">
         <div className="flex flex-col gap-4">
           <Alert variant="success">Your password has been updated.</Alert>
-          <ButtonLink href="/login">Continue to log in</ButtonLink>
+          <ButtonLink href="/login" variant="contrast" className="w-full py-3">Continue to log in</ButtonLink>
         </div>
       </AuthCard>
     );
@@ -72,28 +73,26 @@ function ResetPasswordInner() {
     <AuthCard title="Set a new password">
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         {error && <Alert>{error}</Alert>}
-        <Field
+        <PasswordField
           label="New password"
           name="newPassword"
-          type="password"
           autoComplete="new-password"
           required
           minLength={8}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={setPassword}
           error={fieldError}
           placeholder="At least 8 characters"
         />
-        <Field
+        <PasswordField
           label="Confirm password"
           name="confirmPassword"
-          type="password"
           autoComplete="new-password"
           required
           value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
+          onChange={setConfirm}
         />
-        <Button type="submit" loading={submitting}>
+        <Button type="submit" variant="contrast" loading={submitting} className="w-full py-3">
           Update password
         </Button>
         <Link
