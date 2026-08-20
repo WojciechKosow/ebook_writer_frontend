@@ -10,8 +10,7 @@ import {
 } from "react";
 import { authApi } from "./api";
 import type { User } from "./types";
-
-const TOKEN_KEY = "ebook.accessToken";
+import { TOKEN_KEY } from "./session-boot";
 
 interface AuthState {
   user: User | null;

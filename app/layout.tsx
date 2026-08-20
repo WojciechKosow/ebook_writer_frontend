@@ -3,6 +3,7 @@ import { Instrument_Sans, Newsreader, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider, themeScript } from "@/lib/theme-context";
+import { sessionBootScript } from "@/lib/session-boot";
 import { BRAND, TAGLINE } from "@/lib/brand";
 
 // Clean, slightly characterful grotesque for all UI + body copy.
@@ -36,6 +37,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${instrumentSans.variable} ${newsreader.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {/* Send an already-logged-in visitor off the public-only pages before
+            they paint, so the landing never flashes before the client redirect. */}
+        <script dangerouslySetInnerHTML={{ __html: sessionBootScript }} />
         {/* Apply the stored/system theme before first paint (no flash). */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeProvider>
