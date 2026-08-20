@@ -4,9 +4,12 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
+const TOKEN_KEY = "ebook.accessToken";
+
 /**
- * The marketing landing is for logged-out visitors. Once the session resolves
- * and a user is present, send them straight to their dashboard instead.
+ * The marketing landing is for logged-out visitors only. Once a session is
+ * present, logged-in users are sent to their dashboard and never shown (or
+ * allowed back onto) the marketing page — including via browser back-navigation.
  */
 export function LandingGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -18,8 +21,19 @@ export function LandingGate({ children }: { children: React.ReactNode }) {
     }
   }, [loading, user, router]);
 
-  // Don't flash the marketing page once we know the user is logged in.
+  // Once we know a user is logged in, don't render the marketing page at all.
   if (!loading && user) return null;
+
+  // While the session is still resolving, if there's a stored token the visitor
+  // is almost certainly logged in — hold the marketing page back to avoid a
+  // flash before the redirect kicks in.
+  if (
+    loading &&
+    typeof window !== "undefined" &&
+    window.localStorage.getItem(TOKEN_KEY)
+  ) {
+    return null;
+  }
 
   return <>{children}</>;
 }

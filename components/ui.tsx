@@ -14,13 +14,14 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const buttonBase =
-  "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950";
+  "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-[background,border-color,box-shadow,transform] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 const buttonVariants: Record<string, string> = {
-  primary: "bg-indigo-600 text-white hover:bg-indigo-500",
+  primary:
+    "bg-accent text-white shadow-soft hover:brightness-95",
   secondary:
-    "border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800",
-  ghost: "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800",
+    "border border-hairline-2 bg-surface text-foreground hover:border-muted",
+  ghost: "text-foreground hover:bg-surface-2",
 };
 
 export function Button({
@@ -65,6 +66,9 @@ export function ButtonLink({
 
 // ---- Field (label + input + error) ----------------------------------------
 
+const controlBase =
+  "rounded-xl border border-hairline-2 bg-surface px-3.5 py-2.5 text-sm text-foreground placeholder:text-faint transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25";
+
 type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string;
   error?: string;
@@ -74,14 +78,10 @@ export function Field({ label, error, id, className = "", ...rest }: FieldProps)
   const inputId = id || rest.name;
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={inputId} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+      <label htmlFor={inputId} className="text-sm font-medium text-foreground-2">
         {label}
       </label>
-      <input
-        id={inputId}
-        className={`rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 ${className}`}
-        {...rest}
-      />
+      <input id={inputId} className={`${controlBase} ${className}`} {...rest} />
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
@@ -99,15 +99,11 @@ export function TextAreaField({ label, hint, error, id, className = "", ...rest 
   const areaId = id || rest.name;
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={areaId} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+      <label htmlFor={areaId} className="text-sm font-medium text-foreground-2">
         {label}
       </label>
-      <textarea
-        id={areaId}
-        className={`min-h-24 rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 ${className}`}
-        {...rest}
-      />
-      {hint && !error && <p className="text-xs text-zinc-400">{hint}</p>}
+      <textarea id={areaId} className={`min-h-24 ${controlBase} ${className}`} {...rest} />
+      {hint && !error && <p className="text-xs text-faint">{hint}</p>}
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
@@ -126,11 +122,11 @@ export function Alert({
     error:
       "border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300",
     success:
-      "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300",
-    info: "border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-300",
+      "border-[color-mix(in_oklab,var(--good)_35%,transparent)] bg-good-soft text-good",
+    info: "border-[color-mix(in_oklab,var(--accent)_30%,transparent)] bg-accent-soft text-accent-ink",
   };
   return (
-    <div className={`rounded-lg border px-4 py-3 text-sm ${styles[variant]}`} role="alert">
+    <div className={`rounded-xl border px-4 py-3 text-sm ${styles[variant]}`} role="alert">
       {children}
     </div>
   );
@@ -161,11 +157,11 @@ export function Spinner({ className = "" }: { className?: string }) {
 export function AuthCard({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
     <div className="mx-auto w-full max-w-md">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+      <div className="rounded-2xl border border-hairline bg-surface p-8 shadow-soft">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           {title}
         </h1>
-        {subtitle && <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
+        {subtitle && <p className="mt-1.5 text-sm text-muted">{subtitle}</p>}
         <div className="mt-6">{children}</div>
       </div>
     </div>

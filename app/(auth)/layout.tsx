@@ -5,7 +5,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <>
       <SiteHeader />
-      <main className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-zinc-900/40">
+      <main className="flex flex-1 items-center justify-center bg-surface-2/60 px-6 py-16">
         {children}
       </main>
       <SiteFooter />

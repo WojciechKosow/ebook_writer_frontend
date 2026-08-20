@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
           </Alert>
           <Link
             href="/login"
-            className="text-center text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+            className="text-center text-sm font-medium text-accent hover:underline"
           >
             Back to log in
           </Link>
@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
           </Button>
           <Link
             href="/login"
-            className="text-center text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+            className="text-center text-sm font-medium text-accent hover:underline"
           >
             Back to log in
           </Link>
