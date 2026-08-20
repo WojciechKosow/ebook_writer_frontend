@@ -92,6 +92,19 @@ export default function BillingPage() {
     }
   }
 
+  async function manage() {
+    if (!token) return;
+    setBusy("manage");
+    setError(null);
+    try {
+      const res = await subscriptionApi.portal(token);
+      window.location.assign(res.url);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not open the billing portal.");
+      setBusy(null);
+    }
+  }
+
   const balance = credits?.balance ?? data?.balance ?? 0;
 
   return (
@@ -127,17 +140,23 @@ export default function BillingPage() {
               Active — {SUBSCRIPTION.credits} credits every {SUBSCRIPTION.period}.
               {sub.cancelAtPeriodEnd && " Cancels at the end of the current period."}
             </p>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button onClick={manage} loading={busy === "manage"}>
+                Manage subscription
+              </Button>
               {sub.cancelAtPeriodEnd ? (
                 <Button variant="secondary" onClick={resume} loading={busy === "resume"}>
-                  Resume subscription
+                  Resume
                 </Button>
               ) : (
                 <Button variant="secondary" onClick={cancel} loading={busy === "cancel"}>
-                  Cancel subscription
+                  Cancel
                 </Button>
               )}
             </div>
+            <p className="mt-2 text-xs text-zinc-400 dark:text-zinc-500">
+              Manage opens Stripe, where you can update your payment method, view invoices, and cancel.
+            </p>
           </div>
         ) : (
           <div className="mt-2">

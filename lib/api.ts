@@ -205,6 +205,9 @@ export const subscriptionApi = {
   resume(token: string) {
     return request<SubscriptionResponse>("/api/subscription/resume", { method: "POST", token });
   },
+  portal(token: string) {
+    return request<{ url: string }>("/api/subscription/portal", { method: "POST", token });
+  },
 };
 
 export const paymentApi = {
