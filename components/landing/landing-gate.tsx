@@ -3,8 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-
-const TOKEN_KEY = "ebook.accessToken";
+import { TOKEN_KEY } from "@/lib/session-boot";
 
 /**
  * The marketing landing is for logged-out visitors only. Once a session is
