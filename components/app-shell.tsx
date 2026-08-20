@@ -38,10 +38,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex min-h-full">
-      {/* Sidebar (static on desktop, slide-over on mobile) */}
+    <div className="flex min-h-screen">
+      {/* Sidebar (sticky full-height on desktop, slide-over on mobile) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-hairline bg-surface transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-hairline bg-surface transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
