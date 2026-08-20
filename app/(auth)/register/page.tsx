@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import { AuthCard, Alert, Button, Field } from "@/components/ui";
+import { PasswordField, PasswordChecklist } from "@/components/auth-fields";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -14,14 +15,23 @@ export default function RegisterPage() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  const mismatch = confirm.length > 0 && password !== confirm;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setFieldErrors({});
+
+    if (password !== confirm) {
+      setError("Passwords don't match.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await register(displayName, email, password);
@@ -39,14 +49,14 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthCard title="Create your account" subtitle="Start writing your first ebook.">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <AuthCard title="Create your account">
+      <form onSubmit={onSubmit} className="flex flex-col gap-5">
         {error && <Alert>{error}</Alert>}
 
         <Field
-          label="Name"
+          label="Username"
           name="displayName"
-          autoComplete="name"
+          autoComplete="username"
           required
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
@@ -62,28 +72,38 @@ export default function RegisterPage() {
           onChange={(e) => setEmail(e.target.value)}
           error={fieldErrors.email}
         />
-        <Field
-          label="Password"
-          name="password"
-          type="password"
+        <div>
+          <PasswordField
+            label="Password"
+            name="password"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            value={password}
+            onChange={setPassword}
+            error={fieldErrors.password}
+          />
+          <PasswordChecklist password={password} />
+        </div>
+        <PasswordField
+          label="Confirm password"
+          name="confirmPassword"
           autoComplete="new-password"
           required
-          minLength={8}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={fieldErrors.password}
-          placeholder="At least 8 characters"
+          value={confirm}
+          onChange={setConfirm}
+          error={mismatch ? "Passwords don't match." : undefined}
         />
 
-        <Button type="submit" loading={submitting}>
+        <Button type="submit" variant="contrast" loading={submitting} className="w-full py-3">
           Create account
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
+      <p className="mt-6 text-center text-sm text-muted">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-accent hover:underline">
-          Log in
+        <Link href="/login" className="font-semibold text-foreground hover:underline">
+          Sign in
         </Link>
       </p>
     </AuthCard>

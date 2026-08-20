@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { authApi, ApiError } from "@/lib/api";
 import { AuthCard, Alert, Button, Field } from "@/components/ui";
+import { PasswordField } from "@/components/auth-fields";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,8 +49,8 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthCard title="Welcome back" subtitle="Log in to your account.">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <AuthCard title="Welcome back">
+      <form onSubmit={onSubmit} className="flex flex-col gap-5">
         {error && <Alert>{error}</Alert>}
         {needsVerify && !resent && (
           <button
@@ -71,42 +72,38 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <Field
+        <PasswordField
           label="Password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={setPassword}
         />
 
         <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+          <label className="flex items-center gap-2 text-sm text-muted">
             <input
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-300 text-accent focus:ring-accent"
+              className="h-4 w-4 rounded border-hairline-2 text-accent focus:ring-accent"
             />
             Remember me
           </label>
-          <Link
-            href="/forgot-password"
-            className="text-sm font-medium text-accent hover:underline"
-          >
+          <Link href="/forgot-password" className="text-sm font-medium text-accent hover:underline">
             Forgot password?
           </Link>
         </div>
 
-        <Button type="submit" loading={submitting}>
-          Log in
+        <Button type="submit" variant="contrast" loading={submitting} className="w-full py-3">
+          Sign in
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-        No account?{" "}
-        <Link href="/register" className="font-medium text-accent hover:underline">
+      <p className="mt-6 text-center text-sm text-muted">
+        Don&apos;t have an account?{" "}
+        <Link href="/register" className="font-semibold text-foreground hover:underline">
           Create one
         </Link>
       </p>

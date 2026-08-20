@@ -44,7 +44,7 @@ function VerifyInner() {
   if (state === "loading") {
     return (
       <AuthCard title="Verifying your account">
-        <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="flex items-center gap-3 text-sm text-muted">
           <Spinner /> Checking your link…
         </div>
       </AuthCard>
@@ -56,7 +56,7 @@ function VerifyInner() {
       <AuthCard title="Account activated" subtitle="You're all set.">
         <div className="flex flex-col gap-4">
           <Alert variant="success">Your email is verified. You can log in now.</Alert>
-          <ButtonLink href="/login">Continue to log in</ButtonLink>
+          <ButtonLink href="/login" variant="contrast" className="w-full py-3">Continue to log in</ButtonLink>
         </div>
       </AuthCard>
     );
@@ -66,7 +66,7 @@ function VerifyInner() {
     <AuthCard title="Verification failed">
       <div className="flex flex-col gap-4">
         <Alert>{message}</Alert>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-muted">
           The link may have expired or already been used.
         </p>
         <ButtonLink href="/login" variant="secondary">

@@ -28,8 +28,8 @@ function CheckEmailInner() {
   return (
     <AuthCard title="Check your email" subtitle="One more step to activate your account.">
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          We sent a verification link{email ? <> to <strong className="text-zinc-800 dark:text-zinc-200">{email}</strong></> : ""}.
+        <p className="text-sm text-muted">
+          We sent a verification link{email ? <> to <strong className="text-foreground">{email}</strong></> : ""}.
           Click it to activate your account, then log in.
         </p>
 
