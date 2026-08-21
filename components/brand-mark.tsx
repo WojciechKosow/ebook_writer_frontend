@@ -1,15 +1,17 @@
+import Image from "next/image";
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
+import logo from "@/app/logo.png";
 
-/** The Scrivetta logo glyph — a serif initial in an accent gradient tile. */
-export function BrandMark({ className = "h-8 w-8 text-lg rounded-[9px]" }: { className?: string }) {
+/** The Scrivetta logo glyph (self-contained rounded-square app icon). */
+export function BrandMark({ className = "h-8 w-8" }: { className?: string }) {
   return (
-    <span
-      aria-hidden
-      className={`grid shrink-0 place-items-center bg-gradient-to-br from-accent to-accent-2 font-[family-name:var(--font-display)] italic text-white shadow-[0_4px_12px_-4px_color-mix(in_oklab,var(--accent)_65%,transparent)] ${className}`}
-    >
-      {BRAND.charAt(0)}
-    </span>
+    <Image
+      src={logo}
+      alt={`${BRAND} logo`}
+      sizes="40px"
+      className={`shrink-0 object-contain ${className}`}
+    />
   );
 }
 

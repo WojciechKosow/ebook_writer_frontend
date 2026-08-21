@@ -27,6 +27,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: `${BRAND} — ${TAGLINE}`,
   description: TAGLINE,
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-96x96.png", type: "image/png", sizes: "96x96" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png" }],
+  },
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
