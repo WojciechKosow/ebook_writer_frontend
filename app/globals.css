@@ -129,8 +129,24 @@ body {
 }
 .bar-live { animation: bar-pulse 2.4s ease-in-out infinite; }
 
+/* Blinking text caret used by the auto-typing showcase fields. */
+@keyframes caret-blink {
+  0%, 45% { opacity: 1; }
+  55%, 100% { opacity: 0; }
+}
+.caret-blink { animation: caret-blink 1.05s steps(1, end) infinite; }
+
+/* Editing "consistency pass" sweep highlight in the showcase pipeline. */
+@keyframes edit-sweep {
+  0% { transform: translateY(-100%); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(1100%); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1 !important; animation: none !important; }
   .ink-underline path { animation: none !important; stroke-dashoffset: 0 !important; }
   .bar-live { animation: none !important; }
+  .caret-blink { animation: none !important; }
 }

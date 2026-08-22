@@ -1,4 +1,5 @@
 import { ButtonLink } from "@/components/ui";
+import { Showcase } from "@/components/landing/showcase";
 
 export function Hero() {
   return (
@@ -58,95 +59,8 @@ export function Hero() {
           <span>✓ Export-ready PDF</span>
         </div>
 
-        <ProductPreview />
+        <Showcase captions={false} className="mt-14" />
       </div>
     </section>
-  );
-}
-
-/** A framed screenshot-style mock of the app dashboard. */
-function ProductPreview() {
-  return (
-    <div className="mx-auto mt-14 max-w-4xl overflow-hidden rounded-2xl border border-hairline bg-surface text-left shadow-float">
-      <div className="flex items-center gap-2 border-b border-hairline bg-surface-2 px-4 py-3">
-        <div className="flex gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-hairline-2" />
-          <span className="h-2.5 w-2.5 rounded-full bg-hairline-2" />
-          <span className="h-2.5 w-2.5 rounded-full bg-hairline-2" />
-        </div>
-        <div className="ml-2 hidden h-6 max-w-xs flex-1 items-center rounded-lg border border-hairline bg-surface px-3 text-xs text-faint sm:flex">
-          app.scrivetta.com/dashboard
-        </div>
-      </div>
-      <div className="grid min-h-[320px] grid-cols-1 sm:grid-cols-[190px_1fr]">
-        <div className="hidden flex-col gap-1 border-r border-hairline bg-surface-2 p-3 sm:flex">
-          <PreviewNav active label="New ebook" />
-          <PreviewNav label="Your library" />
-          <PreviewNav label="Billing" />
-        </div>
-        <div className="p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-[17px] font-semibold text-foreground">Your library</p>
-            <span className="rounded-full border border-hairline bg-accent-soft px-2.5 py-0.5 text-[11px] font-semibold text-accent-ink">
-              3 in progress
-            </span>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <PreviewCard title="The Tide Between Us" meta="Literary fiction · 12 chapters" pct={100} state="done" />
-            <PreviewCard title="Systems of Small Wins" meta="Self-help · chapter 6 of 10" pct={62} state="writing" />
-            <PreviewCard title="Marrow & Ash" meta="Fantasy · outlining" pct={18} state="draft" />
-            <PreviewCard title="A Quiet Ledger" meta="Memoir · 9 chapters" pct={100} state="done" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PreviewNav({ label, active = false }: { label: string; active?: boolean }) {
-  return (
-    <div
-      className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-medium ${
-        active ? "bg-accent-soft text-accent-ink" : "text-muted"
-      }`}
-    >
-      <span className="h-3.5 w-3.5 rounded-[5px] bg-current opacity-70" />
-      {label}
-    </div>
-  );
-}
-
-const STATE_STYLES = {
-  done: { label: "Done", cls: "bg-good-soft text-good" },
-  writing: { label: "Writing", cls: "bg-accent-soft text-accent-ink" },
-  draft: { label: "Draft", cls: "bg-surface-3 text-muted" },
-} as const;
-
-function PreviewCard({
-  title,
-  meta,
-  pct,
-  state,
-}: {
-  title: string;
-  meta: string;
-  pct: number;
-  state: keyof typeof STATE_STYLES;
-}) {
-  const s = STATE_STYLES[state];
-  return (
-    <div className="rounded-xl border border-hairline bg-surface p-3.5">
-      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.cls}`}>
-        ● {s.label}
-      </span>
-      <p className="mt-2 text-sm font-semibold text-foreground">{title}</p>
-      <p className="text-xs text-faint">{meta}</p>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-3">
-        <div
-          className={`h-full rounded-full bg-gradient-to-r from-accent to-accent-2 ${pct < 100 ? "bar-live" : ""}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
   );
 }
