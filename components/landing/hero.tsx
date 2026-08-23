@@ -30,8 +30,10 @@ export function Hero() {
           AI writing studio for authors
         </span>
 
-        <h1 className="mx-auto mt-6 max-w-3xl text-balance text-5xl font-semibold leading-[1.02] tracking-tight text-foreground sm:text-6xl">
-          One idea in. A{" "}
+        <h1 className="mx-auto mt-6 max-w-3xl text-5xl font-semibold leading-[1.02] tracking-tight text-foreground sm:text-6xl">
+          One idea in.
+          <br />
+          A{" "}
           <span className="font-[family-name:var(--font-display)] italic font-medium text-accent">
             finished book
           </span>{" "}

@@ -15,11 +15,10 @@ export default function Home() {
 
       <main className="flex-1">
         <Hero />
-        <TrustStrip />
         <Features />
         <HowItWorks />
         <Plans />
-        <Testimonial />
+        <WhatYouGet />
 
         {/* Closing CTA */}
         <section className="mx-auto w-full max-w-6xl px-6 pb-24">
@@ -62,50 +61,17 @@ export default function Home() {
   );
 }
 
-function TrustStrip() {
-  const names = ["Paperbound", "NORTHWIND", "Quillfire", "LEDGER&CO", "Marginalia"];
-  return (
-    <section className="mx-auto w-full max-w-6xl px-6 pt-8 text-center">
-      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-faint">
-        Trusted by indie authors, ghostwriters &amp; content teams
-      </p>
-      <div className="mt-5 flex flex-wrap items-center justify-center gap-x-9 gap-y-3 opacity-70">
-        {names.map((n, i) => (
-          <span
-            key={n}
-            className={`text-[17px] font-bold tracking-tight text-muted ${
-              i % 2 ? "" : "font-[family-name:var(--font-display)] italic font-medium"
-            }`}
-          >
-            {n}
-          </span>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Testimonial() {
+function WhatYouGet() {
   return (
     <section className="mx-auto w-full max-w-3xl px-6 py-16 text-center">
       <Reveal>
         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-accent-ink">
-          One writer’s take
+          What you get
         </p>
-        <blockquote className="mt-5 text-balance font-[family-name:var(--font-display)] text-2xl leading-snug tracking-tight text-foreground sm:text-3xl">
-          “I came in with a one-line idea for a novella and left with a typeset PDF the
-          same afternoon. Scrivetta didn’t just autocomplete — it kept my characters
-          straight for twelve chapters.”
-        </blockquote>
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-brass to-accent-2 text-sm font-semibold text-white">
-            EM
-          </span>
-          <div className="text-left">
-            <div className="text-sm font-semibold text-foreground">Elena Márquez</div>
-            <div className="text-[13px] text-faint">Indie author · 4 books on Scrivetta</div>
-          </div>
-        </div>
+        <p className="mt-5 text-balance font-[family-name:var(--font-display)] text-2xl leading-snug tracking-tight text-foreground sm:text-3xl">
+          A complete ebook — outline, every chapter, a consistency pass, and a typeset
+          PDF ready to read, publish, or share.
+        </p>
       </Reveal>
     </section>
   );
