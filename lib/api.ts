@@ -3,6 +3,8 @@ import type {
   CheckoutResponse,
   CreditBalanceResponse,
   CreditPack,
+  EbookContentResponse,
+  EbookContentUpdateInput,
   EbookRequestInput,
   EbookStatusResponse,
   OrderStatus,
@@ -152,6 +154,20 @@ export const ebookApi = {
 
   list(token: string) {
     return request<EbookStatusResponse[]>("/api/ebooks", { token });
+  },
+
+  /** Load the editable manuscript (all chapters + their Markdown bodies). */
+  getContent(token: string, id: string) {
+    return request<EbookContentResponse>(`/api/ebooks/${id}/content`, { token });
+  },
+
+  /** Save edited chapters; the backend re-renders the PDF so downloads stay in sync. */
+  saveContent(token: string, id: string, input: EbookContentUpdateInput) {
+    return request<EbookContentResponse>(`/api/ebooks/${id}/content`, {
+      method: "PUT",
+      body: input,
+      token,
+    });
   },
 
   /** Download the finished PDF as a Blob (needs the Authorization header). */

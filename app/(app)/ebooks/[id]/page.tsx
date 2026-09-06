@@ -151,10 +151,13 @@ export default function EbookDetailPage() {
           {ebook.description && (
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{ebook.description}</p>
           )}
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-3">
             <Button onClick={download} loading={downloading}>
               Download PDF
             </Button>
+            <ButtonLink href={`/ebooks/${ebook.id}/edit`} variant="secondary">
+              Edit text
+            </ButtonLink>
           </div>
           {error && (
             <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>
