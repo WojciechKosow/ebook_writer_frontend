@@ -46,6 +46,34 @@ export interface EbookStatusResponse {
   updatedAt: string | null;
 }
 
+// ---- Ebook content (editor) ------------------------------------------------
+
+export interface ChapterContent {
+  chapterNumber: number;
+  title: string | null;
+  /** Chapter body in Markdown — what the editor loads and saves. */
+  content: string | null;
+}
+
+export interface EbookContentResponse {
+  id: string;
+  status: EbookStatus;
+  title: string | null;
+  subtitle: string | null;
+  editable: boolean;
+  chapters: ChapterContent[];
+}
+
+export interface ChapterUpdateInput {
+  chapterNumber: number;
+  title: string;
+  content: string;
+}
+
+export interface EbookContentUpdateInput {
+  chapters: ChapterUpdateInput[];
+}
+
 export interface EbookRequestInput {
   topic: string;
   targetAudience: string;
