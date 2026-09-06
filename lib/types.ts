@@ -49,6 +49,8 @@ export interface EbookStatusResponse {
 // ---- Ebook content (editor) ------------------------------------------------
 
 export interface ChapterContent {
+  /** Stable server id — echoed back on save to identify edits vs. new chapters. */
+  id: string;
   chapterNumber: number;
   title: string | null;
   /** Chapter body in Markdown — what the editor loads and saves. */
@@ -65,7 +67,8 @@ export interface EbookContentResponse {
 }
 
 export interface ChapterUpdateInput {
-  chapterNumber: number;
+  /** Existing chapter id, or null to add a new chapter. List order sets the number. */
+  id: string | null;
   title: string;
   content: string;
 }
