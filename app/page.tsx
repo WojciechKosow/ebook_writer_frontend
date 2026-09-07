@@ -7,10 +7,12 @@ import { HowItWorks } from "@/components/landing/how-it-works";
 import { Plans } from "@/components/landing/plans";
 import { Reveal } from "@/components/landing/reveal";
 import { LandingGate } from "@/components/landing/landing-gate";
+import { StructuredData } from "@/components/landing/structured-data";
 
 export default function Home() {
   return (
     <LandingGate>
+      <StructuredData />
       <SiteHeader />
 
       <main className="flex-1">
