@@ -5,7 +5,13 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider, themeScript } from "@/lib/theme-context";
 import { sessionBootScript } from "@/lib/session-boot";
-import { BRAND, TAGLINE } from "@/lib/brand";
+import { BRAND } from "@/lib/brand";
+import {
+  SITE_URL,
+  SITE_DESCRIPTION,
+  SITE_TAGLINE,
+  SITE_KEYWORDS,
+} from "@/lib/site";
 
 // Clean, slightly characterful grotesque for all UI + body copy.
 const instrumentSans = Instrument_Sans({
@@ -26,8 +32,49 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: `${BRAND} — ${TAGLINE}`,
-  description: TAGLINE,
+  // Resolves every relative URL below (OG image, canonical) to an absolute one.
+  metadataBase: new URL(SITE_URL),
+  title: {
+    // Home/default title, plus a template child pages fill in (e.g. "Pricing").
+    default: `${BRAND} — ${SITE_TAGLINE}`,
+    template: `%s · ${BRAND}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: BRAND,
+  keywords: SITE_KEYWORDS,
+  authors: [{ name: BRAND }],
+  creator: BRAND,
+  publisher: BRAND,
+  category: "technology",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    siteName: BRAND,
+    title: `${BRAND} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    url: "/",
+    locale: "en_US",
+    // og image is supplied by app/opengraph-image.tsx (auto-detected).
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${BRAND} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    // twitter image falls back to the generated OG image.
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
