@@ -1,6 +1,7 @@
 import type { ChapterStatus, EbookStatus } from "./types";
 
 export const STATUS_LABEL: Record<EbookStatus, string> = {
+  DRAFT: "Draft",
   PENDING: "Queued",
   PLANNING: "Planning",
   WRITING: "Writing",
@@ -12,6 +13,7 @@ export const STATUS_LABEL: Record<EbookStatus, string> = {
 
 /** Tailwind classes for a status pill. */
 export const STATUS_CLASSES: Record<EbookStatus, string> = {
+  DRAFT: "bg-surface-3 text-muted",
   PENDING: "bg-surface-3 text-muted",
   PLANNING: "bg-accent-soft text-accent-ink",
   WRITING: "bg-accent-soft text-accent-ink",
@@ -22,6 +24,7 @@ export const STATUS_CLASSES: Record<EbookStatus, string> = {
 };
 
 export const STAGE_MESSAGE: Record<EbookStatus, string> = {
+  DRAFT: "Draft — add assets, then generate.",
   PENDING: "Queued — starting shortly.",
   PLANNING: "Planning the outline and chapters…",
   WRITING: "Writing chapters one by one…",
@@ -33,6 +36,11 @@ export const STAGE_MESSAGE: Record<EbookStatus, string> = {
 
 export function isTerminal(status: EbookStatus): boolean {
   return status === "COMPLETED" || status === "FAILED";
+}
+
+/** True while the generation pipeline is actively running (worth polling). */
+export function isGenerating(status: EbookStatus): boolean {
+  return status !== "DRAFT" && !isTerminal(status);
 }
 
 export const CHAPTER_STATUS_LABEL: Record<ChapterStatus, string> = {

@@ -79,6 +79,8 @@ export default function DashboardPage() {
 
   // Rotate the writer's line every few seconds.
   useEffect(() => {
+    // Client-only randomisation (avoids an SSR/CSR hydration mismatch).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLine(Math.floor(Math.random() * WRITER_LINES.length));
     const t = setInterval(() => setLine((n) => (n + 1) % WRITER_LINES.length), 7000);
     return () => clearInterval(t);

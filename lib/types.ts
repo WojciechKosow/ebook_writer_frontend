@@ -16,6 +16,7 @@ export interface AuthResponse {
 // ---- Ebook -----------------------------------------------------------------
 
 export type EbookStatus =
+  | "DRAFT"
   | "PENDING"
   | "PLANNING"
   | "WRITING"
@@ -48,6 +49,9 @@ export interface EbookStatusResponse {
 
 // ---- Ebook content (editor) ------------------------------------------------
 
+/** Whether a piece of content/placement is still AI output or a user edit. */
+export type ContentSource = "AI" | "USER";
+
 export interface ChapterContent {
   /** Stable server id — echoed back on save to identify edits vs. new chapters. */
   id: string;
@@ -55,6 +59,7 @@ export interface ChapterContent {
   title: string | null;
   /** Chapter body in Markdown — what the editor loads and saves. */
   content: string | null;
+  contentSource?: ContentSource;
 }
 
 export interface EbookContentResponse {
@@ -75,6 +80,45 @@ export interface ChapterUpdateInput {
 
 export interface EbookContentUpdateInput {
   chapters: ChapterUpdateInput[];
+}
+
+// ---- Assets (images) -------------------------------------------------------
+
+export type AssetRole =
+  | "GENERAL"
+  | "LOGO"
+  | "AUTHOR"
+  | "PRODUCT"
+  | "COVER"
+  | "ILLUSTRATION";
+
+export type AssetPlacement = "UNUSED" | "COVER" | "CHAPTER";
+
+/** A project asset (image), mirroring the backend EbookImageDTO. */
+export interface EbookImage {
+  id: string;
+  role: AssetRole;
+  placement: AssetPlacement;
+  chapterId: string | null;
+  placedBy: ContentSource | null;
+  displayWidthPercent: number | null;
+  contentType: string;
+  originalFilename: string | null;
+  sizeBytes: number;
+  width: number;
+  height: number;
+  aiDescription: string | null;
+  tags: string[];
+  /** Token to place this asset inside a chapter's Markdown: ebook-image:<id>. */
+  markdownRef: string;
+  /** Relative API path that streams the bytes (needs the Authorization header). */
+  rawUrl: string;
+  createdAt: string | null;
+}
+
+export interface EbookImageUpdateInput {
+  role?: AssetRole;
+  displayWidthPercent?: number;
 }
 
 export interface EbookRequestInput {

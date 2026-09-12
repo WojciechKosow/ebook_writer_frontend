@@ -5,6 +5,8 @@ import type {
   CreditPack,
   EbookContentResponse,
   EbookContentUpdateInput,
+  EbookImage,
+  EbookImageUpdateInput,
   EbookRequestInput,
   EbookStatusResponse,
   OrderStatus,
@@ -31,7 +33,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   token?: string | null;
   /** Send the httpOnly refresh cookie (used by refresh/logout). */
@@ -140,10 +142,19 @@ export const authApi = {
 // ---- Ebook endpoints -------------------------------------------------------
 
 export const ebookApi = {
+  /** Create a draft (no credits held, not generating yet). */
   create(token: string, input: EbookRequestInput) {
     return request<EbookStatusResponse>("/api/ebooks", {
       method: "POST",
       body: input,
+      token,
+    });
+  },
+
+  /** Reserve credits and start generating a draft. */
+  start(token: string, id: string) {
+    return request<EbookStatusResponse>(`/api/ebooks/${id}/start`, {
+      method: "POST",
       token,
     });
   },
@@ -187,6 +198,92 @@ export const ebookApi = {
       throw new ApiError(message, res.status);
     }
     return res.blob();
+  },
+};
+
+// ---- Asset (image) endpoints -----------------------------------------------
+
+export const imageApi = {
+  list(token: string, ebookId: string) {
+    return request<EbookImage[]>(`/api/ebooks/${ebookId}/images`, { token });
+  },
+
+  /**
+   * Upload an image via multipart form data. Uses XHR (not fetch) so the caller
+   * can show real upload progress. Resolves with the created asset.
+   */
+  upload(
+    token: string,
+    ebookId: string,
+    file: File,
+    opts: { role?: string; onProgress?: (percent: number) => void } = {},
+  ): Promise<EbookImage> {
+    return new Promise<EbookImage>((resolve, reject) => {
+      const form = new FormData();
+      form.append("file", file);
+      if (opts.role) form.append("role", opts.role);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${API_URL}/api/ebooks/${ebookId}/images`);
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && opts.onProgress) {
+          opts.onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+      xhr.onload = () => {
+        const raw = xhr.responseText;
+        let data: unknown = null;
+        try {
+          data = raw ? JSON.parse(raw) : null;
+        } catch {
+          data = raw;
+        }
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(data as EbookImage);
+        } else {
+          const obj = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+          const message =
+            (obj && typeof obj.message === "string" && obj.message) ||
+            `Upload failed (${xhr.status})`;
+          reject(new ApiError(message, xhr.status, undefined, data));
+        }
+      };
+      xhr.onerror = () => reject(new ApiError("Upload failed", xhr.status || 0));
+      xhr.send(form);
+    });
+  },
+
+  /** Fetch an asset's bytes (auth required — the bucket is private) as a Blob. */
+  async fetchBlob(token: string, ebookId: string, imageId: string): Promise<Blob> {
+    const res = await fetch(`${API_URL}/api/ebooks/${ebookId}/images/${imageId}/raw`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new ApiError(`Failed to load image (${res.status})`, res.status);
+    return res.blob();
+  },
+
+  update(token: string, ebookId: string, imageId: string, input: EbookImageUpdateInput) {
+    return request<EbookImage>(`/api/ebooks/${ebookId}/images/${imageId}`, {
+      method: "PATCH",
+      body: input,
+      token,
+    });
+  },
+
+  setCover(token: string, ebookId: string, imageId: string) {
+    return request<EbookImage>(`/api/ebooks/${ebookId}/images/${imageId}/cover`, {
+      method: "PUT",
+      token,
+    });
+  },
+
+  remove(token: string, ebookId: string, imageId: string) {
+    return request<void>(`/api/ebooks/${ebookId}/images/${imageId}`, {
+      method: "DELETE",
+      token,
+    });
   },
 };
 
