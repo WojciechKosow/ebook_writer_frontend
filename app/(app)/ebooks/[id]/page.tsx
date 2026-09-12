@@ -6,10 +6,12 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
+import { useAssets } from "@/lib/use-assets";
 import type { EbookStatusResponse } from "@/lib/types";
 import { StatusBadge, ProgressBar } from "@/components/ebook-ui";
+import { AssetManager } from "@/components/asset-manager";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
-import { CHAPTER_STATUS_LABEL, STAGE_MESSAGE, isTerminal } from "@/lib/ebook-format";
+import { CHAPTER_STATUS_LABEL, STAGE_MESSAGE, isGenerating, isTerminal } from "@/lib/ebook-format";
 
 const POLL_MS = 3000;
 
@@ -18,12 +20,16 @@ export default function EbookDetailPage() {
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
   const { token } = useAuth();
   const credits = useCredits();
+  const assets = useAssets(token, id);
 
   const [ebook, setEbook] = useState<EbookStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  // Poll while the generation is still running.
+  // Poll while the generation is actively running (drafts and terminal states
+  // don't poll). Re-armed via reloadKey when the user starts generation.
   useEffect(() => {
     if (!token || !id) return;
     let active = true;
@@ -34,10 +40,10 @@ export default function EbookDetailPage() {
         const data = await ebookApi.get(token, id);
         if (!active) return;
         setEbook(data);
-        if (!isTerminal(data.status)) {
+        if (isGenerating(data.status)) {
           timer = setTimeout(poll, POLL_MS);
-        } else {
-          // Refresh the balance — a failed generation refunds its credits.
+        } else if (isTerminal(data.status)) {
+          // A failed generation refunds its credits; refresh the balance.
           credits?.refresh();
         }
       } catch (err) {
@@ -52,7 +58,31 @@ export default function EbookDetailPage() {
       clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, id]);
+  }, [token, id, reloadKey]);
+
+  const startGeneration = useCallback(async () => {
+    if (!token || !ebook) return;
+    setStarting(true);
+    setError(null);
+    try {
+      const updated = await ebookApi.start(token, ebook.id);
+      setEbook(updated);
+      credits?.refresh();
+      setReloadKey((k) => k + 1); // begin polling
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 402) {
+        const body = err.body as { required?: number; available?: number } | undefined;
+        setError(
+          `You need ${body?.required ?? "more"} credits but have ${body?.available ?? 0}. Buy more to generate.`,
+        );
+        credits?.refresh();
+      } else {
+        setError(err instanceof ApiError ? err.message : "Couldn't start generation.");
+      }
+    } finally {
+      setStarting(false);
+    }
+  }, [token, ebook, credits]);
 
   const download = useCallback(async () => {
     if (!token || !ebook) return;
@@ -96,9 +126,11 @@ export default function EbookDetailPage() {
     );
   }
 
-  const active = !isTerminal(ebook.status);
+  const draft = ebook.status === "DRAFT";
+  const active = isGenerating(ebook.status);
   const failed = ebook.status === "FAILED";
   const completed = ebook.status === "COMPLETED";
+  const balance = credits?.balance ?? null;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -109,7 +141,7 @@ export default function EbookDetailPage() {
       <div className="mt-3 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {ebook.title || "Preparing your ebook…"}
+            {ebook.title || (draft ? "Your ebook draft" : "Preparing your ebook…")}
           </h1>
           {ebook.subtitle && (
             <p className="mt-1 text-zinc-500 dark:text-zinc-400">{ebook.subtitle}</p>
@@ -118,8 +150,52 @@ export default function EbookDetailPage() {
         <StatusBadge status={ebook.status} />
       </div>
 
+      {/* Draft — assets + generate */}
+      {draft && (
+        <div className="mt-6 flex flex-col gap-5">
+          <div className="rounded-xl border border-hairline bg-surface-2 p-4">
+            <h2 className="text-sm font-semibold text-foreground-2">Assets (optional)</h2>
+            <p className="mt-1 text-xs text-muted">
+              Upload your own images — a logo, product shots, diagrams. Scrivetta will use the ones
+              that fit (on the cover or in the right chapter) and leave the rest. You can add, change
+              or remove them later in the editor too.
+            </p>
+            <div className="mt-4">
+              <AssetManager state={assets} mode="draft" />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-600 dark:text-zinc-300">Your balance</span>
+              <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                {balance === null ? "…" : `${balance} credits`}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              Generating reserves credits for your page count (about 1 per page); you&apos;re only
+              billed for the pages actually produced.
+            </p>
+          </div>
+
+          {error && <Alert>{error}</Alert>}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={startGeneration} loading={starting}>
+              Generate ebook
+            </Button>
+            <ButtonLink href="/billing" variant="secondary">
+              Buy credits
+            </ButtonLink>
+            <span className="text-xs text-zinc-400">
+              This can take several minutes — you can watch progress here.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Progress */}
-      {!failed && (
+      {!draft && !failed && (
         <div className="mt-6">
           <div className="mb-2 flex items-center justify-between text-sm">
             <span className="text-zinc-600 dark:text-zinc-300">{STAGE_MESSAGE[ebook.status]}</span>
@@ -156,7 +232,7 @@ export default function EbookDetailPage() {
               Download PDF
             </Button>
             <ButtonLink href={`/ebooks/${ebook.id}/edit`} variant="secondary">
-              Edit text
+              Edit ebook
             </ButtonLink>
           </div>
           {error && (

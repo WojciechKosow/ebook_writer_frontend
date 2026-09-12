@@ -2,24 +2,37 @@
 
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import type { ReactNode } from "react";
+import { forwardRef, useImperativeHandle, type ReactNode } from "react";
+import { EbookImage } from "./ebook-image-extension";
+
+/** What the page can drive on the editor imperatively (e.g. insert an asset). */
+export interface RichTextEditorHandle {
+  /**
+   * Insert an image at the cursor, or replace the currently-selected image.
+   * `id` is the asset id (persisted as the `ebook-image:<id>` token on save);
+   * `url` is the blob URL used only for on-screen preview.
+   */
+  insertImage(image: { id: string; url: string; alt?: string; widthPercent?: number | null }): void;
+  /** The asset id of the selected image, or null if no image is selected. */
+  getSelectedImageId(): string | null;
+}
 
 /**
  * A lightweight Word-like rich-text editor. Edits HTML internally (via TipTap);
  * the page converts to/from Markdown at load and save time. Remount with a
- * `key` to load a different chapter.
+ * `key` to load a different chapter. Exposes an imperative handle so the asset
+ * panel can insert/replace images in the active chapter.
  */
-export function RichTextEditor({
-  html,
-  editable = true,
-  onChange,
-}: {
-  html: string;
-  editable?: boolean;
-  onChange: (html: string) => void;
-}) {
+export const RichTextEditor = forwardRef<
+  RichTextEditorHandle,
+  {
+    html: string;
+    editable?: boolean;
+    onChange: (html: string) => void;
+  }
+>(function RichTextEditor({ html, editable = true, onChange }, ref) {
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, EbookImage],
     content: html,
     editable,
     // Required for SSR (Next.js) to avoid a hydration mismatch.
@@ -31,6 +44,31 @@ export function RichTextEditor({
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      insertImage({ id, url, alt = "", widthPercent }) {
+        if (!editor) return;
+        const attrs: Record<string, unknown> = {
+          src: url,
+          alt,
+          "data-ebook-image-id": id,
+          style: widthPercent ? `width:${widthPercent}%` : null,
+        };
+        if (editor.isActive("image")) {
+          editor.chain().focus().updateAttributes("image", attrs).run();
+        } else {
+          editor.chain().focus().insertContent({ type: "image", attrs }).run();
+        }
+      },
+      getSelectedImageId() {
+        if (!editor || !editor.isActive("image")) return null;
+        return (editor.getAttributes("image")["data-ebook-image-id"] as string) ?? null;
+      },
+    }),
+    [editor],
+  );
 
   if (!editor) {
     return (
@@ -44,7 +82,7 @@ export function RichTextEditor({
       <EditorContent editor={editor} />
     </div>
   );
-}
+});
 
 function Toolbar({ editor }: { editor: Editor }) {
   return (

@@ -1,20 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ebookApi, ApiError } from "@/lib/api";
+import { useAssets } from "@/lib/use-assets";
 import type { EbookContentResponse } from "@/lib/types";
-import { markdownToHtml, htmlToMarkdown } from "@/lib/markdown";
-import { RichTextEditor } from "@/components/rich-text-editor";
+import { markdownToHtml, htmlToMarkdown, resolveEbookImages } from "@/lib/markdown";
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/rich-text-editor";
+import { AssetManager } from "@/components/asset-manager";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
 
 /**
  * A chapter as the editor holds it. `key` is a stable client-side id used for
  * React keys and selection; `id` is the server id (null for a chapter the user
  * just added, which the backend will create on save). The body is kept as HTML
- * for TipTap and converted to/from Markdown at load and save.
+ * for TipTap and converted to/from Markdown at load and save. Image tokens
+ * (`ebook-image:<id>`) are resolved to preview blob URLs for display and
+ * converted back to tokens on save.
  */
 interface EditableChapter {
   key: string;
@@ -23,27 +27,29 @@ interface EditableChapter {
   html: string;
 }
 
+/** Raw chapter as loaded from the server, before image resolution. */
+interface RawChapter {
+  id: string;
+  title: string;
+  content: string;
+}
+
 function newKey(): string {
   return typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
     : `k_${Math.random().toString(36).slice(2)}_${Date.now()}`;
 }
 
-function toEditable(data: EbookContentResponse): EditableChapter[] {
-  return data.chapters.map((c) => ({
-    key: newKey(),
-    id: c.id,
-    title: c.title ?? "",
-    html: markdownToHtml(c.content),
-  }));
-}
+const IMG_TOKEN = /ebook-image:([A-Za-z0-9-]+)/g;
 
 export default function EbookEditPage() {
   const params = useParams();
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
   const { token } = useAuth();
+  const assets = useAssets(token, id);
 
   const [meta, setMeta] = useState<EbookContentResponse | null>(null);
+  const [rawChapters, setRawChapters] = useState<RawChapter[] | null>(null);
   const [chapters, setChapters] = useState<EditableChapter[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -51,6 +57,21 @@ export default function EbookEditPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [forceBuild, setForceBuild] = useState(false);
+
+  const builtRef = useRef(false);
+  const editorRef = useRef<RichTextEditorHandle>(null);
+
+  /** Resolve an image token to its preview URL + stored width. */
+  const resolve = useCallback(
+    (imgId: string) => {
+      const url = assets.urlFor(imgId);
+      if (!url) return undefined;
+      const asset = assets.assets.find((a) => a.id === imgId);
+      return { url, widthPercent: asset?.displayWidthPercent ?? null };
+    },
+    [assets],
+  );
 
   // Load the manuscript once.
   useEffect(() => {
@@ -61,9 +82,9 @@ export default function EbookEditPage() {
         const data = await ebookApi.getContent(token, id);
         if (!active) return;
         setMeta(data);
-        const editable = toEditable(data);
-        setChapters(editable);
-        setActiveKey(editable[0]?.key ?? null);
+        setRawChapters(
+          data.chapters.map((c) => ({ id: c.id, title: c.title ?? "", content: c.content ?? "" })),
+        );
       } catch (err) {
         if (!active) return;
         setError(err instanceof ApiError ? err.message : "Couldn't load this ebook.");
@@ -75,6 +96,40 @@ export default function EbookEditPage() {
       active = false;
     };
   }, [token, id]);
+
+  // Don't wait forever on image blobs — build the editor after a short grace
+  // period even if a preview failed to load.
+  useEffect(() => {
+    const t = setTimeout(() => setForceBuild(true), 2500);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Build the editable chapters once, when the manuscript is loaded and the
+  // referenced image previews are ready (or the grace period elapsed). Building
+  // once avoids clobbering edits when new blob URLs arrive later.
+  useEffect(() => {
+    if (builtRef.current || !rawChapters || assets.loading) return;
+
+    const referenced = new Set<string>();
+    for (const c of rawChapters) {
+      for (const m of c.content.matchAll(IMG_TOKEN)) referenced.add(m[1]);
+    }
+    const allResolved = [...referenced].every((rid) => assets.urlFor(rid));
+    if (referenced.size > 0 && !allResolved && !forceBuild) return;
+
+    const editable = rawChapters.map((c) => ({
+      key: newKey(),
+      id: c.id,
+      title: c.title,
+      html: resolveEbookImages(markdownToHtml(c.content), resolve),
+    }));
+    // One-time build of editor state once the manuscript and image previews are
+    // ready; guarded by builtRef so it runs exactly once.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setChapters(editable);
+    setActiveKey(editable[0]?.key ?? null);
+    builtRef.current = true;
+  }, [rawChapters, assets, resolve, forceBuild]);
 
   // Warn before leaving with unsaved edits (browser navigation / refresh).
   useEffect(() => {
@@ -100,9 +155,7 @@ export default function EbookEditPage() {
 
   const patchActive = useCallback(
     (patch: Partial<EditableChapter>) => {
-      setChapters((prev) =>
-        prev.map((c) => (c.key === activeKey ? { ...c, ...patch } : c)),
-      );
+      setChapters((prev) => prev.map((c) => (c.key === activeKey ? { ...c, ...patch } : c)));
       touch();
     },
     [activeKey, touch],
@@ -121,7 +174,6 @@ export default function EbookEditPage() {
         if (prev.length <= 1) return prev; // a book must keep at least one chapter
         const idx = prev.findIndex((c) => c.key === key);
         const next = prev.filter((c) => c.key !== key);
-        // Keep a sensible chapter selected after removal.
         if (key === activeKey) {
           const fallback = next[Math.min(idx, next.length - 1)];
           setActiveKey(fallback?.key ?? null);
@@ -148,6 +200,23 @@ export default function EbookEditPage() {
     [touch],
   );
 
+  // Insert (or replace the selected) image in the active chapter.
+  const insertAsset = useCallback(
+    (assetId: string) => {
+      const url = assets.urlFor(assetId);
+      if (!url || !editorRef.current) return;
+      const asset = assets.assets.find((a) => a.id === assetId);
+      editorRef.current.insertImage({
+        id: assetId,
+        url,
+        alt: asset?.aiDescription || asset?.originalFilename || "",
+        widthPercent: asset?.displayWidthPercent ?? null,
+      });
+      touch();
+    },
+    [assets, touch],
+  );
+
   const save = useCallback(async () => {
     if (!token || !id) return;
     setSaving(true);
@@ -163,20 +232,27 @@ export default function EbookEditPage() {
         })),
       });
       setMeta(updated);
-      // Rebuild from the authoritative response (fresh ids + order), keeping the
-      // same chapter selected by position.
-      const rebuilt = toEditable(updated);
+      // Rebuild from the authoritative response (fresh ids + order), re-resolving
+      // image tokens to previews, keeping the same chapter selected by position.
+      const rebuilt: EditableChapter[] = updated.chapters.map((c) => ({
+        key: newKey(),
+        id: c.id,
+        title: c.title ?? "",
+        html: resolveEbookImages(markdownToHtml(c.content), resolve),
+      }));
       setChapters(rebuilt);
       const keep = rebuilt[Math.min(Math.max(prevActiveIndex, 0), rebuilt.length - 1)];
       setActiveKey(keep?.key ?? null);
       setDirty(false);
       setSaved(true);
+      // Placement/usage may have changed; refresh the asset panel.
+      assets.refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Save failed.");
     } finally {
       setSaving(false);
     }
-  }, [token, id, chapters, activeIndex]);
+  }, [token, id, chapters, activeIndex, resolve, assets]);
 
   if (loading) {
     return (
@@ -217,7 +293,7 @@ export default function EbookEditPage() {
   const canRemove = chapters.length > 1;
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-6xl">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
@@ -245,12 +321,13 @@ export default function EbookEditPage() {
       )}
 
       <p className="mt-2 text-xs text-faint">
-        Add, remove or reorder chapters and edit their text. Saving re-renders the
-        downloadable PDF. Editing is free.
+        Add, remove or reorder chapters and edit their text and images. Use the Assets panel to
+        insert an image into the chapter you&apos;re editing. Saving re-renders the downloadable
+        PDF. Editing is free.
       </p>
 
       {/* Editor + chapter navigation */}
-      <div className="mt-6 grid gap-6 md:grid-cols-[16rem_1fr]">
+      <div className="mt-6 grid gap-6 md:grid-cols-[14rem_1fr]">
         {/* Chapter list */}
         <aside className="md:sticky md:top-6 md:self-start">
           <h2 className="mb-2 text-sm font-semibold text-foreground-2">Chapters</h2>
@@ -348,9 +425,23 @@ export default function EbookEditPage() {
               />
               <RichTextEditor
                 key={active.key}
+                ref={editorRef}
                 html={active.html}
                 onChange={(html) => patchActive({ html })}
               />
+
+              {/* Assets */}
+              <div className="mt-8 rounded-xl border border-hairline bg-surface-2 p-4">
+                <h2 className="text-sm font-semibold text-foreground-2">Assets</h2>
+                <p className="mt-1 text-xs text-muted">
+                  Upload images or reuse ones from this project. <strong>Insert</strong> places an
+                  image in the chapter you&apos;re editing (or replaces the selected image). Set a
+                  cover, adjust an image&apos;s width, or remove it. Changes save with the book.
+                </p>
+                <div className="mt-4">
+                  <AssetManager state={assets} mode="editor" onInsert={(a) => insertAsset(a.id)} />
+                </div>
+              </div>
             </>
           ) : (
             <p className="text-sm text-muted">This ebook has no chapters to edit.</p>

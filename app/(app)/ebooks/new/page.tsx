@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
 import type { EbookRequestInput } from "@/lib/types";
-import { Alert, Button, ButtonLink, Field, TextAreaField } from "@/components/ui";
+import { Alert, Button, Field, TextAreaField } from "@/components/ui";
 
 const initial: EbookRequestInput = {
   topic: "",
@@ -95,6 +95,9 @@ export default function NewEbookPage() {
   // Rotate the example brief every few seconds so the placeholders keep
   // suggesting different kinds of books (fiction, SaaS, e-commerce…).
   useEffect(() => {
+    // Randomise the starting example on the client only (doing it during render
+    // would cause an SSR/CSR hydration mismatch).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setExIdx(Math.floor(Math.random() * EXAMPLES.length));
     const t = setInterval(() => setExIdx((n) => (n + 1) % EXAMPLES.length), 5000);
     return () => clearInterval(t);
@@ -130,21 +133,14 @@ export default function NewEbookPage() {
     setFieldErrors({});
     setSubmitting(true);
     try {
+      // Create a draft — no credits are charged yet. The next screen lets the
+      // user add assets and then generate (which reserves the credits).
       const created = await ebookApi.create(token, form);
-      credits?.refresh();
       router.push(`/ebooks/${created.id}`);
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 402) {
-          const body = err.body as { required?: number; available?: number } | undefined;
-          setError(
-            `You need ${body?.required ?? cost} credits but have ${body?.available ?? balance ?? 0}.`,
-          );
-          credits?.refresh();
-        } else {
-          setFieldErrors(err.fieldErrors ?? {});
-          setError(err.fieldErrors ? null : err.message);
-        }
+        setFieldErrors(err.fieldErrors ?? {});
+        setError(err.fieldErrors ? null : err.message);
       } else {
         setError("Something went wrong. Please try again.");
       }
@@ -249,7 +245,7 @@ export default function NewEbookPage() {
           hint="Optional. Paste any reference text or examples to ground the book."
         />
 
-        {/* Cost vs balance */}
+        {/* Cost vs balance — the charge happens when you generate on the next step. */}
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
           <div className="flex items-center justify-between text-sm">
             <span className="text-zinc-600 dark:text-zinc-300">Estimated cost</span>
@@ -261,25 +257,19 @@ export default function NewEbookPage() {
               {balance === null ? "…" : `${balance} credits`}
             </span>
           </div>
-          {insufficient && (
-            <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-              <p className="text-sm text-amber-700 dark:text-amber-400">
-                You need {cost} credits but have {balance}. Buy more to continue.
-              </p>
-            </div>
-          )}
+          <p className="mt-3 border-t border-zinc-200 pt-3 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+            {insufficient
+              ? `You'll need ${cost} credits to generate — you can add assets first and buy credits before generating.`
+              : "Next you can upload your own images (optional), then generate. Credits are only charged when you generate."}
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
-          {insufficient ? (
-            <ButtonLink href="/billing">Buy credits</ButtonLink>
-          ) : (
-            <Button type="submit" loading={submitting} disabled={balance === null}>
-              Generate ebook — {cost} credits
-            </Button>
-          )}
+          <Button type="submit" loading={submitting}>
+            Continue → add assets
+          </Button>
           <span className="text-xs text-zinc-400">
-            This can take several minutes — you can watch the progress on the next screen.
+            Next: upload any images you want in the book, then generate.
           </span>
         </div>
       </form>
