@@ -181,6 +181,29 @@ export const ebookApi = {
     });
   },
 
+  /**
+   * Fetch the browser-ready HTML preview of the book (needs the Authorization
+   * header — the endpoint returns a self-contained HTML document, not JSON).
+   * The editor renders this in a sandboxed iframe and paginates it client-side.
+   */
+  async previewHtml(token: string, id: string): Promise<string> {
+    const res = await fetch(`${API_URL}/api/ebooks/${id}/preview`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      let message = `Preview failed (${res.status})`;
+      try {
+        const obj = JSON.parse(text);
+        if (obj?.message) message = obj.message;
+      } catch {
+        /* keep default */
+      }
+      throw new ApiError(message, res.status);
+    }
+    return res.text();
+  },
+
   /** Download the finished PDF as a Blob (needs the Authorization header). */
   async download(token: string, id: string): Promise<Blob> {
     const res = await fetch(`${API_URL}/api/ebooks/${id}/download`, {

@@ -10,6 +10,7 @@ import type { EbookContentResponse } from "@/lib/types";
 import { markdownToHtml, htmlToMarkdown, resolveEbookImages } from "@/lib/markdown";
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/rich-text-editor";
 import { AssetManager } from "@/components/asset-manager";
+import { EbookPreview } from "@/components/ebook-preview";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
 
 /**
@@ -58,6 +59,8 @@ export default function EbookEditPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [forceBuild, setForceBuild] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
 
   const builtRef = useRef(false);
   const editorRef = useRef<RichTextEditorHandle>(null);
@@ -245,6 +248,8 @@ export default function EbookEditPage() {
       setActiveKey(keep?.key ?? null);
       setDirty(false);
       setSaved(true);
+      // The saved manuscript is what the preview renders — reload it.
+      setPreviewKey((k) => k + 1);
       // Placement/usage may have changed; refresh the asset panel.
       assets.refresh();
     } catch (err) {
@@ -293,7 +298,7 @@ export default function EbookEditPage() {
   const canRemove = chapters.length > 1;
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className={`mx-auto ${showPreview ? "max-w-[110rem]" : "max-w-6xl"}`}>
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
@@ -308,6 +313,13 @@ export default function EbookEditPage() {
         <div className="flex items-center gap-3">
           {saved && !dirty && <span className="text-sm text-good">Saved ✓</span>}
           {dirty && <span className="text-sm text-muted">Unsaved changes</span>}
+          <Button
+            variant="secondary"
+            onClick={() => setShowPreview((v) => !v)}
+            aria-pressed={showPreview}
+          >
+            {showPreview ? "Hide preview" : "Preview book"}
+          </Button>
           <Button onClick={save} loading={saving} disabled={!dirty}>
             Save changes
           </Button>
@@ -326,8 +338,10 @@ export default function EbookEditPage() {
         PDF. Editing is free.
       </p>
 
-      {/* Editor + chapter navigation */}
-      <div className="mt-6 grid gap-6 md:grid-cols-[14rem_1fr]">
+      {/* Editor world (left) + faithful preview (right) */}
+      <div className={`mt-6 ${showPreview ? "grid gap-6 xl:grid-cols-2 xl:items-start" : ""}`}>
+        <div className="min-w-0">
+          <div className="grid gap-6 md:grid-cols-[14rem_1fr]">
         {/* Chapter list */}
         <aside className="md:sticky md:top-6 md:self-start">
           <h2 className="mb-2 text-sm font-semibold text-foreground-2">Chapters</h2>
@@ -447,6 +461,19 @@ export default function EbookEditPage() {
             <p className="text-sm text-muted">This ebook has no chapters to edit.</p>
           )}
         </section>
+          </div>
+        </div>
+        {showPreview && (
+          <div className="xl:sticky xl:top-6 xl:self-start xl:h-[calc(100vh-7rem)]">
+            <EbookPreview
+              token={token}
+              ebookId={id}
+              refreshKey={previewKey}
+              dirty={dirty}
+              onSave={save}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
