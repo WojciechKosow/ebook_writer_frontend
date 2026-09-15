@@ -7,6 +7,14 @@ import Image from "@tiptap/extension-image";
  * persisting the transient blob URL that is only used for on-screen preview.
  */
 export const EbookImage = Image.extend({
+  // Block-level (its own "section" between paragraphs) and draggable, so the
+  // author can drag an image to move it between text blocks — ProseMirror drops
+  // it at a block boundary, never inside a sentence. This is the placement model
+  // the backend stores: the image token's position between paragraphs.
+  inline: false,
+  group: "block",
+  draggable: true,
+
   addAttributes() {
     return {
       ...this.parent?.(),

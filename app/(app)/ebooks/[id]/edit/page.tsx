@@ -145,6 +145,24 @@ export default function EbookEditPage() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
+  // Asset changes (cover, resize, placement, add/remove) persist immediately and
+  // re-render the book server-side, so refresh the preview when the assets change
+  // — not only on a chapter save. Skips the first (initial load) signature.
+  const assetSignature = useMemo(
+    () =>
+      assets.assets
+        .map((a) => `${a.id}:${a.placement}:${a.displayWidthPercent ?? ""}`)
+        .join("|"),
+    [assets.assets],
+  );
+  const prevAssetSig = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevAssetSig.current !== null && prevAssetSig.current !== assetSignature) {
+      setPreviewKey((k) => k + 1);
+    }
+    prevAssetSig.current = assetSignature;
+  }, [assetSignature]);
+
   const activeIndex = useMemo(
     () => chapters.findIndex((c) => c.key === activeKey),
     [chapters, activeKey],
