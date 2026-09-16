@@ -61,6 +61,7 @@ export default function EbookEditPage() {
   const [forceBuild, setForceBuild] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
+  const [revision, setRevision] = useState(0);
 
   const builtRef = useRef(false);
   const editorRef = useRef<RichTextEditorHandle>(null);
@@ -172,7 +173,22 @@ export default function EbookEditPage() {
   const touch = useCallback(() => {
     setDirty(true);
     setSaved(false);
+    // Drives the live preview's debounced refresh.
+    setRevision((r) => r + 1);
   }, []);
+
+  // The editor's current content as the preview endpoint expects it (Markdown).
+  // Built on demand (once per debounce) rather than on every keystroke.
+  const buildPreviewContent = useCallback(
+    () => ({
+      chapters: chapters.map((c) => ({
+        id: c.id,
+        title: c.title,
+        content: htmlToMarkdown(c.html),
+      })),
+    }),
+    [chapters],
+  );
 
   const patchActive = useCallback(
     (patch: Partial<EditableChapter>) => {
@@ -489,6 +505,9 @@ export default function EbookEditPage() {
               refreshKey={previewKey}
               dirty={dirty}
               onSave={save}
+              live
+              revision={revision}
+              buildContent={buildPreviewContent}
             />
           </div>
         )}

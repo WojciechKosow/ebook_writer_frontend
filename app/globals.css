@@ -204,4 +204,6 @@ body {
 .rte-content img:hover { outline: 2px dashed var(--hairline-2); outline-offset: 2px; }
 .rte-content img:active { cursor: grabbing; }
 .rte-content img.ProseMirror-selectednode { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Drop indicator while dragging an image between blocks (prosemirror-dropcursor). */
+.ebook-dropcursor { background-color: var(--accent); border-radius: 3px; }
 /* Placeholder shown when a chapter is empty is handled in-app, not here. */

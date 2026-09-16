@@ -32,7 +32,15 @@ export const RichTextEditor = forwardRef<
   }
 >(function RichTextEditor({ html, editable = true, onChange }, ref) {
   const editor = useEditor({
-    extensions: [StarterKit, EbookImage],
+    extensions: [
+      StarterKit.configure({
+        // The drop indicator shown while dragging an image between blocks:
+        // a thick accent line at the block boundary it'll land on. Colored via
+        // CSS (.ebook-dropcursor) so it follows the light/dark accent token.
+        dropcursor: { width: 3, color: false, class: "ebook-dropcursor" },
+      }),
+      EbookImage,
+    ],
     content: html,
     editable,
     // Required for SSR (Next.js) to avoid a hydration mismatch.
