@@ -204,6 +204,35 @@ export const ebookApi = {
     return res.text();
   },
 
+  /**
+   * Render a live preview from the editor's current (unsaved) content. Posts the
+   * working chapters and returns the same self-contained HTML as `previewHtml`,
+   * built from what was sent rather than the stored manuscript. Nothing is saved.
+   */
+  async previewHtmlLive(
+    token: string,
+    id: string,
+    input: EbookContentUpdateInput,
+  ): Promise<string> {
+    const res = await fetch(`${API_URL}/api/ebooks/${id}/preview`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      let message = `Preview failed (${res.status})`;
+      try {
+        const obj = JSON.parse(text);
+        if (obj?.message) message = obj.message;
+      } catch {
+        /* keep default */
+      }
+      throw new ApiError(message, res.status);
+    }
+    return res.text();
+  },
+
   /** Download the finished PDF as a Blob (needs the Authorization header). */
   async download(token: string, id: string): Promise<Blob> {
     const res = await fetch(`${API_URL}/api/ebooks/${id}/download`, {
