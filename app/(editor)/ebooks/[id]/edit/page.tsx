@@ -4,13 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
 import { useAssets } from "@/lib/use-assets";
 import type { EbookContentResponse } from "@/lib/types";
 import { markdownToHtml, htmlToMarkdown, resolveEbookImages } from "@/lib/markdown";
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/rich-text-editor";
-import { AssetManager } from "@/components/asset-manager";
 import { EbookPreview } from "@/components/ebook-preview";
+import { EditorShell, type EditorPanel } from "@/components/editor/editor-shell";
+import { ChaptersPanel } from "@/components/editor/chapters-panel";
+import { ImageLibraryPanel } from "@/components/editor/image-library-panel";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
 
 /**
@@ -47,6 +51,7 @@ export default function EbookEditPage() {
   const params = useParams();
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
   const { token } = useAuth();
+  const credits = useCredits();
   const assets = useAssets(token, id);
 
   const [meta, setMeta] = useState<EbookContentResponse | null>(null);
@@ -59,7 +64,7 @@ export default function EbookEditPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [forceBuild, setForceBuild] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const [previewKey, setPreviewKey] = useState(0);
   const [revision, setRevision] = useState(0);
 
@@ -293,9 +298,11 @@ export default function EbookEditPage() {
     }
   }, [token, id, chapters, activeIndex, resolve, assets]);
 
+  // ---- Loading / gate states (rendered full-screen, no app chrome) ----------
+
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted">
+      <div className="flex h-full items-center justify-center gap-2 text-sm text-muted">
         <Spinner /> Loading your manuscript…
       </div>
     );
@@ -303,20 +310,20 @@ export default function EbookEditPage() {
 
   if (error && !meta) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <CenteredCard>
         <Alert>{error}</Alert>
         <div className="mt-4">
           <ButtonLink href="/dashboard" variant="secondary">
             Back to your ebooks
           </ButtonLink>
         </div>
-      </div>
+      </CenteredCard>
     );
   }
 
   if (meta && !meta.editable) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <CenteredCard>
         <Alert variant="info">
           This ebook isn&apos;t ready to edit yet — it&apos;s still being generated.
         </Alert>
@@ -325,193 +332,159 @@ export default function EbookEditPage() {
             Back to this ebook
           </ButtonLink>
         </div>
-      </div>
+      </CenteredCard>
     );
   }
 
   const canRemove = chapters.length > 1;
 
-  return (
-    <div className={`mx-auto ${showPreview ? "max-w-[110rem]" : "max-w-6xl"}`}>
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <Link href={`/ebooks/${id}`} className="text-sm text-muted hover:underline">
-            ← Back to this ebook
-          </Link>
-          <h1 className="mt-2 truncate text-2xl font-semibold tracking-tight text-foreground">
-            {meta?.title || "Edit your ebook"}
-          </h1>
-          {meta?.subtitle && <p className="mt-1 text-muted">{meta.subtitle}</p>}
-        </div>
-        <div className="flex items-center gap-3">
-          {saved && !dirty && <span className="text-sm text-good">Saved ✓</span>}
-          {dirty && <span className="text-sm text-muted">Unsaved changes</span>}
-          <Button
-            variant="secondary"
-            onClick={() => setShowPreview((v) => !v)}
-            aria-pressed={showPreview}
-          >
-            {showPreview ? "Hide preview" : "Preview book"}
-          </Button>
-          <Button onClick={save} loading={saving} disabled={!dirty}>
-            Save changes
-          </Button>
-        </div>
+  const panels: EditorPanel[] = [
+    {
+      key: "chapters",
+      label: "Chapters",
+      icon: <IconChapters />,
+      content: (
+        <ChaptersPanel
+          chapters={chapters}
+          activeKey={activeKey}
+          onSelect={setActiveKey}
+          onAdd={addChapter}
+          onMove={move}
+          onRemove={removeChapter}
+          canRemove={canRemove}
+        />
+      ),
+    },
+    {
+      key: "images",
+      label: "Images",
+      icon: <IconImages />,
+      content: <ImageLibraryPanel state={assets} onInsert={insertAsset} />,
+    },
+  ];
+
+  const header = (
+    <>
+      <Link
+        href={`/ebooks/${id}`}
+        className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+        title="Back to this ebook"
+      >
+        <span aria-hidden>←</span>
+        <span className="hidden sm:inline">Back</span>
+      </Link>
+      <div className="mx-1 h-6 w-px bg-hairline" aria-hidden />
+      <div className="min-w-0">
+        <h1 className="truncate text-sm font-semibold text-foreground">
+          {meta?.title || "Edit your ebook"}
+        </h1>
+        {meta?.subtitle && <p className="truncate text-xs text-muted">{meta.subtitle}</p>}
       </div>
 
+      <div className="ml-auto flex items-center gap-2">
+        {saved && !dirty && <span className="hidden text-xs text-good sm:inline">Saved ✓</span>}
+        {dirty && <span className="hidden text-xs text-muted sm:inline">Unsaved changes</span>}
+        <span
+          className="hidden items-center gap-1 rounded-full border border-hairline-2 bg-surface px-2.5 py-1 text-xs text-muted md:inline-flex"
+          title="Editing is free; credits are only used to generate a book"
+        >
+          <b className="tabular-nums text-foreground-2">{credits?.balance ?? "…"}</b> credits
+        </span>
+        <Button
+          variant="secondary"
+          onClick={() => setShowPreview((v) => !v)}
+          aria-pressed={showPreview}
+          className="px-3 py-2"
+        >
+          {showPreview ? "Hide preview" : "Preview"}
+        </Button>
+        <Button onClick={save} loading={saving} disabled={!dirty} className="px-3 py-2">
+          Save
+        </Button>
+        <ThemeToggle />
+      </div>
+    </>
+  );
+
+  return (
+    <EditorShell
+      header={header}
+      panels={panels}
+      showPreview={showPreview}
+      preview={
+        <EbookPreview
+          token={token}
+          ebookId={id}
+          refreshKey={previewKey}
+          dirty={dirty}
+          onSave={save}
+          live
+          revision={revision}
+          buildContent={buildPreviewContent}
+        />
+      }
+    >
       {error && (
-        <div className="mt-4">
+        <div className="mb-4">
           <Alert>{error}</Alert>
         </div>
       )}
 
-      <p className="mt-2 text-xs text-faint">
-        Add, remove or reorder chapters and edit their text and images. Use the Assets panel to
-        insert an image into the chapter you&apos;re editing. Saving re-renders the downloadable
-        PDF. Editing is free.
-      </p>
+      {active ? (
+        <>
+          <input
+            value={active.title}
+            onChange={(e) => patchActive({ title: e.target.value })}
+            placeholder={`Chapter ${activeIndex + 1} title`}
+            aria-label="Chapter title"
+            className="mb-3 w-full rounded-xl border border-hairline-2 bg-surface px-3.5 py-2.5 text-lg font-semibold text-foreground placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+          />
+          <RichTextEditor
+            key={active.key}
+            ref={editorRef}
+            html={active.html}
+            onChange={(html) => patchActive({ html })}
+          />
+          <p className="mt-3 text-xs text-faint">
+            Chapter {activeIndex + 1} of {chapters.length}. Use the <strong>Images</strong> panel to
+            drop a picture into this chapter; select an image to align it. Saving re-renders the
+            downloadable PDF.
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-muted">This ebook has no chapters to edit.</p>
+      )}
+    </EditorShell>
+  );
+}
 
-      {/* Editor world (left) + faithful preview (right) */}
-      <div className={`mt-6 ${showPreview ? "grid gap-6 xl:grid-cols-2 xl:items-start" : ""}`}>
-        <div className="min-w-0">
-          <div className="grid gap-6 md:grid-cols-[14rem_1fr]">
-        {/* Chapter list */}
-        <aside className="md:sticky md:top-6 md:self-start">
-          <h2 className="mb-2 text-sm font-semibold text-foreground-2">Chapters</h2>
-          <ul className="flex flex-col gap-1">
-            {chapters.map((c, i) => {
-              const isActive = c.key === activeKey;
-              return (
-                <li key={c.key}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveKey(c.key)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                      isActive
-                        ? "bg-accent-soft text-accent-ink"
-                        : "text-foreground-2 hover:bg-surface-2"
-                    }`}
-                  >
-                    <span className="shrink-0 tabular-nums text-xs text-faint">{i + 1}</span>
-                    <span className="min-w-0 flex-1 truncate">
-                      {c.title || `Chapter ${i + 1}`}
-                    </span>
-                    {!c.id && (
-                      <span className="shrink-0 rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold text-accent-ink">
-                        new
-                      </span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <button
-            type="button"
-            onClick={addChapter}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-hairline-2 px-3 py-2 text-sm text-foreground-2 transition-colors hover:border-accent hover:text-accent-ink"
-          >
-            + Add chapter
-          </button>
-        </aside>
-
-        {/* Active chapter editor */}
-        <section className="min-w-0">
-          {active ? (
-            <>
-              {/* Per-chapter controls: reorder + delete */}
-              <div className="mb-3 flex items-center gap-2">
-                <span className="text-sm text-muted">
-                  Chapter {activeIndex + 1} of {chapters.length}
-                </span>
-                <div className="ml-auto flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    onClick={() => move(active.key, -1)}
-                    disabled={activeIndex === 0}
-                    aria-label="Move chapter up"
-                    title="Move up"
-                  >
-                    ↑
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => move(active.key, 1)}
-                    disabled={activeIndex === chapters.length - 1}
-                    aria-label="Move chapter down"
-                    title="Move down"
-                  >
-                    ↓
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          `Delete "${active.title || `Chapter ${activeIndex + 1}`}"? This can't be undone once you save.`,
-                        )
-                      ) {
-                        removeChapter(active.key);
-                      }
-                    }}
-                    disabled={!canRemove}
-                    title={canRemove ? "Delete chapter" : "A book needs at least one chapter"}
-                    className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-
-              <input
-                value={active.title}
-                onChange={(e) => patchActive({ title: e.target.value })}
-                placeholder={`Chapter ${activeIndex + 1} title`}
-                aria-label="Chapter title"
-                className="mb-3 w-full rounded-xl border border-hairline-2 bg-surface px-3.5 py-2.5 text-lg font-semibold text-foreground placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
-              />
-              <RichTextEditor
-                key={active.key}
-                ref={editorRef}
-                html={active.html}
-                onChange={(html) => patchActive({ html })}
-              />
-
-              {/* Assets */}
-              <div className="mt-8 rounded-xl border border-hairline bg-surface-2 p-4">
-                <h2 className="text-sm font-semibold text-foreground-2">Assets</h2>
-                <p className="mt-1 text-xs text-muted">
-                  Upload images or reuse ones from this project. <strong>Insert</strong> places an
-                  image in the chapter you&apos;re editing (or replaces the selected image). Set a
-                  cover, adjust an image&apos;s width, or remove it. Changes save with the book.
-                </p>
-                <div className="mt-4">
-                  <AssetManager state={assets} mode="editor" onInsert={(a) => insertAsset(a.id)} />
-                </div>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-muted">This ebook has no chapters to edit.</p>
-          )}
-        </section>
-          </div>
-        </div>
-        {showPreview && (
-          <div className="xl:sticky xl:top-6 xl:self-start xl:h-[calc(100vh-7rem)]">
-            <EbookPreview
-              token={token}
-              ebookId={id}
-              refreshKey={previewKey}
-              dirty={dirty}
-              onSave={save}
-              live
-              revision={revision}
-              buildContent={buildPreviewContent}
-            />
-          </div>
-        )}
-      </div>
+function CenteredCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-full items-center justify-center p-6">
+      <div className="w-full max-w-md">{children}</div>
     </div>
+  );
+}
+
+function IconChapters() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  );
+}
+
+function IconImages() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.5-3.5a2 2 0 0 0-2.8 0L5 21" />
+    </svg>
   );
 }
