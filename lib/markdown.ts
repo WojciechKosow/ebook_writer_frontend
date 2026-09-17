@@ -21,8 +21,39 @@ const turndown = new TurndownService({
   emDelimiter: "*",
 });
 
-// An asset image round-trips to its stable token, regardless of the (transient)
-// blob URL currently in its src.
+/** The horizontal alignments an inline image can carry. */
+const ALIGNS = new Set(["left", "center", "right"]);
+
+/** Coerce an arbitrary alignment string to a safe value (defaults to centre). */
+function normalizeAlign(value: string | null | undefined): "left" | "center" | "right" {
+  return value && ALIGNS.has(value) ? (value as "left" | "center" | "right") : "center";
+}
+
+/** Escape a string for safe use inside a double-quoted HTML attribute. */
+function escapeAttr(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// An asset image round-trips to its stable `ebook-image:<id>` reference,
+// regardless of the (transient) blob URL currently in its src.
+//
+// We deliberately emit a small raw-HTML block instead of a plain `![](…)` image.
+// Both the on-screen preview and the downloadable PDF are produced by the same
+// backend from this Markdown, but they render with different engines: the
+// preview runs in a browser, the PDF in openhtmltopdf. A browser centres a
+// block image with `margin:auto`, but openhtmltopdf ignores auto margins on
+// images and left-aligns them — so a centred image in the preview "escaped" to
+// the left in the PDF. Wrapping the image in a block with `text-align` and
+// making the image `inline-block` centres/aligns it identically in *both*
+// engines, so the PDF matches the preview 1:1. commonmark (backend) and marked
+// (this file, on load) both pass the HTML block through untouched, and the
+// render pipeline still rewrites the `ebook-image:` src and applies the stored
+// display width. `data-align` on the <img> is what lets the alignment round-trip
+// back into the editor on the next load.
 turndown.addRule("ebookImage", {
   filter: (node) =>
     node.nodeName === "IMG" && !!(node as HTMLElement).getAttribute("data-ebook-image-id"),
@@ -30,7 +61,12 @@ turndown.addRule("ebookImage", {
     const el = node as HTMLElement;
     const id = el.getAttribute("data-ebook-image-id");
     const alt = el.getAttribute("alt") || "";
-    return `\n\n![${alt}](ebook-image:${id})\n\n`;
+    const align = normalizeAlign(el.getAttribute("data-align"));
+    return (
+      `\n\n<div class="ebook-figure" style="text-align:${align}">` +
+      `<img src="ebook-image:${id}" alt="${escapeAttr(alt)}" data-align="${align}"` +
+      ` style="display:inline-block;max-width:100%"/></div>\n\n`
+    );
   },
 });
 
@@ -57,24 +93,31 @@ export interface ResolvedImage {
 
 /**
  * Rewrite `<img src="ebook-image:<id>">` tokens produced from the Markdown into
- * displayable `<img>`s: swap the src for the resolver's blob URL, tag the
- * element with `data-ebook-image-id` (so it round-trips back to a token on
- * save), and apply any stored display width. A token with no resolved asset is
- * left untouched.
+ * displayable `<img>`s the editor can load: swap the src for the resolver's blob
+ * URL, tag the element with `data-ebook-image-id` (so it round-trips back to a
+ * token on save), carry the stored alignment (`data-align`), and apply any
+ * stored display width. Each matched image is rebuilt from scratch so the editor
+ * gets a clean, single-`style` tag (the stored Markdown carries a render-only
+ * inline style that the editor styles via CSS instead). A token with no resolved
+ * asset is left untouched. Also handles legacy plain `![](ebook-image:<id>)`
+ * images, which have no `data-align` and default to centre.
  */
 export function resolveEbookImages(
   html: string,
   resolve: (id: string) => ResolvedImage | undefined,
 ): string {
-  return html.replace(/<img\b[^>]*>/g, (tag) => {
-    const m = tag.match(/src="ebook-image:([^"]+)"/);
+  return html.replace(/<img\b[^>]*>/gi, (tag) => {
+    const m = tag.match(/src=["']ebook-image:([^"']+)["']/i);
     if (!m) return tag;
     const id = m[1];
     const resolved = resolve(id);
     if (!resolved) return tag;
-    let out = tag.replace(/src="ebook-image:[^"]+"/, `src="${resolved.url}"`);
+    const alt = tag.match(/\balt=["']([^"']*)["']/i)?.[1] ?? "";
+    const align = normalizeAlign(tag.match(/\bdata-align=["']([^"']*)["']/i)?.[1]);
     const style = resolved.widthPercent ? ` style="width:${resolved.widthPercent}%"` : "";
-    out = out.replace(/\s*\/?>$/, ` data-ebook-image-id="${id}"${style}>`);
-    return out;
+    return (
+      `<img src="${resolved.url}" alt="${escapeAttr(alt)}"` +
+      ` data-ebook-image-id="${id}" data-align="${align}"${style}>`
+    );
   });
 }

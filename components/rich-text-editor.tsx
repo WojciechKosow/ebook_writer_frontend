@@ -149,6 +149,10 @@ function Toolbar({ editor }: { editor: Editor }) {
 
       <Divider />
 
+      <ImageAlignButtons editor={editor} />
+
+      <Divider />
+
       <ToolButton
         label="Undo"
         onClick={() => editor.chain().focus().undo().run()}
@@ -164,6 +168,55 @@ function Toolbar({ editor }: { editor: Editor }) {
         ↷
       </ToolButton>
     </div>
+  );
+}
+
+/**
+ * Left / centre / right alignment for the selected image. The buttons are only
+ * enabled when an image is selected; each sets the image node's `data-align`,
+ * which drives both the in-editor placement and the alignment saved into the
+ * Markdown (so the preview and PDF match).
+ */
+function ImageAlignButtons({ editor }: { editor: Editor }) {
+  const imageActive = editor.isActive("image");
+  const current = imageActive
+    ? ((editor.getAttributes("image")["data-align"] as string) || "center")
+    : null;
+
+  const options: { value: "left" | "center" | "right"; label: string }[] = [
+    { value: "left", label: "Align image left" },
+    { value: "center", label: "Center image" },
+    { value: "right", label: "Align image right" },
+  ];
+
+  return (
+    <>
+      {options.map(({ value, label }) => (
+        <ToolButton
+          key={value}
+          label={label}
+          active={current === value}
+          disabled={!imageActive}
+          onClick={() =>
+            editor.chain().focus().updateAttributes("image", { "data-align": value }).run()
+          }
+        >
+          <AlignIcon align={value} />
+        </ToolButton>
+      ))}
+    </>
+  );
+}
+
+/** Small alignment glyph: a framed picture pushed to one side of the column. */
+function AlignIcon({ align }: { align: "left" | "center" | "right" }) {
+  const x = align === "left" ? 2 : align === "right" ? 8 : 5;
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden fill="none">
+      <line x1="1" y1="2.5" x2="15" y2="2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <rect x={x} y="5" width="6" height="6" rx="1" fill="currentColor" />
+      <line x1="1" y1="13.5" x2="15" y2="13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
   );
 }
 
