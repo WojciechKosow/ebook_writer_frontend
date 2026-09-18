@@ -191,7 +191,8 @@ export const RichTextEditor = forwardRef<
           editor={editor}
           shouldShow={({ editor }) => editor.isActive("image")}
           appendTo={() => document.body}
-          options={{ placement: "top-end", offset: 8, strategy: "fixed" }}
+          options={{ placement: "top-end", offset: 10, strategy: "fixed", flip: true, shift: { padding: 8 } }}
+          className="imgmenu"
         >
           {/* Remount per selected image so the menu opens fresh (collapsed). */}
           <ImageOptionsMenu key={selectedImageId ?? "none"} editor={editor} onSetWidth={onImageSetWidth} />
@@ -373,27 +374,30 @@ function ImageOptionsMenu({
   ];
 
   return (
-    <div className="relative">
+    <div className="imgmenu-trigger relative">
       <button
         type="button"
         aria-label="Image options"
         aria-expanded={open}
         title="Image options"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-hairline-2 bg-surface text-lg leading-none text-foreground-2 shadow-soft transition-colors hover:bg-surface-2"
+        className={`flex h-8 items-center gap-1.5 rounded-full border border-hairline-2 bg-surface/95 px-2.5 text-foreground-2 shadow-lg backdrop-blur transition-all hover:bg-surface-2 hover:text-foreground active:scale-95 ${
+          open ? "bg-surface-2 text-foreground ring-2 ring-accent/30" : ""
+        }`}
       >
-        ⋯
+        <IconDots />
+        <span className="text-xs font-medium">Edit</span>
       </button>
 
       {open && (
         <>
           {/* Click-away catcher */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
-          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-hairline-2 bg-surface p-1.5 shadow-soft">
-            <p className="px-1.5 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-faint">
+          <div className="imgmenu-pop absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-hairline-2 bg-surface p-2 shadow-xl">
+            <p className="px-1 pb-1.5 pt-0.5 text-[10px] font-semibold uppercase tracking-wider text-faint">
               Align
             </p>
-            <div className="flex gap-1">
+            <div className="flex gap-1 rounded-xl bg-surface-2 p-1">
               {(["left", "center", "right"] as const).map((v) => (
                 <button
                   key={v}
@@ -401,8 +405,10 @@ function ImageOptionsMenu({
                   onClick={() => setAlign(v)}
                   aria-label={`Align ${v}`}
                   aria-pressed={align === v}
-                  className={`flex flex-1 items-center justify-center rounded-md py-1.5 transition-colors ${
-                    align === v ? "bg-accent-soft text-accent-ink" : "text-foreground-2 hover:bg-surface-2"
+                  className={`flex flex-1 items-center justify-center rounded-lg py-1.5 transition-colors ${
+                    align === v
+                      ? "bg-surface text-accent-ink shadow-soft"
+                      : "text-foreground-2 hover:text-foreground"
                   }`}
                 >
                   <AlignIcon align={v} />
@@ -412,18 +418,20 @@ function ImageOptionsMenu({
 
             {onSetWidth && (
               <>
-                <p className="px-1.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-faint">
+                <p className="px-1 pb-1.5 pt-3 text-[10px] font-semibold uppercase tracking-wider text-faint">
                   Width
                 </p>
-                <div className="flex gap-1">
+                <div className="flex gap-1 rounded-xl bg-surface-2 p-1">
                   {widths.map(({ label, pct }) => (
                     <button
                       key={pct}
                       type="button"
                       onClick={() => setWidth(pct)}
                       aria-pressed={width === pct}
-                      className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${
-                        width === pct ? "bg-accent-soft text-accent-ink" : "text-foreground-2 hover:bg-surface-2"
+                      className={`flex-1 rounded-lg py-1 text-xs font-semibold transition-colors ${
+                        width === pct
+                          ? "bg-surface text-accent-ink shadow-soft"
+                          : "text-foreground-2 hover:text-foreground"
                       }`}
                     >
                       {label}
@@ -433,11 +441,11 @@ function ImageOptionsMenu({
               </>
             )}
 
-            <div className="my-1.5 h-px bg-hairline-2" />
+            <div className="my-2 h-px bg-hairline-2" />
             <button
               type="button"
               onClick={removeFromPage}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/40"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/40"
             >
               <IconTrash /> Remove from page
             </button>
@@ -445,6 +453,16 @@ function ImageOptionsMenu({
         </>
       )}
     </div>
+  );
+}
+
+function IconDots() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <circle cx="3" cy="8" r="1.5" />
+      <circle cx="8" cy="8" r="1.5" />
+      <circle cx="13" cy="8" r="1.5" />
+    </svg>
   );
 }
 
