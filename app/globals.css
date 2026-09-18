@@ -218,7 +218,7 @@ body {
 /* The plugin toggles inline `opacity`/`visibility` to show/hide the menu, so a
    transition on opacity fades it in and out. `transform` is left alone —
    Floating UI owns it for positioning. */
-.imgmenu { transition: opacity 0.18s ease; will-change: opacity; }
+.imgmenu { z-index: 40; transition: opacity 0.18s ease; will-change: opacity; }
 /* The "•••" trigger pill gets a soft entrance the first time it mounts for a
    given image. */
 .imgmenu-trigger { animation: imgmenu-trigger-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both; }
