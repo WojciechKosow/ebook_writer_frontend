@@ -33,6 +33,7 @@ export function EditorShell({
   children,
   preview,
   showPreview,
+  defaultPanelKey,
 }: {
   header: ReactNode;
   panels: EditorPanel[];
@@ -40,8 +41,12 @@ export function EditorShell({
   children: ReactNode;
   preview: ReactNode;
   showPreview: boolean;
+  /** Which panel is open on first render (defaults to the first one). */
+  defaultPanelKey?: string;
 }) {
-  const [activeKey, setActiveKey] = useState<string | null>(panels[0]?.key ?? null);
+  const [activeKey, setActiveKey] = useState<string | null>(
+    defaultPanelKey ?? panels[0]?.key ?? null,
+  );
   const active = panels.find((p) => p.key === activeKey) ?? null;
 
   const bodyRef = useRef<HTMLDivElement>(null);

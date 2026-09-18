@@ -14,6 +14,7 @@ import { EbookPreview } from "@/components/ebook-preview";
 import { EditorShell, type EditorPanel } from "@/components/editor/editor-shell";
 import { ChaptersPanel } from "@/components/editor/chapters-panel";
 import { ImageLibraryPanel } from "@/components/editor/image-library-panel";
+import { CoverPanel } from "@/components/editor/cover-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
 
@@ -359,6 +360,12 @@ export default function EbookEditPage() {
 
   const panels: EditorPanel[] = [
     {
+      key: "cover",
+      label: "Cover",
+      icon: <IconCover />,
+      content: <CoverPanel state={assets} title={meta?.title} subtitle={meta?.subtitle} />,
+    },
+    {
       key: "chapters",
       label: "Chapters",
       icon: <IconChapters />,
@@ -429,6 +436,7 @@ export default function EbookEditPage() {
     <EditorShell
       header={header}
       panels={panels}
+      defaultPanelKey="chapters"
       showPreview={showPreview}
       preview={
         <EbookPreview
@@ -486,6 +494,17 @@ function CenteredCard({ children }: { children: React.ReactNode }) {
     <div className="flex h-full items-center justify-center p-6">
       <div className="w-full max-w-md">{children}</div>
     </div>
+  );
+}
+
+function IconCover() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 3v18" />
+      <circle cx="14.5" cy="9" r="1.5" />
+      <path d="m11 16 2.5-2.5L20 20" />
+    </svg>
   );
 }
 
