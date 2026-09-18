@@ -2,8 +2,24 @@
 
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { forwardRef, useImperativeHandle, type ReactNode } from "react";
+import { forwardRef, useImperativeHandle, useState, type ReactNode } from "react";
 import { EbookImage } from "./ebook-image-extension";
+
+/**
+ * The `dataTransfer` type used when an asset is dragged from the Images panel
+ * onto the editor. Shared with the image library panel so both sides agree on
+ * the payload (the asset id). A private, app-specific MIME type keeps the drop
+ * handler from reacting to arbitrary files/text dragged in.
+ */
+export const ASSET_DND_TYPE = "application/x-ebook-image";
+
+/** The resolved image an asset id maps to when dropped (see resolveDropImage). */
+export interface DropImage {
+  id: string;
+  url: string;
+  alt?: string;
+  widthPercent?: number | null;
+}
 
 /** What the page can drive on the editor imperatively (e.g. insert an asset). */
 export interface RichTextEditorHandle {
@@ -29,8 +45,15 @@ export const RichTextEditor = forwardRef<
     html: string;
     editable?: boolean;
     onChange: (html: string) => void;
+    /**
+     * Resolve an asset id (dragged from the Images panel) to a displayable
+     * image. When provided, the author can drag a thumbnail onto the page and it
+     * is inserted at the drop point. Returning undefined cancels the drop.
+     */
+    resolveDropImage?: (assetId: string) => DropImage | undefined;
   }
->(function RichTextEditor({ html, editable = true, onChange }, ref) {
+>(function RichTextEditor({ html, editable = true, onChange, resolveDropImage }, ref) {
+  const [dropActive, setDropActive] = useState(false);
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -78,6 +101,48 @@ export const RichTextEditor = forwardRef<
     [editor],
   );
 
+  const isAssetDrag = (e: React.DragEvent) =>
+    Array.from(e.dataTransfer.types).includes(ASSET_DND_TYPE);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!editable || !resolveDropImage || !isAssetDrag(e)) return;
+    // Required so the browser fires a `drop`; only for our own asset drags, so
+    // ProseMirror's native image drag-between-blocks is left untouched.
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    if (!dropActive) setDropActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!isAssetDrag(e)) return;
+    // Ignore moves between children — only clear when leaving the drop area.
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+    setDropActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!editable || !resolveDropImage || !isAssetDrag(e) || !editor) return;
+    e.preventDefault();
+    setDropActive(false);
+    const assetId = e.dataTransfer.getData(ASSET_DND_TYPE);
+    if (!assetId) return;
+    const img = resolveDropImage(assetId);
+    if (!img) return;
+    const attrs: Record<string, unknown> = {
+      src: img.url,
+      alt: img.alt ?? "",
+      "data-ebook-image-id": img.id,
+      style: img.widthPercent ? `width:${img.widthPercent}%` : null,
+    };
+    // Insert at the drop point (the block boundary the pointer is over), so the
+    // image lands where the author released it — like dragging within the page.
+    const at = editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
+    const chain = editor.chain().focus();
+    if (at) chain.insertContentAt(at.pos, { type: "image", attrs });
+    else chain.insertContent({ type: "image", attrs });
+    chain.run();
+  };
+
   if (!editor) {
     return (
       <div className="min-h-[24rem] rounded-xl border border-hairline-2 bg-surface" />
@@ -87,7 +152,23 @@ export const RichTextEditor = forwardRef<
   return (
     <div className="rounded-xl border border-hairline-2 bg-surface">
       {editable && <Toolbar editor={editor} />}
-      <EditorContent editor={editor} />
+      <div
+        className={`relative rounded-b-xl transition-shadow ${
+          dropActive ? "ring-2 ring-inset ring-accent" : ""
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <EditorContent editor={editor} />
+        {dropActive && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-accent-soft/20">
+            <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white shadow-soft">
+              Drop to place image
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 });
