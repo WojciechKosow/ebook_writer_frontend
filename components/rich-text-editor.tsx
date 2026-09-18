@@ -1,6 +1,7 @@
 "use client";
 
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import { forwardRef, useImperativeHandle, useState, type ReactNode } from "react";
 import { EbookImage } from "./ebook-image-extension";
@@ -51,8 +52,18 @@ export const RichTextEditor = forwardRef<
      * is inserted at the drop point. Returning undefined cancels the drop.
      */
     resolveDropImage?: (assetId: string) => DropImage | undefined;
+    /**
+     * Persist a new display width (percent of the column) for an asset — the
+     * width isn't stored in the chapter Markdown but on the asset itself, so the
+     * image options menu delegates the save here. When omitted, the width control
+     * is hidden.
+     */
+    onImageSetWidth?: (assetId: string, widthPercent: number) => void;
   }
->(function RichTextEditor({ html, editable = true, onChange, resolveDropImage }, ref) {
+>(function RichTextEditor(
+  { html, editable = true, onChange, resolveDropImage, onImageSetWidth },
+  ref,
+) {
   const [dropActive, setDropActive] = useState(false);
   const editor = useEditor({
     extensions: [
@@ -149,6 +160,11 @@ export const RichTextEditor = forwardRef<
     );
   }
 
+  const selectedImageId =
+    editable && editor.isActive("image")
+      ? ((editor.getAttributes("image")["data-ebook-image-id"] as string) ?? "img")
+      : null;
+
   return (
     <div className="rounded-xl border border-hairline-2 bg-surface">
       {editable && <Toolbar editor={editor} />}
@@ -169,6 +185,18 @@ export const RichTextEditor = forwardRef<
           </div>
         )}
       </div>
+
+      {editable && (
+        <BubbleMenu
+          editor={editor}
+          shouldShow={({ editor }) => editor.isActive("image")}
+          appendTo={() => document.body}
+          options={{ placement: "top-end", offset: 8, strategy: "fixed" }}
+        >
+          {/* Remount per selected image so the menu opens fresh (collapsed). */}
+          <ImageOptionsMenu key={selectedImageId ?? "none"} editor={editor} onSetWidth={onImageSetWidth} />
+        </BubbleMenu>
+      )}
     </div>
   );
 });
@@ -297,6 +325,133 @@ function AlignIcon({ align }: { align: "left" | "center" | "right" }) {
       <line x1="1" y1="2.5" x2="15" y2="2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
       <rect x={x} y="5" width="6" height="6" rx="1" fill="currentColor" />
       <line x1="1" y1="13.5" x2="15" y2="13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/**
+ * The floating "•••" options menu for the selected image (Canva-style). Opens a
+ * card over the image with quick alignment, width presets and "Remove from page"
+ * — which deletes the image from this chapter but leaves the asset in the project
+ * library (so it can be reused), rather than deleting it outright.
+ */
+function ImageOptionsMenu({
+  editor,
+  onSetWidth,
+}: {
+  editor: Editor;
+  onSetWidth?: (assetId: string, widthPercent: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const attrs = editor.getAttributes("image");
+  const assetId = (attrs["data-ebook-image-id"] as string) ?? null;
+  const align = ((attrs["data-align"] as string) || "center") as "left" | "center" | "right";
+  const widthMatch = ((attrs["style"] as string) || "").match(/width:\s*(\d+)/);
+  const width = widthMatch ? Number(widthMatch[1]) : 100;
+
+  const setAlign = (v: "left" | "center" | "right") =>
+    editor.chain().focus().updateAttributes("image", { "data-align": v }).run();
+
+  const setWidth = (pct: number) => {
+    // Reflect the new size in the editor immediately, then persist it on the
+    // asset (width lives on the asset, not the chapter Markdown).
+    editor.chain().focus().updateAttributes("image", { style: `width:${pct}%` }).run();
+    if (assetId && onSetWidth) onSetWidth(assetId, pct);
+    setOpen(false);
+  };
+
+  const removeFromPage = () => {
+    editor.chain().focus().deleteSelection().run();
+    setOpen(false);
+  };
+
+  const widths: { label: string; pct: number }[] = [
+    { label: "S", pct: 50 },
+    { label: "M", pct: 75 },
+    { label: "Full", pct: 100 },
+  ];
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-label="Image options"
+        aria-expanded={open}
+        title="Image options"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-hairline-2 bg-surface text-lg leading-none text-foreground-2 shadow-soft transition-colors hover:bg-surface-2"
+      >
+        ⋯
+      </button>
+
+      {open && (
+        <>
+          {/* Click-away catcher */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
+          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-hairline-2 bg-surface p-1.5 shadow-soft">
+            <p className="px-1.5 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-faint">
+              Align
+            </p>
+            <div className="flex gap-1">
+              {(["left", "center", "right"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setAlign(v)}
+                  aria-label={`Align ${v}`}
+                  aria-pressed={align === v}
+                  className={`flex flex-1 items-center justify-center rounded-md py-1.5 transition-colors ${
+                    align === v ? "bg-accent-soft text-accent-ink" : "text-foreground-2 hover:bg-surface-2"
+                  }`}
+                >
+                  <AlignIcon align={v} />
+                </button>
+              ))}
+            </div>
+
+            {onSetWidth && (
+              <>
+                <p className="px-1.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-faint">
+                  Width
+                </p>
+                <div className="flex gap-1">
+                  {widths.map(({ label, pct }) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setWidth(pct)}
+                      aria-pressed={width === pct}
+                      className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${
+                        width === pct ? "bg-accent-soft text-accent-ink" : "text-foreground-2 hover:bg-surface-2"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="my-1.5 h-px bg-hairline-2" />
+            <button
+              type="button"
+              onClick={removeFromPage}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/40"
+            >
+              <IconTrash /> Remove from page
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function IconTrash() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6" />
     </svg>
   );
 }

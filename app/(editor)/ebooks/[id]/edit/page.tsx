@@ -464,6 +464,9 @@ export default function EbookEditPage() {
             html={active.html}
             onChange={(html) => patchActive({ html })}
             resolveDropImage={resolveDropImage}
+            onImageSetWidth={(assetId, pct) => {
+              void assets.update(assetId, { displayWidthPercent: pct });
+            }}
           />
           <p className="mt-3 text-xs text-faint">
             Chapter {activeIndex + 1} of {chapters.length}. Open the <strong>Images</strong> panel and
