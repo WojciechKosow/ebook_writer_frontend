@@ -213,3 +213,28 @@ body {
 /* Drop indicator while dragging an image between blocks (prosemirror-dropcursor). */
 .ebook-dropcursor { background-color: var(--accent); border-radius: 3px; }
 /* Placeholder shown when a chapter is empty is handled in-app, not here. */
+
+/* ---- Floating image options menu (BubbleMenu) ---------------------------- */
+/* The plugin toggles inline `opacity`/`visibility` to show/hide the menu, so a
+   transition on opacity fades it in and out. `transform` is left alone —
+   Floating UI owns it for positioning. */
+.imgmenu { transition: opacity 0.18s ease; will-change: opacity; }
+/* The "•••" trigger pill gets a soft entrance the first time it mounts for a
+   given image. */
+.imgmenu-trigger { animation: imgmenu-trigger-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes imgmenu-trigger-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+/* The options card slides out from the trigger. */
+.imgmenu-pop {
+  transform-origin: top right;
+  animation: imgmenu-pop-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes imgmenu-pop-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .imgmenu, .imgmenu-trigger, .imgmenu-pop { animation: none; transition: none; }
+}
