@@ -190,8 +190,17 @@ export const RichTextEditor = forwardRef<
         <BubbleMenu
           editor={editor}
           shouldShow={({ editor }) => editor.isActive("image")}
-          appendTo={() => document.body}
-          options={{ placement: "top-end", offset: 10, strategy: "fixed", flip: true, shift: { padding: 8 } }}
+          updateDelay={0}
+          // Default positioning (absolute, anchored in the editor's own scroll
+          // container) keeps the menu glued to the image as the canvas scrolls.
+          // A negative offset tucks it into the image's top-right corner — on the
+          // image, not floating above it.
+          options={{
+            placement: "top-end",
+            offset: { mainAxis: -40, crossAxis: -8 },
+            flip: false,
+            shift: false,
+          }}
           className="imgmenu"
         >
           {/* Remount per selected image so the menu opens fresh (collapsed). */}
