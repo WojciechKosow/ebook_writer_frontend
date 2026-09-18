@@ -140,7 +140,7 @@ export function EbookPreview({
     if (!live) return;
     const t = setTimeout(() => {
       load();
-    }, 450);
+    }, 200);
     return () => clearTimeout(t);
   }, [revision, live, load]);
 
@@ -300,7 +300,7 @@ export function EbookPreview({
                 // allow-same-origin, so the (user-uploaded) content stays isolated.
                 sandbox="allow-scripts"
                 srcDoc={bufs[slot]}
-                className={`absolute inset-0 h-full w-full border-0 bg-transparent transition-opacity duration-300 ${
+                className={`absolute inset-0 h-full w-full border-0 bg-transparent transition-opacity duration-150 ${
                   active === slot ? "opacity-100" : "pointer-events-none opacity-0"
                 }`}
               />
