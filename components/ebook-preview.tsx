@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ebookApi, ApiError } from "@/lib/api";
 import type { EbookContentUpdateInput } from "@/lib/types";
 import { Spinner } from "@/components/ui";
@@ -40,28 +40,37 @@ export function EbookPreview({
   /** Produces the current editor content to preview. Required for live mode. */
   buildContent?: () => EbookContentUpdateInput;
 }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  // Two iframes are kept in sync as a double buffer: a live update renders into
+  // the hidden one and, once Paged.js finishes, we cross-fade to it. The reader
+  // never sees a blank/re-paginating frame, so edits no longer make the preview
+  // flash or jump — just a smooth swap under a slim loading bar.
+  const iframeA = useRef<HTMLIFrameElement>(null);
+  const iframeB = useRef<HTMLIFrameElement>(null);
+  const iframes = useMemo(() => [iframeA, iframeB] as const, []);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [srcDoc, setSrcDoc] = useState<string>("");
+  const [bufs, setBufs] = useState<[string, string]>(["", ""]);
+  const [active, setActive] = useState(0);
+  const [ready, setReady] = useState(false);
   const [pages, setPages] = useState<number | null>(null);
   const [scale, setScale] = useState(1);
 
-  // Latest content builder, read without changing `load`'s identity so a
-  // keystroke doesn't recreate the effect (the debounce owns the cadence).
+  // Refs mirror the state so `load` and the message handler stay stable (a
+  // keystroke shouldn't recreate the effects; the debounce owns the cadence).
+  const activeRef = useRef(0);
+  const pendingRef = useRef<number | null>(null);
+  const hasContentRef = useRef(false);
+  const scrollRef = useRef(0);
+  const viewRef = useRef<{ scale: number; manual: boolean }>({ scale: 1, manual: false });
+
   const buildRef = useRef(buildContent);
   useEffect(() => {
     buildRef.current = buildContent;
   }, [buildContent]);
 
-  // Scroll preservation across the srcDoc swap on a live update.
-  const scrollRef = useRef(0);
-  const restorePendingRef = useRef(false);
-  const hasContentRef = useRef(false);
-
   const load = useCallback(async () => {
     if (!token) return;
-    const isUpdate = hasContentRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -69,12 +78,20 @@ export function EbookPreview({
       const html = payload
         ? await ebookApi.previewHtmlLive(token, ebookId, payload)
         : await ebookApi.previewHtml(token, ebookId);
-      restorePendingRef.current = isUpdate; // keep scroll position on a refresh
-      setSrcDoc(injectPreviewRuntime(html));
+      // First render goes into the visible buffer; later ones into the hidden
+      // buffer, to be promoted once it reports Paged.js is done.
+      const target = hasContentRef.current ? (1 - activeRef.current) : activeRef.current;
+      pendingRef.current = target;
       hasContentRef.current = true;
+      setBufs((prev) => {
+        const next: [string, string] = [prev[0], prev[1]];
+        next[target] = injectPreviewRuntime(html);
+        return next;
+      });
+      // `loading` is cleared when the target iframe promotes (preview:info).
     } catch (err) {
+      pendingRef.current = null;
       setError(err instanceof ApiError ? err.message : "Couldn't load the preview.");
-    } finally {
       setLoading(false);
     }
   }, [token, ebookId, live]);
@@ -95,40 +112,74 @@ export function EbookPreview({
     return () => clearTimeout(t);
   }, [revision, live, load]);
 
-  // Messages from the iframe: page count, applied scale, and scroll position.
+  // Messages from either iframe: page count, applied scale, and scroll position.
   useEffect(() => {
     function onMessage(e: MessageEvent) {
-      if (e.source !== iframeRef.current?.contentWindow) return;
+      const slot = iframes.findIndex((r) => r.current?.contentWindow === e.source);
+      if (slot < 0) return;
       const data = e.data as { type?: string; pages?: number; scale?: number; y?: number };
+
       if (data?.type === "preview:info") {
-        if (typeof data.pages === "number") setPages(data.pages);
-        if (typeof data.scale === "number") setScale(data.scale);
-        // After a live re-render, put the reader back where they were.
-        if (restorePendingRef.current) {
-          restorePendingRef.current = false;
-          iframeRef.current?.contentWindow?.postMessage(
-            { type: "preview:scrollTo", y: scrollRef.current },
-            "*",
-          );
+        if (slot === pendingRef.current) {
+          // The freshly rendered (hidden) buffer is ready — carry the reader's
+          // scroll and any manual zoom over to it, then cross-fade it in.
+          const win = iframes[slot].current?.contentWindow;
+          if (viewRef.current.manual) {
+            win?.postMessage({ type: "preview:zoom", scale: viewRef.current.scale }, "*");
+          }
+          win?.postMessage({ type: "preview:scrollTo", y: scrollRef.current }, "*");
+          if (typeof data.pages === "number") setPages(data.pages);
+          if (typeof data.scale === "number") {
+            setScale(data.scale);
+            if (!viewRef.current.manual) viewRef.current.scale = data.scale;
+          }
+          pendingRef.current = null;
+          activeRef.current = slot;
+          setActive(slot);
+          setReady(true);
+          setLoading(false);
+        } else if (slot === activeRef.current) {
+          // The visible buffer re-fit itself (e.g. on resize) — just sync info.
+          if (typeof data.pages === "number") setPages(data.pages);
+          if (typeof data.scale === "number") setScale(data.scale);
         }
       } else if (data?.type === "preview:scroll" && typeof data.y === "number") {
-        scrollRef.current = data.y;
+        if (slot === activeRef.current) scrollRef.current = data.y;
       }
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [iframes]);
 
-  const postZoom = useCallback((msg: Record<string, unknown>) => {
-    iframeRef.current?.contentWindow?.postMessage({ type: "preview:zoom", ...msg }, "*");
-  }, []);
+  const postZoom = useCallback(
+    (msg: Record<string, unknown>) => {
+      iframes[activeRef.current].current?.contentWindow?.postMessage(
+        { type: "preview:zoom", ...msg },
+        "*",
+      );
+    },
+    [iframes],
+  );
 
-  const zoomIn = () => postZoom({ scale: Math.min(1.5, scale + 0.1) });
-  const zoomOut = () => postZoom({ scale: Math.max(0.3, scale - 0.1) });
-  const zoomFit = () => postZoom({ fit: true });
+  const zoomIn = () => {
+    const next = Math.min(1.5, scale + 0.1);
+    viewRef.current = { scale: next, manual: true };
+    setScale(next);
+    postZoom({ scale: next });
+  };
+  const zoomOut = () => {
+    const next = Math.max(0.3, scale - 0.1);
+    viewRef.current = { scale: next, manual: true };
+    setScale(next);
+    postZoom({ scale: next });
+  };
+  const zoomFit = () => {
+    viewRef.current = { ...viewRef.current, manual: false };
+    postZoom({ fit: true });
+  };
 
-  const showOverlay = loading && !srcDoc;
-  const showUpdating = loading && !!srcDoc;
+  const showOverlay = loading && !ready;
+  const showUpdating = loading && ready;
 
   return (
     <div className="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-xl border border-hairline-2 bg-surface-3">
@@ -199,23 +250,37 @@ export function EbookPreview({
 
       {/* Stage */}
       <div className="relative min-h-0 flex-1">
+        {/* Slim, smooth loading bar for live updates (content stays visible). */}
+        {showUpdating && (
+          <div className="absolute inset-x-0 top-0 z-20 h-0.5 overflow-hidden">
+            <div className="preview-loading-bar h-full w-1/3 rounded-full bg-accent" />
+          </div>
+        )}
         {showOverlay && (
-          <div className="absolute inset-0 z-10 flex items-center gap-2 bg-surface-3/70 p-4 text-sm text-muted">
+          <div className="absolute inset-0 z-20 flex items-center gap-2 bg-surface-3/70 p-4 text-sm text-muted">
             <Spinner /> Rendering your book…
           </div>
         )}
         {error ? (
           <div className="p-4 text-sm text-red-600">{error}</div>
         ) : (
-          <iframe
-            ref={iframeRef}
-            title="Book preview"
-            // allow-scripts lets Paged.js paginate inside the frame; no
-            // allow-same-origin, so the (user-uploaded) content stays isolated.
-            sandbox="allow-scripts"
-            srcDoc={srcDoc}
-            className="h-full w-full border-0 bg-transparent"
-          />
+          <>
+            {([0, 1] as const).map((slot) => (
+              <iframe
+                key={slot}
+                ref={iframes[slot]}
+                title={slot === 0 ? "Book preview" : "Book preview (buffer)"}
+                aria-hidden={active !== slot}
+                // allow-scripts lets Paged.js paginate inside the frame; no
+                // allow-same-origin, so the (user-uploaded) content stays isolated.
+                sandbox="allow-scripts"
+                srcDoc={bufs[slot]}
+                className={`absolute inset-0 h-full w-full border-0 bg-transparent transition-opacity duration-300 ${
+                  active === slot ? "opacity-100" : "pointer-events-none opacity-0"
+                }`}
+              />
+            ))}
+          </>
         )}
       </div>
     </div>
