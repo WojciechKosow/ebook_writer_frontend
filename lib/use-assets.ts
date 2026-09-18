@@ -14,6 +14,7 @@ export interface AssetsState {
   upload: (file: File, onProgress?: (pct: number) => void) => Promise<EbookImage>;
   update: (id: string, input: EbookImageUpdateInput) => Promise<EbookImage>;
   setCover: (id: string) => Promise<void>;
+  clearCover: () => Promise<void>;
   remove: (id: string) => Promise<void>;
 }
 
@@ -139,6 +140,12 @@ export function useAssets(token: string | null, ebookId: string | null): AssetsS
     [token, ebookId, refresh],
   );
 
+  const clearCover = useCallback(async () => {
+    if (!token || !ebookId) throw new Error("Not ready");
+    await imageApi.clearCover(token, ebookId);
+    await refresh();
+  }, [token, ebookId, refresh]);
+
   const remove = useCallback(
     async (id: string) => {
       if (!token || !ebookId) throw new Error("Not ready");
@@ -148,5 +155,5 @@ export function useAssets(token: string | null, ebookId: string | null): AssetsS
     [token, ebookId, refresh],
   );
 
-  return { assets, loading, error, urlFor, refresh, upload, update, setCover, remove };
+  return { assets, loading, error, urlFor, refresh, upload, update, setCover, clearCover, remove };
 }

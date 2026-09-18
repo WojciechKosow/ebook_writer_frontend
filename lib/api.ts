@@ -331,6 +331,14 @@ export const imageApi = {
     });
   },
 
+  /** Unset the book's cover (the asset stays in the library). */
+  clearCover(token: string, ebookId: string) {
+    return request<void>(`/api/ebooks/${ebookId}/images/cover`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
   remove(token: string, ebookId: string, imageId: string) {
     return request<void>(`/api/ebooks/${ebookId}/images/${imageId}`, {
       method: "DELETE",
