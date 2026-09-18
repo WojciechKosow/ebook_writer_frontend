@@ -63,11 +63,36 @@ export function EbookPreview({
   const hasContentRef = useRef(false);
   const scrollRef = useRef(0);
   const viewRef = useRef<{ scale: number; manual: boolean }>({ scale: 1, manual: false });
+  const promoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const buildRef = useRef(buildContent);
   useEffect(() => {
     buildRef.current = buildContent;
   }, [buildContent]);
+
+  // Cross-fade the hidden buffer in: carry the reader's scroll + manual zoom
+  // over, then reveal it. Used both when the iframe reports it's painted and by
+  // a safety timer, so a live edit is never left invisible if the frame is slow
+  // to report back.
+  const promote = useCallback(
+    (slot: number) => {
+      if (promoteTimerRef.current) {
+        clearTimeout(promoteTimerRef.current);
+        promoteTimerRef.current = null;
+      }
+      const win = iframes[slot].current?.contentWindow;
+      if (viewRef.current.manual) {
+        win?.postMessage({ type: "preview:zoom", scale: viewRef.current.scale }, "*");
+      }
+      win?.postMessage({ type: "preview:scrollTo", y: scrollRef.current }, "*");
+      pendingRef.current = null;
+      activeRef.current = slot;
+      setActive(slot);
+      setReady(true);
+      setLoading(false);
+    },
+    [iframes],
+  );
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -88,13 +113,19 @@ export function EbookPreview({
         next[target] = injectPreviewRuntime(html);
         return next;
       });
-      // `loading` is cleared when the target iframe promotes (preview:info).
+      // Normally the target iframe promotes itself via preview:info. This is a
+      // safety net so a live edit still appears even if Paged.js is slow or
+      // doesn't report back — the preview never gets stuck on a stale frame.
+      if (promoteTimerRef.current) clearTimeout(promoteTimerRef.current);
+      promoteTimerRef.current = setTimeout(() => {
+        if (pendingRef.current === target) promote(target);
+      }, 2000);
     } catch (err) {
       pendingRef.current = null;
       setError(err instanceof ApiError ? err.message : "Couldn't load the preview.");
       setLoading(false);
     }
-  }, [token, ebookId, live]);
+  }, [token, ebookId, live, promote]);
 
   // Immediate load on mount and on an explicit refresh.
   useEffect(() => {
@@ -103,14 +134,22 @@ export function EbookPreview({
   }, [load, refreshKey]);
 
   // Live mode: debounce a reload after edits so the preview tracks typing
-  // without a request per keystroke.
+  // closely (the double buffer makes frequent updates cheap and flicker-free)
+  // without firing a request on every keystroke.
   useEffect(() => {
     if (!live) return;
     const t = setTimeout(() => {
       load();
-    }, 900);
+    }, 450);
     return () => clearTimeout(t);
   }, [revision, live, load]);
+
+  // Clear any pending promote timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (promoteTimerRef.current) clearTimeout(promoteTimerRef.current);
+    };
+  }, []);
 
   // Messages from either iframe: page count, applied scale, and scroll position.
   useEffect(() => {
@@ -120,28 +159,14 @@ export function EbookPreview({
       const data = e.data as { type?: string; pages?: number; scale?: number; y?: number };
 
       if (data?.type === "preview:info") {
+        if (typeof data.pages === "number") setPages(data.pages);
+        if (typeof data.scale === "number") {
+          setScale(data.scale);
+          if (!viewRef.current.manual) viewRef.current.scale = data.scale;
+        }
         if (slot === pendingRef.current) {
-          // The freshly rendered (hidden) buffer is ready — carry the reader's
-          // scroll and any manual zoom over to it, then cross-fade it in.
-          const win = iframes[slot].current?.contentWindow;
-          if (viewRef.current.manual) {
-            win?.postMessage({ type: "preview:zoom", scale: viewRef.current.scale }, "*");
-          }
-          win?.postMessage({ type: "preview:scrollTo", y: scrollRef.current }, "*");
-          if (typeof data.pages === "number") setPages(data.pages);
-          if (typeof data.scale === "number") {
-            setScale(data.scale);
-            if (!viewRef.current.manual) viewRef.current.scale = data.scale;
-          }
-          pendingRef.current = null;
-          activeRef.current = slot;
-          setActive(slot);
-          setReady(true);
-          setLoading(false);
-        } else if (slot === activeRef.current) {
-          // The visible buffer re-fit itself (e.g. on resize) — just sync info.
-          if (typeof data.pages === "number") setPages(data.pages);
-          if (typeof data.scale === "number") setScale(data.scale);
+          // The freshly rendered (hidden) buffer is painted — cross-fade it in.
+          promote(slot);
         }
       } else if (data?.type === "preview:scroll" && typeof data.y === "number") {
         if (slot === activeRef.current) scrollRef.current = data.y;
@@ -149,7 +174,7 @@ export function EbookPreview({
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [iframes]);
+  }, [iframes, promote]);
 
   const postZoom = useCallback(
     (msg: Record<string, unknown>) => {
