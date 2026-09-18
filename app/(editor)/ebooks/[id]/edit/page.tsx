@@ -242,7 +242,8 @@ export default function EbookEditPage() {
     [touch],
   );
 
-  // Insert (or replace the selected) image in the active chapter.
+  // Insert (or replace the selected) image in the active chapter — the click
+  // path from the Images panel.
   const insertAsset = useCallback(
     (assetId: string) => {
       const url = assets.urlFor(assetId);
@@ -257,6 +258,24 @@ export default function EbookEditPage() {
       touch();
     },
     [assets, touch],
+  );
+
+  // Resolve a dragged asset id to a displayable image, so the editor can drop it
+  // at the release point. Returns undefined (cancelling the drop) until the
+  // asset's preview blob is ready.
+  const resolveDropImage = useCallback(
+    (assetId: string) => {
+      const url = assets.urlFor(assetId);
+      if (!url) return undefined;
+      const asset = assets.assets.find((a) => a.id === assetId);
+      return {
+        id: assetId,
+        url,
+        alt: asset?.aiDescription || asset?.originalFilename || "",
+        widthPercent: asset?.displayWidthPercent ?? null,
+      };
+    },
+    [assets],
   );
 
   const save = useCallback(async () => {
@@ -444,10 +463,11 @@ export default function EbookEditPage() {
             ref={editorRef}
             html={active.html}
             onChange={(html) => patchActive({ html })}
+            resolveDropImage={resolveDropImage}
           />
           <p className="mt-3 text-xs text-faint">
-            Chapter {activeIndex + 1} of {chapters.length}. Use the <strong>Images</strong> panel to
-            drop a picture into this chapter; select an image to align it. Saving re-renders the
+            Chapter {activeIndex + 1} of {chapters.length}. Open the <strong>Images</strong> panel and
+            drag a picture onto the page; select an image to align it. Saving re-renders the
             downloadable PDF.
           </p>
         </>

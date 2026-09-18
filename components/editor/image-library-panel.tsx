@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import type { AssetsState } from "@/lib/use-assets";
 import type { EbookImage } from "@/lib/types";
 import { ApiError } from "@/lib/api";
+import { ASSET_DND_TYPE } from "@/components/rich-text-editor";
 
 const ACCEPT = "image/png,image/jpeg,image/webp,image/gif,image/svg+xml";
 const ALLOWED = new Set([
@@ -122,7 +123,7 @@ export function ImageLibraryPanel({
     <div className="flex h-full flex-col">
       <div className="px-4 pb-2 pt-4">
         <h2 className="text-sm font-semibold text-foreground">Images</h2>
-        <p className="mt-0.5 text-xs text-muted">Click an image to drop it into the current chapter.</p>
+        <p className="mt-0.5 text-xs text-muted">Drag an image onto your page — or click to insert it.</p>
       </div>
 
       {/* Upload dropzone */}
@@ -259,7 +260,9 @@ function ImageCard({
   onWidth: (w: number) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
   const isCover = asset.placement === "COVER";
+  const draggable = !!url;
 
   const run = (fn: () => Promise<void> | void) => async () => {
     setBusy(true);
@@ -270,18 +273,36 @@ function ImageCard({
     }
   };
 
+  const onDragStart = (e: React.DragEvent) => {
+    if (!url) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.setData(ASSET_DND_TYPE, asset.id);
+    e.dataTransfer.setData("text/plain", asset.originalFilename || "image");
+    e.dataTransfer.effectAllowed = "copy";
+    if (imgRef.current) e.dataTransfer.setDragImage(imgRef.current, 24, 24);
+  };
+
   return (
     <li className="group relative overflow-hidden rounded-lg border border-hairline bg-surface">
-      {/* Clickable thumbnail → insert */}
+      {/* Draggable thumbnail → drop onto the page (click still inserts at the cursor) */}
       <button
         type="button"
+        draggable={draggable}
+        onDragStart={onDragStart}
         onClick={onInsert}
-        title={`Insert ${asset.originalFilename || "image"}`}
-        className="block aspect-square w-full bg-surface-3"
+        title={`Drag "${asset.originalFilename || "image"}" onto your page (or click to insert)`}
+        className={`block aspect-square w-full bg-surface-3 ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
       >
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={asset.originalFilename || "asset"} className="h-full w-full object-contain" />
+          <img
+            ref={imgRef}
+            src={url}
+            alt={asset.originalFilename || "asset"}
+            className="pointer-events-none h-full w-full object-contain"
+          />
         ) : (
           <span className="flex h-full items-center justify-center text-[10px] text-faint">…</span>
         )}
@@ -293,18 +314,18 @@ function ImageCard({
         </span>
       )}
 
-      {/* Hover overlay: primary Insert */}
-      <button
-        type="button"
-        onClick={onInsert}
-        className="absolute inset-x-0 top-0 flex h-[calc(100%-1.75rem)] items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/30 group-hover:opacity-100"
+      {/* Hover affordance: drag hint */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 flex h-[calc(100%-1.75rem)] items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
         aria-hidden
-        tabIndex={-1}
       >
-        <span className="rounded-md bg-white/95 px-2.5 py-1 text-xs font-semibold text-zinc-900 shadow-soft">
-          Insert
+        <span className="flex items-center gap-1 rounded-md bg-black/55 px-2 py-1 text-[11px] font-semibold text-white">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20" />
+          </svg>
+          Drag in
         </span>
-      </button>
+      </div>
 
       {/* Footer actions */}
       <div className="flex items-center gap-1 px-1.5 py-1">
