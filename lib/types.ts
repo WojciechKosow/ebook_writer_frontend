@@ -21,6 +21,8 @@ export type EbookStatus =
   | "PLANNING"
   | "WRITING"
   | "EDITING"
+  | "PLANNING_IMAGES"
+  | "GENERATING_IMAGES"
   | "RENDERING"
   | "COMPLETED"
   | "FAILED";
