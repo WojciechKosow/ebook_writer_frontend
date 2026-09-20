@@ -11,6 +11,7 @@ import {
   SITE_DESCRIPTION,
   SITE_TAGLINE,
   SITE_KEYWORDS,
+  SITE_VERIFICATION_GOOGLE,
 } from "@/lib/site";
 
 // Clean, slightly characterful grotesque for all UI + body copy.
@@ -64,6 +65,11 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     // twitter image falls back to the generated OG image.
   },
+  // Renders <meta name="google-site-verification"> only when the token is set,
+  // so Google Search Console can verify ownership of the production property.
+  ...(SITE_VERIFICATION_GOOGLE
+    ? { verification: { google: SITE_VERIFICATION_GOOGLE } }
+    : {}),
   robots: {
     index: true,
     follow: true,

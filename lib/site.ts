@@ -9,6 +9,14 @@ export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://scrivetta.com"
 ).replace(/\/$/, "");
 
+// Google Search Console site-verification token (the value of the
+// "google-site-verification" meta tag Google hands you when you add the
+// property via the "HTML tag" method). Read server-side only and rendered
+// into <head> by the metadata export. Left unset locally so no empty tag is
+// emitted; set GOOGLE_SITE_VERIFICATION in Vercel to claim the property.
+export const SITE_VERIFICATION_GOOGLE =
+  process.env.GOOGLE_SITE_VERIFICATION?.trim() || undefined;
+
 import { BRAND } from "./brand";
 
 // One-line value proposition, kept keyword-aware for search without reading as
