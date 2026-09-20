@@ -249,3 +249,55 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .preview-loading-bar { animation: none; opacity: 0.6; }
 }
+
+/* ---- Article prose (blog + content pages) -------------------------------- */
+.prose-post { color: var(--foreground-2); font-size: 1.0625rem; line-height: 1.75; }
+.prose-post > * + * { margin-top: 1.15em; }
+.prose-post h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.6rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  margin-top: 2.2em;
+  scroll-margin-top: 6rem;
+}
+.prose-post h3 {
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: var(--foreground);
+  margin-top: 1.8em;
+  scroll-margin-top: 6rem;
+}
+.prose-post p { text-wrap: pretty; }
+.prose-post strong { color: var(--foreground); font-weight: 600; }
+.prose-post a {
+  color: var(--accent-ink);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--hairline-2);
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.15s;
+}
+.prose-post a:hover { text-decoration-color: currentColor; }
+.prose-post ul, .prose-post ol { padding-left: 1.35em; }
+.prose-post ul { list-style: disc; }
+.prose-post ol { list-style: decimal; }
+.prose-post li { margin-top: 0.4em; }
+.prose-post li::marker { color: var(--faint); }
+.prose-post blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1em;
+  color: var(--muted);
+  font-style: italic;
+}
+.prose-post hr { border: 0; border-top: 1px solid var(--hairline); margin: 2.4em 0; }
+.prose-post code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 0.35rem;
+  padding: 0.1em 0.35em;
+}

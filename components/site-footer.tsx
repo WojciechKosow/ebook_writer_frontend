@@ -13,6 +13,14 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     ],
   },
   {
+    title: "Resources",
+    links: [
+      { label: "Blog", href: "/blog" },
+      { label: "AI ebook generator", href: "/ai-ebook-generator" },
+      { label: "Write an ebook with AI", href: "/how-to-write-an-ebook-with-ai" },
+    ],
+  },
+  {
     title: "Account",
     links: [
       { label: "Log in", href: "/login" },
@@ -32,7 +40,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-hairline">
       <div className="mx-auto w-full max-w-6xl px-6 py-14">
-        <div className="grid gap-10 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 md:grid-cols-[1.5fr_repeat(4,1fr)]">
           <div>
             <Wordmark />
             <p className="mt-3 max-w-xs text-sm text-muted">
