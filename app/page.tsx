@@ -5,6 +5,7 @@ import { Hero } from "@/components/landing/hero";
 import { Features } from "@/components/landing/features";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { Plans } from "@/components/landing/plans";
+import { Faq } from "@/components/landing/faq";
 import { Reveal } from "@/components/landing/reveal";
 import { LandingGate } from "@/components/landing/landing-gate";
 import { StructuredData } from "@/components/landing/structured-data";
@@ -21,6 +22,7 @@ export default function Home() {
         <HowItWorks />
         <Plans />
         <WhatYouGet />
+        <Faq />
 
         {/* Closing CTA */}
         <section className="mx-auto w-full max-w-6xl px-6 pb-24">

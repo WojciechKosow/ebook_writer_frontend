@@ -1,12 +1,21 @@
 import { BRAND } from "@/lib/brand";
 import { SITE_URL, SITE_DESCRIPTION } from "@/lib/site";
-import { SUBSCRIPTION } from "@/lib/pricing";
+import { PACKS, SUBSCRIPTION } from "@/lib/pricing";
+import { FAQ_ITEMS } from "./faq";
 
 /**
  * JSON-LD structured data for the marketing landing. Helps search engines and
  * AI answer engines understand what Scrivetta is (a SaaS app), who publishes
- * it, and how it's priced — which can surface richer results.
+ * it, how it's priced, and the answers to common questions — which can surface
+ * richer results.
  */
+
+// All published prices (subscription + one-time packs) as plain numbers, so the
+// AggregateOffer's low/high price band tracks the real pricing config.
+const PRICES = [SUBSCRIPTION.priceLabel, ...PACKS.map((p) => p.priceLabel)].map(
+  (label) => Number(label.replace(/[^0-9.]/g, "")),
+);
+
 export function StructuredData() {
   const graph = {
     "@context": "https://schema.org",
@@ -36,11 +45,24 @@ export function StructuredData() {
         description: SITE_DESCRIPTION,
         publisher: { "@id": `${SITE_URL}/#organization` },
         offers: {
-          "@type": "Offer",
-          price: SUBSCRIPTION.priceLabel.replace(/[^0-9.]/g, ""),
+          "@type": "AggregateOffer",
           priceCurrency: "USD",
-          category: "subscription",
+          lowPrice: Math.min(...PRICES).toString(),
+          highPrice: Math.max(...PRICES).toString(),
+          offerCount: PRICES.length,
         },
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${SITE_URL}/#faq`,
+        mainEntity: FAQ_ITEMS.map((item) => ({
+          "@type": "Question",
+          name: item.q,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: item.a,
+          },
+        })),
       },
     ],
   };
