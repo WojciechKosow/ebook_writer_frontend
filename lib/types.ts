@@ -44,6 +44,13 @@ export interface EbookStatusResponse {
   description: string | null;
   errorMessage: string | null;
   downloadReady: boolean;
+  /**
+   * The real number of pages in the finished PDF (0 until COMPLETED). Scrivetta
+   * decides the length from the topic — this is the result, not an order.
+   */
+  actualPageCount: number;
+  /** Credits actually charged for this generation (1 credit = 1 final page). */
+  creditsCharged: number;
   chapters: ChapterProgress[];
   createdAt: string | null;
   updatedAt: string | null;
@@ -127,10 +134,27 @@ export interface EbookRequestInput {
   topic: string;
   targetAudience: string;
   style: string;
-  approxPageCount: number;
   language: string;
   additionalInstructions: string;
   sourceMaterial: string;
+}
+
+/**
+ * Describes generation as a credit budget rather than a fixed page order. The
+ * user no longer picks a page count: Scrivetta decides how much content a
+ * complete ebook needs, and credits are the budget that pays for it.
+ */
+export interface GenerationBudgetResponse {
+  /** Smallest balance that may start a standard generation. */
+  minCredits: number;
+  /** Low end of the orientational page range (~20). */
+  estimatedPagesLow: number;
+  /** High end of the orientational page range (~30). */
+  estimatedPagesHigh: number;
+  /** The user's current credit balance. */
+  balance: number;
+  /** Whether the balance is enough to start now. */
+  canGenerate: boolean;
 }
 
 // ---- Credits & billing -----------------------------------------------------
@@ -140,6 +164,7 @@ export type CreditTransactionType =
   | "CREDIT_PURCHASE"
   | "GENERATION"
   | "GENERATION_REFUND"
+  | "GENERATION_ADJUSTMENT"
   | "SIGNUP_BONUS";
 
 export interface CreditTransaction {

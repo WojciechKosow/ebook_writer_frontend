@@ -44,7 +44,7 @@ export function Plans() {
             </div>
             <p className="mt-3 text-foreground-2">
               <span className="font-semibold text-foreground">{SUBSCRIPTION.credits} credits</span> every{" "}
-              {SUBSCRIPTION.period} — about {SUBSCRIPTION.credits} pages of finished writing.
+              {SUBSCRIPTION.period} — enough budget for several complete ebooks.
             </p>
             <ul className="mt-6 space-y-3 text-sm text-foreground-2">
               {SUB_FEATURES.map((f) => (
