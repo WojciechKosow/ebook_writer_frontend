@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
 import { useAssets } from "@/lib/use-assets";
-import type { EbookStatusResponse } from "@/lib/types";
+import type { EbookStatusResponse, GenerationBudgetResponse } from "@/lib/types";
 import { StatusBadge, ProgressBar } from "@/components/ebook-ui";
 import { AssetManager } from "@/components/asset-manager";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
@@ -27,6 +27,25 @@ export default function EbookDetailPage() {
   const [downloading, setDownloading] = useState(false);
   const [starting, setStarting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [budget, setBudget] = useState<GenerationBudgetResponse | null>(null);
+
+  // Generation budget (min credits + orientational page range) — drives the
+  // draft messaging and whether the Generate button is enabled.
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    ebookApi
+      .generationBudget(token)
+      .then((b) => {
+        if (active) setBudget(b);
+      })
+      .catch(() => {
+        /* non-fatal */
+      });
+    return () => {
+      active = false;
+    };
+  }, [token, reloadKey]);
 
   // Poll while the generation is actively running (drafts and terminal states
   // don't poll). Re-armed via reloadKey when the user starts generation.
@@ -130,7 +149,12 @@ export default function EbookDetailPage() {
   const active = isGenerating(ebook.status);
   const failed = ebook.status === "FAILED";
   const completed = ebook.status === "COMPLETED";
-  const balance = credits?.balance ?? null;
+  const balance = credits?.balance ?? budget?.balance ?? null;
+  const minCredits = budget?.minCredits ?? null;
+  // Enough budget to start a standard generation. Undecided until the budget
+  // loads, so we don't flash a "not enough" state.
+  const insufficient =
+    balance !== null && minCredits !== null && balance < minCredits;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -167,28 +191,41 @@ export default function EbookDetailPage() {
 
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
             <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-600 dark:text-zinc-300">Estimated usage</span>
+              <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                {budget
+                  ? `~${budget.estimatedPagesLow}–${budget.estimatedPagesHigh} credits`
+                  : "…"}
+              </span>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-sm">
               <span className="text-zinc-600 dark:text-zinc-300">Your balance</span>
               <span className="font-medium text-zinc-900 dark:text-zinc-50">
                 {balance === null ? "…" : `${balance} credits`}
               </span>
             </div>
-            <p className="mt-2 text-xs text-muted">
-              Generating reserves credits for your page count (about 1 per page); you&apos;re only
-              billed for the pages actually produced.
+            <p className="mt-3 border-t border-zinc-200 pt-3 text-xs text-muted dark:border-zinc-800">
+              {insufficient
+                ? `You need at least ${minCredits} credits to generate a standard ebook. Buy more to start.`
+                : `Scrivetta decides how long a complete ebook needs to be${
+                    budget ? ` (usually ${budget.estimatedPagesLow}–${budget.estimatedPagesHigh} pages)` : ""
+                  }. Credits are the budget, not a page count — you're only billed for the pages actually produced.`}
             </p>
           </div>
 
           {error && <Alert>{error}</Alert>}
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={startGeneration} loading={starting}>
+            <Button onClick={startGeneration} loading={starting} disabled={insufficient}>
               Generate ebook
             </Button>
             <ButtonLink href="/billing" variant="secondary">
               Buy credits
             </ButtonLink>
             <span className="text-xs text-zinc-400">
-              This can take several minutes — you can watch progress here.
+              {insufficient
+                ? `A standard ebook needs at least ${minCredits} credits to generate.`
+                : "This can take several minutes — you can watch progress here."}
             </span>
           </div>
         </div>
@@ -224,6 +261,12 @@ export default function EbookDetailPage() {
       {completed && (
         <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
           <p className="text-sm text-emerald-800 dark:text-emerald-300">Your ebook is ready.</p>
+          {ebook.actualPageCount > 0 && (
+            <p className="mt-2 text-sm font-medium text-emerald-900 dark:text-emerald-200">
+              {ebook.actualPageCount} pages · {ebook.creditsCharged} credits used
+              {balance !== null && ` · ${balance} credits remaining`}
+            </p>
+          )}
           {ebook.description && (
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{ebook.description}</p>
           )}

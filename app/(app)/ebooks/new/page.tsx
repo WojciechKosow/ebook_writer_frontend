@@ -6,14 +6,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
-import type { EbookRequestInput } from "@/lib/types";
+import type { EbookRequestInput, GenerationBudgetResponse } from "@/lib/types";
 import { Alert, Button, Field, TextAreaField } from "@/components/ui";
 
 const initial: EbookRequestInput = {
   topic: "",
   targetAudience: "",
   style: "",
-  approxPageCount: 30,
   language: "English",
   additionalInstructions: "",
   sourceMaterial: "",
@@ -30,7 +29,6 @@ type Example = {
   audience: string;
   style: string;
   instructions: string;
-  pages: number;
 };
 
 const EXAMPLES: Example[] = [
@@ -41,7 +39,6 @@ const EXAMPLES: Example[] = [
     style: "Lyrical, introspective, emotionally honest",
     instructions:
       "Alternate points of view between the sisters. Let the sea and the tides mirror their relationship. Avoid melodrama.",
-    pages: 220,
   },
   {
     tag: "SaaS & startups",
@@ -50,7 +47,6 @@ const EXAMPLES: Example[] = [
     style: "Practical, direct, example-driven",
     instructions:
       "Cover pricing, onboarding, churn, and go-to-market. Include real playbooks and checklists at the end of each chapter.",
-    pages: 90,
   },
   {
     tag: "E-commerce",
@@ -59,7 +55,6 @@ const EXAMPLES: Example[] = [
     style: "Encouraging, step-by-step, no jargon",
     instructions:
       "Walk through product research, branding, product photography, ads, and email flows. Add a launch checklist and common mistakes.",
-    pages: 70,
   },
   {
     tag: "Children's book",
@@ -68,7 +63,6 @@ const EXAMPLES: Example[] = [
     style: "Warm, rhythmic, gently reassuring",
     instructions:
       "Keep sentences short and soothing. End on a calm, comforting note perfect for falling asleep.",
-    pages: 24,
   },
   {
     tag: "Personal finance",
@@ -77,7 +71,6 @@ const EXAMPLES: Example[] = [
     style: "Friendly, reassuring, jargon-free",
     instructions:
       "Explain index funds, compounding, and risk in plain language. Include a simple month-by-month starter plan.",
-    pages: 60,
   },
 ];
 
@@ -91,6 +84,25 @@ export default function NewEbookPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [exIdx, setExIdx] = useState(0);
+  const [budget, setBudget] = useState<GenerationBudgetResponse | null>(null);
+
+  // Load the generation budget (min credits + orientational page range) so we can
+  // frame this as a budget, never a fixed page order.
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    ebookApi
+      .generationBudget(token)
+      .then((b) => {
+        if (active) setBudget(b);
+      })
+      .catch(() => {
+        /* non-fatal: the form still works, just without the estimate */
+      });
+    return () => {
+      active = false;
+    };
+  }, [token]);
 
   // Rotate the example brief every few seconds so the placeholders keep
   // suggesting different kinds of books (fiction, SaaS, e-commerce…).
@@ -112,15 +124,17 @@ export default function NewEbookPage() {
       targetAudience: example.audience,
       style: example.style,
       additionalInstructions: example.instructions,
-      approxPageCount: example.pages,
     }));
     setFieldErrors({});
     setError(null);
   }
 
-  const cost = Math.max(1, form.approxPageCount || 0);
-  const balance = credits?.balance ?? null;
-  const insufficient = balance !== null && balance < cost;
+  const balance = credits?.balance ?? budget?.balance ?? null;
+  const minCredits = budget?.minCredits ?? null;
+  // Enough budget to *generate* on the next step. Creating a draft is always
+  // free, so this only drives messaging, not whether they can continue.
+  const insufficient =
+    balance !== null && minCredits !== null && balance < minCredits;
 
   function update<K extends keyof EbookRequestInput>(key: K, value: EbookRequestInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -209,17 +223,6 @@ export default function NewEbookPage() {
             placeholder={`e.g. ${example.style}`}
           />
           <Field
-            label="Approx. page count"
-            name="approxPageCount"
-            type="number"
-            min={1}
-            max={500}
-            required
-            value={form.approxPageCount}
-            onChange={(e) => update("approxPageCount", Number(e.target.value))}
-            error={fieldErrors.approxPageCount}
-          />
-          <Field
             label="Language"
             name="language"
             value={form.language}
@@ -245,11 +248,16 @@ export default function NewEbookPage() {
           hint="Optional. Paste any reference text or examples to ground the book."
         />
 
-        {/* Cost vs balance — the charge happens when you generate on the next step. */}
+        {/* Generation budget — not a page order. The charge happens when you
+            generate on the next step, and only for the pages actually produced. */}
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-zinc-600 dark:text-zinc-300">Estimated cost</span>
-            <span className="font-medium text-zinc-900 dark:text-zinc-50">{cost} credits</span>
+            <span className="text-zinc-600 dark:text-zinc-300">Estimated usage</span>
+            <span className="font-medium text-zinc-900 dark:text-zinc-50">
+              {budget
+                ? `~${budget.estimatedPagesLow}–${budget.estimatedPagesHigh} credits`
+                : "…"}
+            </span>
           </div>
           <div className="mt-1 flex items-center justify-between text-sm">
             <span className="text-zinc-600 dark:text-zinc-300">Your balance</span>
@@ -259,8 +267,10 @@ export default function NewEbookPage() {
           </div>
           <p className="mt-3 border-t border-zinc-200 pt-3 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
             {insufficient
-              ? `You'll need ${cost} credits to generate — you can add assets first and buy credits before generating.`
-              : "Next you can upload your own images (optional), then generate. Credits are only charged when you generate."}
+              ? `You need at least ${minCredits} credits to generate a standard ebook — you can add assets first and buy credits before generating.`
+              : `Scrivetta decides how long a complete ebook needs to be${
+                  budget ? ` (usually ${budget.estimatedPagesLow}–${budget.estimatedPagesHigh} pages)` : ""
+                }. Credits are the budget, not a page count — you're only charged for the pages actually produced, when you generate.`}
           </p>
         </div>
 
