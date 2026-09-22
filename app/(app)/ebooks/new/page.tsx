@@ -270,7 +270,7 @@ export default function NewEbookPage() {
               ? `You need at least ${minCredits} credits to generate a standard ebook — you can add assets first and buy credits before generating.`
               : `Scrivetta decides how long a complete ebook needs to be${
                   budget ? ` (usually ${budget.estimatedPagesLow}–${budget.estimatedPagesHigh} pages)` : ""
-                }. Credits are the budget, not a page count — you're only charged for the pages actually produced, when you generate.`}
+                } — a bigger topic can use more, up to your balance. Credits are the budget, not a page count: you're only charged for the pages actually produced, when you generate.`}
           </p>
         </div>
 
