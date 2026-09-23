@@ -10,6 +10,12 @@ export interface AssetsState {
   error: string | null;
   /** Blob URL for an asset's bytes (private bucket), or undefined until loaded. */
   urlFor: (id: string) => string | undefined;
+  /**
+   * True once the asset list has loaded and a preview fetch has been attempted
+   * for every asset in it (each either resolved or failed). Lets callers wait for
+   * the previews instead of guessing with a timeout.
+   */
+  previewsReady: boolean;
   refresh: () => Promise<void>;
   upload: (file: File, onProgress?: (pct: number) => void) => Promise<EbookImage>;
   update: (id: string, input: EbookImageUpdateInput) => Promise<EbookImage>;
@@ -30,6 +36,8 @@ export function useAssets(token: string | null, ebookId: string | null): AssetsS
   const [error, setError] = useState<string | null>(null);
   const [urls, setUrls] = useState<Record<string, string>>({});
   const urlsRef = useRef<Record<string, string>>({});
+  // The asset list the last completed preview pass covered.
+  const [settledFor, setSettledFor] = useState<EbookImage[] | null>(null);
 
   const refresh = useCallback(async () => {
     if (!token || !ebookId) return;
@@ -83,17 +91,25 @@ export function useAssets(token: string | null, ebookId: string | null): AssetsS
           delete have[id];
         }
       }
-      for (const asset of assets) {
-        if (have[asset.id]) continue;
-        try {
-          const blob = await imageApi.fetchBlob(token, ebookId, asset.id);
-          if (cancelled) return;
-          have[asset.id] = URL.createObjectURL(blob);
-        } catch {
-          /* leave it unresolved; the card shows a fallback */
-        }
+      // Fetch the missing previews in parallel — one at a time made a book with
+      // several images take long enough that the editor gave up waiting.
+      const fetched = await Promise.all(
+        assets
+          .filter((asset) => !have[asset.id])
+          .map(async (asset) => {
+            try {
+              return [asset.id, await imageApi.fetchBlob(token, ebookId, asset.id)] as const;
+            } catch {
+              return null; // leave it unresolved; the card shows a fallback
+            }
+          }),
+      );
+      if (cancelled) return;
+      for (const entry of fetched) {
+        if (entry) have[entry[0]] = URL.createObjectURL(entry[1]);
       }
-      if (!cancelled) setUrls({ ...have });
+      setUrls({ ...have });
+      setSettledFor(assets);
     })();
 
     return () => {
@@ -110,6 +126,7 @@ export function useAssets(token: string | null, ebookId: string | null): AssetsS
   }, []);
 
   const urlFor = useCallback((id: string) => urls[id], [urls]);
+  const previewsReady = !loading && settledFor === assets;
 
   const upload = useCallback(
     async (file: File, onProgress?: (pct: number) => void) => {
@@ -155,5 +172,17 @@ export function useAssets(token: string | null, ebookId: string | null): AssetsS
     [token, ebookId, refresh],
   );
 
-  return { assets, loading, error, urlFor, refresh, upload, update, setCover, clearCover, remove };
+  return {
+    assets,
+    loading,
+    error,
+    urlFor,
+    previewsReady,
+    refresh,
+    upload,
+    update,
+    setCover,
+    clearCover,
+    remove,
+  };
 }

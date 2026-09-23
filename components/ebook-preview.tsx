@@ -100,7 +100,9 @@ export function EbookPreview({
     setError(null);
     try {
       const payload = live && buildRef.current ? buildRef.current() : null;
-      const html = payload
+      // The live endpoint rejects an empty chapter list, so with nothing to post
+      // (e.g. the editor hasn't built its chapters yet) show the saved book.
+      const html = payload && payload.chapters.length > 0
         ? await ebookApi.previewHtmlLive(token, ebookId, payload)
         : await ebookApi.previewHtml(token, ebookId);
       // First render goes into the visible buffer; later ones into the hidden
@@ -136,8 +138,12 @@ export function EbookPreview({
   // Live mode: debounce a reload after edits so the preview tracks typing
   // closely (the double buffer makes frequent updates cheap and flicker-free)
   // without firing a request on every keystroke.
+  // The mount load above already covers the initial revision, so only react to
+  // actual edits.
+  const lastRevisionRef = useRef(revision);
   useEffect(() => {
-    if (!live) return;
+    if (!live || revision === lastRevisionRef.current) return;
+    lastRevisionRef.current = revision;
     const t = setTimeout(() => {
       load();
     }, 200);

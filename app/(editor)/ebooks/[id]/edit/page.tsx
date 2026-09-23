@@ -65,6 +65,10 @@ export default function EbookEditPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [forceBuild, setForceBuild] = useState(false);
+  // Whether the editable chapters have been built. The live preview waits for
+  // this: before it, the editor holds no chapters and a live preview request
+  // would post an empty list, which the backend rejects ("Validation failed").
+  const [built, setBuilt] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [previewKey, setPreviewKey] = useState(0);
   const [revision, setRevision] = useState(0);
@@ -107,25 +111,25 @@ export default function EbookEditPage() {
     };
   }, [token, id]);
 
-  // Don't wait forever on image blobs — build the editor after a short grace
-  // period even if a preview failed to load.
+  // Safety net: don't wait forever on image blobs if a request hangs — build the
+  // editor anyway after a grace period (images left unresolved still round-trip
+  // as their `ebook-image:` token on save).
   useEffect(() => {
-    const t = setTimeout(() => setForceBuild(true), 2500);
+    const t = setTimeout(() => setForceBuild(true), 8000);
     return () => clearTimeout(t);
   }, []);
 
   // Build the editable chapters once, when the manuscript is loaded and the
-  // referenced image previews are ready (or the grace period elapsed). Building
-  // once avoids clobbering edits when new blob URLs arrive later.
+  // referenced image previews have been fetched (or the grace period elapsed).
+  // Building once avoids clobbering edits when new blob URLs arrive later.
   useEffect(() => {
-    if (builtRef.current || !rawChapters || assets.loading) return;
+    if (builtRef.current || !rawChapters) return;
 
     const referenced = new Set<string>();
     for (const c of rawChapters) {
       for (const m of c.content.matchAll(IMG_TOKEN)) referenced.add(m[1]);
     }
-    const allResolved = [...referenced].every((rid) => assets.urlFor(rid));
-    if (referenced.size > 0 && !allResolved && !forceBuild) return;
+    if (referenced.size > 0 && !assets.previewsReady && !forceBuild) return;
 
     const editable = rawChapters.map((c) => ({
       key: newKey(),
@@ -138,6 +142,7 @@ export default function EbookEditPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setChapters(editable);
     setActiveKey(editable[0]?.key ?? null);
+    setBuilt(true);
     builtRef.current = true;
   }, [rawChapters, assets, resolve, forceBuild]);
 
@@ -164,11 +169,14 @@ export default function EbookEditPage() {
   );
   const prevAssetSig = useRef<string | null>(null);
   useEffect(() => {
+    // Only compare once the list has loaded, so the initial load doesn't count
+    // as a change and reload the preview for nothing.
+    if (assets.loading) return;
     if (prevAssetSig.current !== null && prevAssetSig.current !== assetSignature) {
       setPreviewKey((k) => k + 1);
     }
     prevAssetSig.current = assetSignature;
-  }, [assetSignature]);
+  }, [assetSignature, assets.loading]);
 
   const activeIndex = useMemo(
     () => chapters.findIndex((c) => c.key === activeKey),
@@ -439,16 +447,22 @@ export default function EbookEditPage() {
       defaultPanelKey="chapters"
       showPreview={showPreview}
       preview={
-        <EbookPreview
-          token={token}
-          ebookId={id}
-          refreshKey={previewKey}
-          dirty={dirty}
-          onSave={save}
-          live
-          revision={revision}
-          buildContent={buildPreviewContent}
-        />
+        built ? (
+          <EbookPreview
+            token={token}
+            ebookId={id}
+            refreshKey={previewKey}
+            dirty={dirty}
+            onSave={save}
+            live
+            revision={revision}
+            buildContent={buildPreviewContent}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center gap-2 text-sm text-muted">
+            <Spinner /> Preparing preview…
+          </div>
+        )
       }
     >
       {error && (
