@@ -209,7 +209,79 @@ body {
   .brief-book { transform: rotateY(-18deg) rotateX(4deg) scale(0.85); }
 }
 
+/* ---- Library covers ------------------------------------------------------
+   Typographic book covers for the library, sized by their container (cqw), so
+   one cover works from a 40px list thumbnail up to the featured card. */
+.lib-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  container-type: inline-size;
+  border-radius: 2px 6px 6px 2px;
+  box-shadow: inset 4px 0 0 rgba(0,0,0,.2), inset 6px 0 6px -4px rgba(255,255,255,.25), 0 1px 1px rgba(0,0,0,.08), 0 14px 24px -14px rgba(20,16,40,.55);
+}
+.lib-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.1'/%3E%3C/svg%3E");
+}
+.lib-cover .t { font-family: var(--font-newsreader), Georgia, serif; line-height: 1.08; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.lib-cover .t.pending { opacity: .55; font-style: italic; }
+.lib-cover .k, .lib-cover .f { font-family: var(--font-geist-mono), ui-monospace, monospace; text-transform: uppercase; letter-spacing: .12em; }
+/* Classic: gradient, kicker, rule, title, footer */
+.lib-cover.s0 { display: flex; flex-direction: column; padding: 10% 8% 8% 12%; background: linear-gradient(160deg, var(--c1), var(--c2)); color: var(--ci); }
+.lib-cover.s0 .k { font-size: 4cqw; opacity: .7; }
+.lib-cover.s0 .r { width: 12cqw; height: 1px; margin: 6cqw 0; background: currentColor; opacity: .5; }
+.lib-cover.s0 .t { font-size: 12cqw; -webkit-line-clamp: 5; }
+.lib-cover.s0 .f { display: flex; justify-content: space-between; margin-top: auto; padding-top: 4cqw; font-size: 3.6cqw; opacity: .65; border-top: 1px solid color-mix(in srgb, var(--ci) 22%, transparent); }
+/* Band: a colour block with a big initial over paper */
+.lib-cover.s1 { display: flex; flex-direction: column; background: #f3eee3; color: #1d1a16; }
+.lib-cover.s1 .band { display: flex; align-items: flex-end; height: 44%; padding: 0 8cqw 3cqw 12cqw; background: var(--c1); color: var(--ci); font-family: var(--font-newsreader), Georgia, serif; font-style: italic; font-size: 34cqw; line-height: .8; }
+.lib-cover.s1 .body { display: flex; flex: 1; flex-direction: column; min-height: 0; padding: 7cqw 8cqw 8cqw 12cqw; }
+.lib-cover.s1 .t { font-size: 10.5cqw; -webkit-line-clamp: 4; }
+.lib-cover.s1 .f { margin-top: auto; font-size: 3.6cqw; color: #6a5f50; }
+/* Typographic: dark ground, inset frame, italic title */
+.lib-cover.s2 { padding: 8% 8% 8% 11%; background: var(--c2); color: var(--ci); }
+.lib-cover.s2 .in { position: absolute; inset: 5cqw 5cqw 5cqw 8cqw; border: 1px solid color-mix(in srgb, var(--ci) 28%, transparent); }
+.lib-cover.s2 .wc { position: relative; display: flex; flex-direction: column; height: 100%; padding: 5cqw; }
+.lib-cover.s2 .t { font-style: italic; font-size: 14cqw; line-height: 1; -webkit-line-clamp: 5; }
+.lib-cover.s2 .f { margin-top: auto; font-size: 3.6cqw; opacity: .6; }
+/* Draft: no cover yet — ruled paper with a dashed edge */
+.lib-cover.draft {
+  display: flex;
+  flex-direction: column;
+  padding: 10% 9% 9% 11%;
+  border: 1.5px dashed var(--hairline-2);
+  box-shadow: none;
+  color: var(--muted);
+  background: repeating-linear-gradient(to bottom, var(--surface-2) 0 11cqw, var(--hairline) 11cqw calc(11cqw + 1px));
+}
+.lib-cover.draft::after { display: none; }
+.lib-cover.draft .k { font-size: 4cqw; color: var(--accent); }
+.lib-cover.draft .t { margin-top: 6cqw; font-size: 11cqw; font-style: italic; color: var(--foreground-2); -webkit-line-clamp: 4; }
+.lib-cover.draft .f { margin-top: auto; font-size: 3.6cqw; }
+/* Generating / failed overlays */
+.lib-cover .state { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; justify-content: flex-end; padding: 7cqw; color: #fff; font-size: max(10px, 6.5cqw); font-weight: 600; }
+.lib-cover .state small { display: block; font-size: max(9px, 5cqw); font-weight: 500; opacity: .8; }
+.lib-cover.gen .state { background: linear-gradient(to top, rgba(14,12,24,.88), rgba(14,12,24,.15) 62%); }
+.lib-cover.gen > :not(.state) { filter: saturate(.4); }
+.lib-cover.failed .state { background: linear-gradient(to top, rgba(60,14,4,.88), rgba(60,14,4,.2) 65%); }
+.lib-cover .bar { height: 3px; margin-top: 4cqw; overflow: hidden; border-radius: 3px; background: rgba(255,255,255,.22); }
+.lib-cover .bar i { display: block; height: 100%; border-radius: 3px; background: #fff; transition: width .6s; }
+/* Tiny list thumbnails: text would be unreadable — keep colour only. */
+.lib-cover.thumb .t, .lib-cover.thumb .k, .lib-cover.thumb .f, .lib-cover.thumb .state > * { visibility: hidden; }
+.lib-cover.thumb .band { font-size: 0; }
+
+/* Chapter strip on the featured "writing now" card. */
+@keyframes chapter-now { from { background: var(--hairline-2); } to { background: var(--accent-2); } }
+.chapter-now { animation: chapter-now 1.1s ease-in-out infinite alternate; }
+
 @media (prefers-reduced-motion: reduce) {
+  .chapter-now { animation: none; }
   .brief-book, .brief-book-cover, .brief-book-pages { transition: none; }
   .reveal { opacity: 1 !important; animation: none !important; }
   .ink-underline path { animation: none !important; stroke-dashoffset: 0 !important; }
