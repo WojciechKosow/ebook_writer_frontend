@@ -245,9 +245,22 @@ export const ebookApi = {
 
   /** Download the finished PDF as a Blob (needs the Authorization header). */
   async download(token: string, id: string): Promise<Blob> {
-    const res = await fetch(`${API_URL}/api/ebooks/${id}/download`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL}/api/ebooks/${id}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+    } catch (err) {
+      // fetch only rejects when no readable response arrived: the connection
+      // dropped, or the response was blocked by CORS (e.g. a server error page
+      // without CORS headers). Surface that instead of a generic failure.
+      console.error("PDF download request failed before a response arrived", err);
+      throw new ApiError(
+        "Couldn't download the PDF: the server's response didn't arrive (network or server error). Please try again in a moment.",
+        0,
+      );
+    }
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       let message = `Download failed (${res.status})`;
@@ -259,7 +272,12 @@ export const ebookApi = {
       }
       throw new ApiError(message, res.status);
     }
-    return res.blob();
+    try {
+      return await res.blob();
+    } catch (err) {
+      console.error("PDF download was interrupted while receiving the file", err);
+      throw new ApiError("The download was interrupted before the PDF finished. Please try again.", 0);
+    }
   },
 };
 
