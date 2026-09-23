@@ -244,40 +244,24 @@ export const ebookApi = {
   },
 
   /** Download the finished PDF as a Blob (needs the Authorization header). */
-  async download(token: string, id: string): Promise<Blob> {
-    let res: Response;
-    try {
-      res = await fetch(`${API_URL}/api/ebooks/${id}/download`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      });
-    } catch (err) {
-      // fetch only rejects when no readable response arrived: the connection
-      // dropped, or the response was blocked by CORS (e.g. a server error page
-      // without CORS headers). Surface that instead of a generic failure.
-      console.error("PDF download request failed before a response arrived", err);
-      throw new ApiError(
-        "Couldn't download the PDF: the server's response didn't arrive (network or server error). Please try again in a moment.",
-        0,
-      );
-    }
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      let message = `Download failed (${res.status})`;
-      try {
-        const obj = JSON.parse(text);
-        if (obj?.message) message = obj.message;
-      } catch {
-        /* keep default */
-      }
-      throw new ApiError(message, res.status);
-    }
-    try {
-      return await res.blob();
-    } catch (err) {
-      console.error("PDF download was interrupted while receiving the file", err);
-      throw new ApiError("The download was interrupted before the PDF finished. Please try again.", 0);
-    }
+  /**
+   * Download the finished PDF. Asks the backend for a short-lived signed link and
+   * lets the browser download it natively (like any file link). Fetching the PDF
+   * into a blob instead breaks when a download manager or antivirus intercepts
+   * the file mid-transfer (net::ERR_FAILED on a 200), and holds the whole file in
+   * page memory; a native download is streamed and compatible with those tools.
+   */
+  async download(token: string, id: string): Promise<void> {
+    const { url } = await request<{ url: string }>(`/api/ebooks/${id}/download-link`, {
+      method: "POST",
+      token,
+    });
+    const a = document.createElement("a");
+    a.href = `${API_URL}${url}`;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   },
 };
 

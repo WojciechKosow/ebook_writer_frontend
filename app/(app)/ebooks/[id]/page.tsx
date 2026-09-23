@@ -115,15 +115,9 @@ export default function EbookDetailPage() {
     setDownloading(true);
     setError(null);
     try {
-      const blob = await ebookApi.download(token, ebook.id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${ebook.title || "ebook"}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      // The server answers with a signed link; the browser then downloads the
+      // PDF natively (the filename comes from the response's Content-Disposition).
+      await ebookApi.download(token, ebook.id);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Download failed.");
     } finally {
