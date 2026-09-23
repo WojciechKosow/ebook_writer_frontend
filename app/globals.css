@@ -84,6 +84,7 @@
   --color-good: var(--good);
   --color-good-soft: var(--good-soft);
   --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
   --color-paper: var(--paper);
   --color-paper-soft: var(--paper-soft);
   --font-sans: var(--font-instrument);
@@ -152,7 +153,64 @@ body {
 }
 .float-in { opacity: 0; animation: float-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 
+/* ---- New-ebook brief: live 3D book preview ------------------------------ */
+.brief-book-stage { display: grid; place-items: center; height: 296px; perspective: 1200px; }
+.brief-book {
+  position: relative;
+  width: 192px;
+  height: 266px;
+  transform: rotateY(-18deg) rotateX(4deg);
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.brief-book-stage:hover .brief-book { transform: rotateY(-7deg) rotateX(2deg); }
+.brief-book-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 22px 20px 18px 26px;
+  border-radius: 3px 8px 8px 3px;
+  box-shadow: inset 6px 0 0 rgba(0,0,0,.18), inset 8px 0 10px -6px rgba(255,255,255,.2), 18px 24px 40px -14px rgba(20,16,40,.45);
+  transition: background 0.5s, color 0.5s;
+}
+/* Paper grain over the cover. */
+.brief-book-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.1'/%3E%3C/svg%3E");
+}
+/* The page block, seen edge-on; its width follows the target length. */
+.brief-book-pages {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  right: 0;
+  transform-origin: right;
+  transform: rotateY(90deg);
+  border-radius: 0 2px 2px 0;
+  background: repeating-linear-gradient(to right, #fbf8f1 0 1px, #e6dfcf 1px 2px);
+  transition: width 0.35s;
+}
+.dark .brief-book-pages { background: repeating-linear-gradient(to right, #e9e4d8 0 1px, #bdb5a4 1px 2px); }
+.brief-book-shadow {
+  width: 186px;
+  height: 14px;
+  margin: -8px auto 0;
+  background: radial-gradient(closest-side, rgba(20,16,40,.22), transparent);
+  filter: blur(2px);
+}
+@media (max-width: 639px) {
+  .brief-book-stage { height: 250px; }
+  .brief-book { transform: rotateY(-18deg) rotateX(4deg) scale(0.85); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .brief-book, .brief-book-cover, .brief-book-pages { transition: none; }
   .reveal { opacity: 1 !important; animation: none !important; }
   .ink-underline path { animation: none !important; stroke-dashoffset: 0 !important; }
   .bar-live { animation: none !important; }
