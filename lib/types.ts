@@ -153,6 +153,8 @@ export interface EbookRequestInput {
   language: string;
   additionalInstructions: string;
   sourceMaterial: string;
+  /** Optional author/pen name printed on the cover ("by …"). */
+  authorName?: string;
   /**
    * Selected target length in pages — a soft content budget that shapes the
    * plan (chapters, depth, exercises). Never a hard limit: the book isn't cut to
