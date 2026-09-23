@@ -8,7 +8,7 @@ import { ebookApi } from "@/lib/api";
 import type { EbookStatusResponse } from "@/lib/types";
 import { StatusBadge, ProgressBar } from "@/components/ebook-ui";
 import { Alert, ButtonLink, Spinner } from "@/components/ui";
-import { STAGE_MESSAGE, isTerminal } from "@/lib/ebook-format";
+import { STAGE_MESSAGE, inBook, isTerminal } from "@/lib/ebook-format";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "";
@@ -39,9 +39,11 @@ function coverFor(id: string): string {
 
 /** Chapters written / total, when we have chapter data. */
 function chapterProgress(e: EbookStatusResponse): { done: number; total: number } | null {
-  const total = e.chapters?.length ?? 0;
+  // Deferred chapters were left out to end the book naturally — not part of it.
+  const chapters = inBook(e.chapters ?? []);
+  const total = chapters.length;
   if (total === 0) return null;
-  const done = e.chapters.filter((c) => c.status === "WRITTEN" || c.status === "EDITED").length;
+  const done = chapters.filter((c) => c.status === "WRITTEN" || c.status === "EDITED").length;
   return { done, total };
 }
 

@@ -27,7 +27,12 @@ export type EbookStatus =
   | "COMPLETED"
   | "FAILED";
 
-export type ChapterStatus = "PENDING" | "WRITTEN" | "EDITED" | "FAILED";
+/**
+ * DEFERRED: planned but left out of this book because the credits couldn't
+ * cover the whole outline — the book was wound down to a natural ending instead
+ * of being cut off. Never rendered; kept for a future "continue" feature.
+ */
+export type ChapterStatus = "PENDING" | "WRITTEN" | "EDITED" | "FAILED" | "DEFERRED";
 
 export interface ChapterProgress {
   chapterNumber: number;
@@ -45,8 +50,13 @@ export interface EbookStatusResponse {
   errorMessage: string | null;
   downloadReady: boolean;
   /**
-   * The real number of pages in the finished PDF (0 until COMPLETED). Scrivetta
-   * decides the length from the topic — this is the result, not an order.
+   * The target length the user selected — a soft content budget. The finished
+   * book lands around it but may be a little shorter or longer.
+   */
+  targetPages: number;
+  /**
+   * The real number of pages in the finished PDF (0 until COMPLETED) — the
+   * result of generation, not an order.
    */
   actualPageCount: number;
   /** Credits actually charged for this generation (1 credit = 1 final page). */
@@ -111,6 +121,9 @@ export interface EbookImage {
   chapterId: string | null;
   placedBy: ContentSource | null;
   displayWidthPercent: number | null;
+  /** Crop focal point for the cover, as % of width/height (null = centre). */
+  focalX: number | null;
+  focalY: number | null;
   contentType: string;
   originalFilename: string | null;
   sizeBytes: number;
@@ -128,6 +141,9 @@ export interface EbookImage {
 export interface EbookImageUpdateInput {
   role?: AssetRole;
   displayWidthPercent?: number;
+  /** 0–100: the point a cropped placement (the cover) is framed around. */
+  focalX?: number;
+  focalY?: number;
 }
 
 export interface EbookRequestInput {
@@ -137,12 +153,18 @@ export interface EbookRequestInput {
   language: string;
   additionalInstructions: string;
   sourceMaterial: string;
+  /**
+   * Selected target length in pages — a soft content budget that shapes the
+   * plan (chapters, depth, exercises). Never a hard limit: the book isn't cut to
+   * fit it or padded to reach it. Omit to use the default.
+   */
+  targetPages?: number;
 }
 
 /**
- * Describes generation as a credit budget rather than a fixed page order. The
- * user no longer picks a page count: Scrivetta decides how much content a
- * complete ebook needs, and credits are the budget that pays for it.
+ * What the creation UI needs: the target-length options (a soft content budget
+ * that shapes the plan) and the credit budget (the only hard limit — 1 credit
+ * pays for 1 final page, billed on the real result).
  */
 export interface GenerationBudgetResponse {
   /** Smallest balance that may start a standard generation. */
@@ -153,8 +175,19 @@ export interface GenerationBudgetResponse {
   estimatedPagesHigh: number;
   /** The user's current credit balance. */
   balance: number;
-  /** Whether the balance is enough to start now. */
+  /** Whether the balance is enough to start now (at the default target). */
   canGenerate: boolean;
+  /** Target lengths offered by the form (e.g. 20, 30, 50, 75, 100). */
+  targetOptions: number[];
+  /** Target used when none is selected. */
+  defaultTargetPages: number;
+  /** Largest target accepted. */
+  maxTargetPages: number;
+  /**
+   * Roughly how many pages the balance pays for. A target above this is planned
+   * down to what the user can afford, and ends naturally rather than being cut.
+   */
+  affordablePages: number;
 }
 
 // ---- Credits & billing -----------------------------------------------------
