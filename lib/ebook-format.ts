@@ -54,4 +54,21 @@ export const CHAPTER_STATUS_LABEL: Record<ChapterStatus, string> = {
   WRITTEN: "Written",
   EDITED: "Edited",
   FAILED: "Failed",
+  DEFERRED: "Saved for later",
 };
+
+/** Chapters that are part of the book (deferred ones were left out to end it naturally). */
+export function inBook<T extends { status: ChapterStatus }>(chapters: T[]): T[] {
+  return chapters.filter((c) => c.status !== "DEFERRED");
+}
+
+/**
+ * Credits needed to start a book with this target: the standard minimum, but
+ * never more than the target itself (a short book needs only enough for itself).
+ * Mirrors the backend start gate.
+ */
+export function creditsToStart(minCredits: number | null, targetPages: number | null): number | null {
+  if (minCredits === null) return null;
+  if (!targetPages || targetPages <= 0) return minCredits;
+  return Math.max(1, Math.min(minCredits, targetPages));
+}

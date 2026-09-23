@@ -11,7 +11,14 @@ import type { EbookStatusResponse, GenerationBudgetResponse } from "@/lib/types"
 import { StatusBadge, ProgressBar } from "@/components/ebook-ui";
 import { AssetManager } from "@/components/asset-manager";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
-import { CHAPTER_STATUS_LABEL, STAGE_MESSAGE, isGenerating, isTerminal } from "@/lib/ebook-format";
+import {
+  CHAPTER_STATUS_LABEL,
+  STAGE_MESSAGE,
+  creditsToStart,
+  inBook,
+  isGenerating,
+  isTerminal,
+} from "@/lib/ebook-format";
 
 const POLL_MS = 3000;
 
@@ -150,11 +157,15 @@ export default function EbookDetailPage() {
   const failed = ebook.status === "FAILED";
   const completed = ebook.status === "COMPLETED";
   const balance = credits?.balance ?? budget?.balance ?? null;
-  const minCredits = budget?.minCredits ?? null;
-  // Enough budget to start a standard generation. Undecided until the budget
-  // loads, so we don't flash a "not enough" state.
+  const targetPages = ebook.targetPages > 0 ? ebook.targetPages : null;
+  // Credits needed to start at this book's target (mirrors the backend gate).
+  // Undecided until the budget loads, so we don't flash a "not enough" state.
+  const minCredits = creditsToStart(budget?.minCredits ?? null, targetPages);
   const insufficient =
     balance !== null && minCredits !== null && balance < minCredits;
+  const affordablePages =
+    balance === null ? null : Math.max(0, Math.min(balance, budget?.affordablePages ?? balance));
+  const deferred = ebook.chapters.filter((c) => c.status === "DEFERRED");
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -191,11 +202,9 @@ export default function EbookDetailPage() {
 
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-600 dark:text-zinc-300">Estimated usage</span>
+              <span className="text-zinc-600 dark:text-zinc-300">Target length</span>
               <span className="font-medium text-zinc-900 dark:text-zinc-50">
-                {budget
-                  ? `~${budget.estimatedPagesLow}–${budget.estimatedPagesHigh} credits`
-                  : "…"}
+                {targetPages ? `~${targetPages} pages` : "Standard"}
               </span>
             </div>
             <div className="mt-1 flex items-center justify-between text-sm">
@@ -206,10 +215,10 @@ export default function EbookDetailPage() {
             </div>
             <p className="mt-3 border-t border-zinc-200 pt-3 text-xs text-muted dark:border-zinc-800">
               {insufficient
-                ? `You need at least ${minCredits} credits to generate a standard ebook. Buy more to start.`
-                : `Scrivetta decides how long a complete ebook needs to be${
-                    budget ? ` (usually ${budget.estimatedPagesLow}–${budget.estimatedPagesHigh} pages)` : ""
-                  }. Credits are the budget, not a page count — you're only billed for the pages actually produced.`}
+                ? `You need at least ${minCredits} credits to generate this ebook. Buy more to start.`
+                : targetPages && affordablePages !== null && affordablePages < targetPages
+                  ? `Your credits cover about ${affordablePages} pages, so the book will be planned as a complete ~${affordablePages}-page ebook. Add credits first for the full ~${targetPages} pages.`
+                  : "The target guides the plan — the finished book may be a little shorter or longer, and is never cut off to fit. You're only billed for the pages actually produced (1 credit = 1 page)."}
             </p>
           </div>
 
@@ -263,8 +272,16 @@ export default function EbookDetailPage() {
           <p className="text-sm text-emerald-800 dark:text-emerald-300">Your ebook is ready.</p>
           {ebook.actualPageCount > 0 && (
             <p className="mt-2 text-sm font-medium text-emerald-900 dark:text-emerald-200">
-              {ebook.actualPageCount} pages · {ebook.creditsCharged} credits used
+              {ebook.actualPageCount} pages
+              {targetPages ? ` (target ~${targetPages})` : ""} · {ebook.creditsCharged} credits used
               {balance !== null && ` · ${balance} credits remaining`}
+            </p>
+          )}
+          {deferred.length > 0 && (
+            <p className="mt-2 text-xs text-emerald-900/80 dark:text-emerald-200/80">
+              To finish within your credits, the book was brought to a complete ending and{" "}
+              {deferred.length === 1 ? "1 planned chapter was" : `${deferred.length} planned chapters were`}{" "}
+              left out. They&apos;re listed below as &ldquo;saved for later&rdquo;.
             </p>
           )}
           {ebook.description && (
@@ -289,13 +306,18 @@ export default function EbookDetailPage() {
         <div className="mt-8">
           <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Chapters</h2>
           <ul className="mt-3 flex flex-col gap-1.5">
-            {ebook.chapters.map((c) => {
+            {[...inBook(ebook.chapters), ...deferred].map((c) => {
               const done = c.status === "WRITTEN" || c.status === "EDITED";
               const chapterFailed = c.status === "FAILED";
+              const isDeferred = c.status === "DEFERRED";
               return (
                 <li
                   key={c.chapterNumber}
-                  className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  className={`flex items-center gap-3 rounded-lg border px-4 py-2.5 text-sm ${
+                    isDeferred
+                      ? "border-dashed border-zinc-200 bg-transparent opacity-70 dark:border-zinc-800"
+                      : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+                  }`}
                 >
                   <span
                     className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-semibold ${
@@ -306,7 +328,7 @@ export default function EbookDetailPage() {
                           : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
                     }`}
                   >
-                    {done ? "✓" : c.chapterNumber}
+                    {done ? "✓" : isDeferred ? "–" : c.chapterNumber}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-zinc-700 dark:text-zinc-300">
                     {c.title || `Chapter ${c.chapterNumber}`}

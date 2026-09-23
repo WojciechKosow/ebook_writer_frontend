@@ -3,6 +3,10 @@
 import { useCallback, useRef, useState } from "react";
 import type { AssetsState } from "@/lib/use-assets";
 import { ApiError } from "@/lib/api";
+import { coverObjectPosition } from "@/lib/cover-crop";
+
+/** The panel previews the full-page (2:3) cover composition. */
+const COVER_RATIO = 2 / 3;
 
 const ACCEPT = "image/png,image/jpeg,image/webp,image/gif,image/svg+xml";
 const ALLOWED = new Set([
@@ -36,6 +40,21 @@ export function CoverPanel({
 
   const cover = state.assets.find((a) => a.placement === "COVER");
   const coverUrl = cover ? state.urlFor(cover.id) : undefined;
+  // Optimistic focal point while a save is in flight (keyed to the cover id so it
+  // resets when the cover changes).
+  const [pending, setPending] = useState<{ id: string; x: number; y: number } | null>(null);
+  const focal =
+    cover && pending?.id === cover.id
+      ? { x: pending.x, y: pending.y }
+      : { x: cover?.focalX ?? 50, y: cover?.focalY ?? 50 };
+  const objectPosition = cover
+    ? coverObjectPosition(cover.width, cover.height, COVER_RATIO, focal.x, focal.y)
+    : undefined;
+  // Framing only matters when the image isn't already the cover's shape.
+  const needsFraming =
+    !!cover && cover.width > 0 && cover.height > 0 &&
+    Math.abs(cover.width / cover.height - COVER_RATIO) / COVER_RATIO > 0.01;
+
 
   const run = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -48,6 +67,20 @@ export function CoverPanel({
       setBusy(false);
     }
   }, []);
+
+  function setFocal(e: React.MouseEvent<HTMLButtonElement>) {
+    if (!cover) return;
+    const img = e.currentTarget.querySelector("img");
+    const box = (img ?? e.currentTarget).getBoundingClientRect();
+    const x = Math.round(((e.clientX - box.left) / box.width) * 100);
+    const y = Math.round(((e.clientY - box.top) / box.height) * 100);
+    const fx = Math.max(0, Math.min(100, x));
+    const fy = Math.max(0, Math.min(100, y));
+    setPending({ id: cover.id, x: fx, y: fy });
+    run(async () => {
+      await state.update(cover.id, { focalX: fx, focalY: fy });
+    });
+  }
 
   const onFile = useCallback(
     (file: File) => {
@@ -81,7 +114,12 @@ export function CoverPanel({
         <div className="relative mx-auto aspect-[2/3] w-full overflow-hidden rounded-lg border border-hairline-2 bg-[#f4f2ee] shadow-soft">
           {coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={coverUrl} alt="Cover" className="absolute inset-0 h-full w-full object-cover" />
+            <img
+              src={coverUrl}
+              alt="Cover"
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ objectPosition }}
+            />
           ) : null}
           {/* Title/subtitle overlay */}
           <div
@@ -138,6 +176,48 @@ export function CoverPanel({
         </div>
 
         {error && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>}
+
+        {/* Framing — the image is cropped (never stretched) to the cover's shape,
+            centred on the point chosen here. Same crop in the preview and PDF. */}
+        {cover && coverUrl && needsFraming && (
+          <div className="mt-4">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-faint">
+              Framing
+            </p>
+            <p className="mb-2 text-xs text-muted">
+              This image is a different shape from the cover, so part of it is cropped. Click the
+              part that must stay in view.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={setFocal}
+              aria-label="Set the cover's focal point"
+              className="relative block w-full cursor-crosshair overflow-hidden rounded-md border border-hairline bg-surface-3 disabled:cursor-wait"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={coverUrl} alt="" className="block h-auto w-full" draggable={false} />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-accent shadow-[0_0_0_1px_rgba(0,0,0,0.35)]"
+                style={{ left: `${focal.x}%`, top: `${focal.y}%` }}
+              />
+            </button>
+            {(cover.focalX !== null || cover.focalY !== null) && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setPending({ id: cover.id, x: 50, y: 50 });
+                  run(() => state.update(cover.id, { focalX: 50, focalY: 50 }).then(() => undefined));
+                }}
+                className="mt-2 text-xs font-medium text-accent hover:underline disabled:opacity-60"
+              >
+                Reset to centre
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Choose from existing project images */}
         {state.assets.length > 0 && (

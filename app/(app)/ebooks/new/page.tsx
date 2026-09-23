@@ -8,6 +8,12 @@ import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
 import type { EbookRequestInput, GenerationBudgetResponse } from "@/lib/types";
 import { Alert, Button, Field, TextAreaField } from "@/components/ui";
+import { TargetLengthPicker } from "@/components/target-length-picker";
+import { creditsToStart } from "@/lib/ebook-format";
+
+/** Used until the budget endpoint answers (mirrors the backend defaults). */
+const FALLBACK_TARGETS = [20, 30, 50, 75, 100];
+const FALLBACK_DEFAULT_TARGET = 30;
 
 const initial: EbookRequestInput = {
   topic: "",
@@ -85,6 +91,8 @@ export default function NewEbookPage() {
   const [submitting, setSubmitting] = useState(false);
   const [exIdx, setExIdx] = useState(0);
   const [budget, setBudget] = useState<GenerationBudgetResponse | null>(null);
+  // null = "not chosen yet" → the server's default target once the budget loads.
+  const [target, setTarget] = useState<number | null>(null);
 
   // Load the generation budget (min credits + orientational page range) so we can
   // frame this as a budget, never a fixed page order.
@@ -129,8 +137,14 @@ export default function NewEbookPage() {
     setError(null);
   }
 
+  const targetOptions = budget?.targetOptions?.length ? budget.targetOptions : FALLBACK_TARGETS;
+  const targetPages = target ?? budget?.defaultTargetPages ?? FALLBACK_DEFAULT_TARGET;
   const balance = credits?.balance ?? budget?.balance ?? null;
-  const minCredits = budget?.minCredits ?? null;
+  // Credits needed to start at this target (never more than the target itself).
+  const minCredits = creditsToStart(budget?.minCredits ?? null, targetPages);
+  // Pages the balance covers (capped server-side); follows the live balance.
+  const affordablePages =
+    balance === null ? null : Math.max(0, Math.min(balance, budget?.affordablePages ?? balance));
   // Enough budget to *generate* on the next step. Creating a draft is always
   // free, so this only drives messaging, not whether they can continue.
   const insufficient =
@@ -149,7 +163,7 @@ export default function NewEbookPage() {
     try {
       // Create a draft — no credits are charged yet. The next screen lets the
       // user add assets and then generate (which reserves the credits).
-      const created = await ebookApi.create(token, form);
+      const created = await ebookApi.create(token, { ...form, targetPages });
       router.push(`/ebooks/${created.id}`);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -248,16 +262,19 @@ export default function NewEbookPage() {
           hint="Optional. Paste any reference text or examples to ground the book."
         />
 
-        {/* Generation budget — not a page order. The charge happens when you
-            generate on the next step, and only for the pages actually produced. */}
+        <TargetLengthPicker
+          options={targetOptions}
+          value={targetPages}
+          onChange={setTarget}
+          affordablePages={affordablePages}
+        />
+
+        {/* Credits — the only hard limit. The charge happens when you generate on
+            the next step, and only for the pages actually produced. */}
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
           <div className="flex items-center justify-between text-sm">
             <span className="text-zinc-600 dark:text-zinc-300">Estimated usage</span>
-            <span className="font-medium text-zinc-900 dark:text-zinc-50">
-              {budget
-                ? `~${budget.estimatedPagesLow}–${budget.estimatedPagesHigh} credits`
-                : "…"}
-            </span>
+            <span className="font-medium text-zinc-900 dark:text-zinc-50">~{targetPages} credits</span>
           </div>
           <div className="mt-1 flex items-center justify-between text-sm">
             <span className="text-zinc-600 dark:text-zinc-300">Your balance</span>
@@ -267,10 +284,8 @@ export default function NewEbookPage() {
           </div>
           <p className="mt-3 border-t border-zinc-200 pt-3 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
             {insufficient
-              ? `You need at least ${minCredits} credits to generate a standard ebook — you can add assets first and buy credits before generating.`
-              : `Scrivetta decides how long a complete ebook needs to be${
-                  budget ? ` (usually ${budget.estimatedPagesLow}–${budget.estimatedPagesHigh} pages)` : ""
-                }. Credits are the budget, not a page count — you're only charged for the pages actually produced, when you generate.`}
+              ? `You need at least ${minCredits} credits to generate this ebook — you can add assets first and buy credits before generating.`
+              : "1 credit = 1 final page, charged when you generate and only for the pages actually produced. If the book needs a few more pages to finish properly, your credits cover them; unused credits stay on your account."}
           </p>
         </div>
 
