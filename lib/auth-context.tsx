@@ -19,6 +19,8 @@ interface AuthState {
   loading: boolean;
   login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
   register: (displayName: string, email: string, password: string) => Promise<void>;
+  /** Finish "Continue with Google": exchange the callback's one-time code for a session. */
+  completeOAuthLogin: (code: string, clientState: string, rememberMe: boolean) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -98,6 +100,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [applyToken],
   );
 
+  const completeOAuthLogin = useCallback(
+    async (code: string, clientState: string, rememberMe: boolean) => {
+      const res = await authApi.oauthExchange({ code, clientState, rememberMe });
+      applyToken(res.token);
+      if (res.user) {
+        setUser(res.user);
+      } else if (res.token) {
+        setUser(await authApi.me(res.token));
+      }
+    },
+    [applyToken],
+  );
+
   const register = useCallback(
     async (displayName: string, email: string, password: string) => {
       await authApi.register({ displayName, email, password });
@@ -116,8 +131,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [applyToken]);
 
   const value = useMemo<AuthState>(
-    () => ({ user, token, loading, login, register, logout }),
-    [user, token, loading, login, register, logout],
+    () => ({ user, token, loading, login, register, completeOAuthLogin, logout }),
+    [user, token, loading, login, register, completeOAuthLogin, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
