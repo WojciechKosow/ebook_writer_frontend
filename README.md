@@ -18,7 +18,9 @@ The backend must be running (default `http://localhost:8080`) and its CORS
 
 - **Landing page** — `/`
 - **Auth** — `/register`, `/check-email`, `/verify`, `/login`,
-  `/forgot-password`, `/reset-password`
+  `/forgot-password`, `/reset-password`, `/auth/callback` ("Continue with
+  Google" landing page — the OAuth flow itself runs on the backend; no Google
+  credentials are needed in the frontend)
 - **Dashboard** — `/dashboard` (protected placeholder; the ebook flow lands here next)
 
 Auth state lives in `lib/auth-context.tsx`: the access token is kept in memory

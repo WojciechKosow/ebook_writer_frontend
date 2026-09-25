@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { authApi, ApiError } from "@/lib/api";
 import { AuthCard, Alert, Button, Field } from "@/components/ui";
 import { PasswordField } from "@/components/auth-fields";
+import { AuthDivider, GoogleButton } from "@/components/google-button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,6 +51,9 @@ export default function LoginPage() {
 
   return (
     <AuthCard title="Welcome back">
+      <GoogleButton rememberMe={rememberMe} />
+      <AuthDivider />
+
       <form onSubmit={onSubmit} className="flex flex-col gap-5">
         {error && <Alert>{error}</Alert>}
         {needsVerify && !resent && (

@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import { AuthCard, Alert, Button, Field } from "@/components/ui";
 import { PasswordField, PasswordChecklist } from "@/components/auth-fields";
+import { AuthDivider, GoogleButton } from "@/components/google-button";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -50,6 +51,9 @@ export default function RegisterPage() {
 
   return (
     <AuthCard title="Create your account">
+      <GoogleButton />
+      <AuthDivider label="or sign up with email" />
+
       <form onSubmit={onSubmit} className="flex flex-col gap-5">
         {error && <Alert>{error}</Alert>}
 

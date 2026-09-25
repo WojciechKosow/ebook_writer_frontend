@@ -132,6 +132,15 @@ export const authApi = {
     });
   },
 
+  /** Trade the one-time code from /auth/callback for a session (sets the refresh cookie). */
+  oauthExchange(input: { code: string; clientState: string; rememberMe: boolean }) {
+    return request<AuthResponse>("/api/auth/oauth2/exchange", {
+      method: "POST",
+      body: input,
+      withCredentials: true,
+    });
+  },
+
   resetPassword(tokenId: string, token: string, newPassword: string) {
     return request<string>(
       `/api/auth/reset-password?tokenId=${encodeURIComponent(tokenId)}&token=${encodeURIComponent(token)}`,
