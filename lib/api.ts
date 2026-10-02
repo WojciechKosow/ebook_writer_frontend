@@ -177,6 +177,11 @@ export const ebookApi = {
     return request<EbookStatusResponse>(`/api/ebooks/${id}`, { token });
   },
 
+  /** Resume a failed generation: written chapters are kept, the missing ones are written (new credit hold). */
+  resume(token: string, id: string) {
+    return request<EbookStatusResponse>(`/api/ebooks/${id}/resume`, { method: "POST", token });
+  },
+
   /**
    * Describe the generation budget for the creation UI: minimum credits to
    * start, the orientational page range, the balance and whether the user can

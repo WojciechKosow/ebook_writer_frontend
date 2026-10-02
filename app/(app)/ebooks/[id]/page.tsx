@@ -39,6 +39,11 @@ export default function EbookDetailPage() {
   const [budget, setBudget] = useState<GenerationBudgetResponse | null>(null);
   // Bumped when the knowledge step hands over to the blueprint step.
   const [blueprintKey, setBlueprintKey] = useState(0);
+  // Knowledge flow state: a book with materials is written from its blueprint, so
+  // "Generate" waits until the blueprint is ready.
+  const [hasMaterials, setHasMaterials] = useState(false);
+  const [blueprintStatus, setBlueprintStatus] = useState<string>("NOT_STARTED");
+  const [resuming, setResuming] = useState(false);
 
   // Generation budget (min credits + orientational page range) — drives the
   // draft messaging and whether the Generate button is enabled.
@@ -114,6 +119,26 @@ export default function EbookDetailPage() {
     }
   }, [token, ebook, credits]);
 
+  const resumeGeneration = useCallback(async () => {
+    if (!token || !ebook) return;
+    setResuming(true);
+    setError(null);
+    try {
+      setEbook(await ebookApi.resume(token, ebook.id));
+      credits?.refresh();
+      setReloadKey((k) => k + 1); // poll again
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 402) {
+        const body = err.body as { required?: number; available?: number } | undefined;
+        setError(`You need ${body?.required ?? "more"} credits but have ${body?.available ?? 0}. Buy more to resume.`);
+      } else {
+        setError(err instanceof ApiError ? err.message : "Couldn't resume generation.");
+      }
+    } finally {
+      setResuming(false);
+    }
+  }, [token, ebook, credits]);
+
   const download = useCallback(async () => {
     if (!token || !ebook) return;
     setDownloading(true);
@@ -164,6 +189,16 @@ export default function EbookDetailPage() {
   const affordablePages =
     balance === null ? null : Math.max(0, Math.min(balance, budget?.affordablePages ?? balance));
   const deferred = ebook.chapters.filter((c) => c.status === "DEFERRED");
+  const knowledgeFlow = hasMaterials || blueprintStatus !== "NOT_STARTED";
+  const blueprintReady = blueprintStatus === "BLUEPRINT_READY";
+  const waitingForBlueprint = knowledgeFlow && !blueprintReady;
+  const knowledgeBased = ebook.generationMode === "KNOWLEDGE";
+  const stageMessage =
+    knowledgeBased && ebook.status === "PLANNING"
+      ? "Preparing the chapters from your blueprint…"
+      : knowledgeBased && ebook.status === "WRITING"
+        ? "Writing each chapter from your knowledge, blueprint and answers…"
+        : STAGE_MESSAGE[ebook.status];
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -194,12 +229,19 @@ export default function EbookDetailPage() {
                 will use them to understand your knowledge before building your book.
               </p>
               <div className="mt-4">
-                <KnowledgeStep token={token} ebookId={ebook.id} onContinued={() => setBlueprintKey((k) => k + 1)} />
+                <KnowledgeStep
+                  token={token}
+                  ebookId={ebook.id}
+                  onContinued={() => setBlueprintKey((k) => k + 1)}
+                  onHasMaterials={setHasMaterials}
+                />
               </div>
             </section>
           )}
 
-          {token && <BlueprintStep token={token} ebookId={ebook.id} refreshKey={blueprintKey} />}
+          {token && (
+            <BlueprintStep token={token} ebookId={ebook.id} refreshKey={blueprintKey} onStatus={setBlueprintStatus} />
+          )}
 
           <div className="rounded-xl border border-hairline bg-surface-2 p-4">
             <h2 className="text-sm font-semibold text-foreground-2">Assets (optional)</h2>
@@ -238,8 +280,8 @@ export default function EbookDetailPage() {
           {error && <Alert>{error}</Alert>}
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={startGeneration} loading={starting} disabled={insufficient}>
-              Generate ebook
+            <Button onClick={startGeneration} loading={starting} disabled={insufficient || waitingForBlueprint}>
+              {blueprintReady ? "Generate my book" : "Generate ebook"}
             </Button>
             <ButtonLink href="/billing" variant="secondary">
               Buy credits
@@ -247,7 +289,9 @@ export default function EbookDetailPage() {
             <span className="text-xs text-zinc-400">
               {insufficient
                 ? `A standard ebook needs at least ${minCredits} credits to generate.`
-                : "This can take several minutes — you can watch progress here."}
+                : waitingForBlueprint
+                  ? "Finish the steps above first — your book is written from your knowledge and blueprint."
+                  : "This can take several minutes — you can watch progress here."}
             </span>
           </div>
         </div>
@@ -257,7 +301,7 @@ export default function EbookDetailPage() {
       {!draft && !failed && (
         <div className="mt-6">
           <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="text-zinc-600 dark:text-zinc-300">{STAGE_MESSAGE[ebook.status]}</span>
+            <span className="text-zinc-600 dark:text-zinc-300">{stageMessage}</span>
             <span className="tabular-nums text-zinc-400">{ebook.progress}%</span>
           </div>
           <ProgressBar value={ebook.progress} />
@@ -273,9 +317,23 @@ export default function EbookDetailPage() {
       {failed && (
         <div className="mt-6 flex flex-col gap-4">
           <Alert>{ebook.errorMessage || "Generation failed. Please try again."}</Alert>
-          <div>
-            <ButtonLink href="/ebooks/new">Start a new ebook</ButtonLink>
+          {ebook.resumable && (
+            <p className="text-xs text-muted">
+              Your credits were refunded. The chapters already written are kept — resuming writes only the missing
+              ones.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-3">
+            {ebook.resumable && (
+              <Button onClick={resumeGeneration} loading={resuming}>
+                Resume generation
+              </Button>
+            )}
+            <ButtonLink href="/ebooks/new" variant={ebook.resumable ? "secondary" : "primary"}>
+              Start a new ebook
+            </ButtonLink>
           </div>
+          {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
         </div>
       )}
 

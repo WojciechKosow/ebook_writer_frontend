@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { blueprintApi, ApiError } from "@/lib/api";
 import type { Blueprint, BlueprintChapter, BlueprintOverview, BlueprintQuestion } from "@/lib/types";
 import { Alert, Button, Spinner, controlBase } from "@/components/ui";
@@ -35,12 +35,23 @@ export function BlueprintStep({
   token,
   ebookId,
   refreshKey = 0,
+  onStatus,
 }: {
   token: string;
   ebookId: string;
   refreshKey?: number;
+  /** Reports the blueprint status (the draft page gates "Generate" on it). */
+  onStatus?: (status: BlueprintOverview["status"]) => void;
 }) {
-  const [overview, setOverview] = useState<BlueprintOverview | null>(null);
+  const [overview, setOverviewState] = useState<BlueprintOverview | null>(null);
+  const reportStatus = useRef(onStatus);
+  useEffect(() => {
+    reportStatus.current = onStatus;
+  }, [onStatus]);
+  const setOverview = useCallback((data: BlueprintOverview) => {
+    setOverviewState(data);
+    reportStatus.current?.(data.status);
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftBook | null>(null);
   const [saving, setSaving] = useState(false);
@@ -52,7 +63,7 @@ export function BlueprintStep({
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't load your blueprint.");
     }
-  }, [token, ebookId]);
+  }, [token, ebookId, setOverview]);
 
   useEffect(() => {
     let active = true;
@@ -67,7 +78,7 @@ export function BlueprintStep({
     return () => {
       active = false;
     };
-  }, [token, ebookId, refreshKey]);
+  }, [token, ebookId, refreshKey, setOverview]);
 
   const building = overview?.status === "BUILDING_BLUEPRINT";
   useEffect(() => {

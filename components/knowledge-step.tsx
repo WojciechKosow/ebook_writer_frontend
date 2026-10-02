@@ -43,11 +43,14 @@ export function KnowledgeStep({
   token,
   ebookId,
   onContinued,
+  onHasMaterials,
 }: {
   token: string;
   ebookId: string;
   /** Called once the author continues and the blueprint build has been started. */
   onContinued?: () => void;
+  /** Reports whether the book has any materials (then it is written from them, not the brief). */
+  onHasMaterials?: (has: boolean) => void;
 }) {
   const [overview, setOverview] = useState<KnowledgeOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,9 +63,14 @@ export function KnowledgeStep({
   const [continuing, setContinuing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const notesLoaded = useRef(false);
+  const reportMaterials = useRef(onHasMaterials);
+  useEffect(() => {
+    reportMaterials.current = onHasMaterials;
+  }, [onHasMaterials]);
 
   const apply = useCallback((data: KnowledgeOverview) => {
     setOverview(data);
+    reportMaterials.current?.(data.sources.length > 0);
     // Show the saved notes once; after that the textarea is the author's.
     if (!notesLoaded.current) {
       notesLoaded.current = true;

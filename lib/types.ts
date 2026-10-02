@@ -61,6 +61,10 @@ export interface EbookStatusResponse {
   actualPageCount: number;
   /** Credits actually charged for this generation (1 credit = 1 final page). */
   creditsCharged: number;
+  /** LEGACY = written from the brief; KNOWLEDGE = written from the author's knowledge + blueprint. */
+  generationMode: "LEGACY" | "KNOWLEDGE";
+  /** A failed generation that kept its written chapters and can be resumed. */
+  resumable: boolean;
   chapters: ChapterProgress[];
   createdAt: string | null;
   updatedAt: string | null;
