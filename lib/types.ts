@@ -149,6 +149,8 @@ export interface EbookImageUpdateInput {
 export interface EbookRequestInput {
   topic: string;
   targetAudience: string;
+  /** What the book should achieve for its reader (its goal / purpose). */
+  bookGoal?: string;
   style: string;
   language: string;
   additionalInstructions: string;
@@ -242,3 +244,87 @@ export interface OrderStatus {
   creditsGranted: number;
 }
 
+
+// ---- Knowledge ("Tell Scrivetta what you know") ---------------------------
+
+/**
+ * Lifecycle of a book's knowledge ingestion — separate from EbookStatus (the
+ * book stays a DRAFT throughout).
+ */
+export type KnowledgeStatus =
+  | "CREATED"
+  | "MATERIALS_UPLOADING"
+  | "PROCESSING"
+  | "ANALYZING"
+  | "KNOWLEDGE_READY"
+  | "READY_FOR_BLUEPRINT"
+  | "FAILED";
+
+export type KnowledgeSourceType = "ZIP" | "PDF" | "DOCX" | "TXT" | "MD" | "NOTES";
+
+export interface KnowledgeSource {
+  id: string;
+  sourceType: KnowledgeSourceType;
+  filename: string;
+  sizeBytes: number;
+  /** EXTRACTED, PARTIAL (some files skipped) or FAILED (unreadable — ignored). */
+  status: "EXTRACTED" | "PARTIAL" | "FAILED";
+  errorMessage: string | null;
+  documentCount: number;
+  skippedCount: number;
+  extractedChars: number;
+  skipped: { path: string; reason: string }[];
+  createdAt: string | null;
+}
+
+export interface KnowledgeSummary {
+  projectName: string | null;
+  projectType: string | null;
+  overallSummary: string | null;
+  technologies: string[];
+  topicsFound: number;
+  processesFound: number;
+  examplesFound: number;
+  userInsightsFound: number;
+  termsFound: number;
+  importantDetailsFound: number;
+  /** Uploaded sources (files + notes) that were analysed. */
+  sourcesAnalyzed: number;
+  /** Individual documents analysed (e.g. files inside a ZIP). */
+  documentsAnalyzed: number;
+  documentsNotAnalyzed: number;
+  duplicatesSkipped: number;
+  knowledgeGaps: number;
+  topTopics: string[];
+  intendedSequence: string[];
+  gapQuestions: string[];
+}
+
+export interface KnowledgeOverview {
+  ebookId: string;
+  status: KnowledgeStatus;
+  errorMessage: string | null;
+  hasKnowledge: boolean;
+  readyForBlueprint: boolean;
+  /** False when the server has no OpenAI key — processing can't start. */
+  processingAvailable: boolean;
+  sources: KnowledgeSource[];
+  /** The saved pasted notes, or null. */
+  notes: string | null;
+  summary: KnowledgeSummary | null;
+  usage: {
+    model: string | null;
+    openAiCalls: number;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCostUsd: number;
+    analyzedChars: number;
+    chunks: number;
+    processingRuns: number;
+    maxProcessingRuns: number;
+  } | null;
+  limits: { maxUploadBytes: number; maxSources: number; maxNotesChars: number; acceptedFormats: string[] };
+  warnings: string[];
+  startedAt: string | null;
+  completedAt: string | null;
+}

@@ -10,6 +10,7 @@ import { useAssets } from "@/lib/use-assets";
 import type { EbookStatusResponse, GenerationBudgetResponse } from "@/lib/types";
 import { StatusBadge, ProgressBar } from "@/components/ebook-ui";
 import { AssetManager } from "@/components/asset-manager";
+import { KnowledgeStep } from "@/components/knowledge-step";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
 import {
   CHAPTER_STATUS_LABEL,
@@ -182,6 +183,19 @@ export default function EbookDetailPage() {
       {/* Draft — assets + generate */}
       {draft && (
         <div className="mt-6 flex flex-col gap-5">
+          {token && (
+            <section className="rounded-xl border border-hairline bg-surface-2 p-4">
+              <h2 className="text-[15px] font-semibold text-foreground">Tell Scrivetta what you know</h2>
+              <p className="mt-1 text-xs text-muted">
+                Upload your existing materials, notes, project files or other information. Scrivetta
+                will use them to understand your knowledge before building your book.
+              </p>
+              <div className="mt-4">
+                <KnowledgeStep token={token} ebookId={ebook.id} />
+              </div>
+            </section>
+          )}
+
           <div className="rounded-xl border border-hairline bg-surface-2 p-4">
             <h2 className="text-sm font-semibold text-foreground-2">Assets (optional)</h2>
             <p className="mt-1 text-xs text-muted">

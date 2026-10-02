@@ -24,6 +24,7 @@ const FORM_ID = "new-ebook-form";
 const initial: EbookRequestInput = {
   topic: "",
   targetAudience: "",
+  bookGoal: "",
   style: "",
   language: "English",
   additionalInstructions: "",
@@ -218,6 +219,7 @@ export default function NewEbookPage() {
       const created = await ebookApi.create(token, {
         ...form,
         authorName: form.authorName?.trim() || undefined,
+        bookGoal: form.bookGoal?.trim() || undefined,
         targetPages,
       });
       createdRef.current = true;
@@ -252,11 +254,14 @@ export default function NewEbookPage() {
             Start a new <em className="text-accent">book</em>
           </h1>
           <p className="mt-2.5 max-w-[52ch] text-[15px] text-muted">
-            Describe it once. We plan, write and edit it — then hand you a finished PDF.
+            Start with the basics. Next, tell Scrivetta what you know — your notes, documents or a
+            whole project — and it builds the book from your knowledge.
           </p>
         </div>
         <ol className="flex items-center gap-2 text-xs text-muted" aria-label="Steps">
           <Step on>Brief</Step>
+          <li aria-hidden className="h-px w-[18px] bg-hairline-2" />
+          <Step>Knowledge</Step>
           <li aria-hidden className="h-px w-[18px] bg-hairline-2" />
           <Step>Assets</Step>
           <li aria-hidden className="h-px w-[18px] bg-hairline-2" />
@@ -308,6 +313,17 @@ export default function NewEbookPage() {
                   {ex.tag}
                 </button>
               ))}
+            </div>
+            <div className="mt-5">
+              <TextInput
+                id="bookGoal"
+                label="Book goal — what should the reader be able to do after reading it?"
+                optional
+                value={form.bookGoal ?? ""}
+                onChange={(v) => update("bookGoal", v)}
+                placeholder="Teach beginners how to build the project from scratch."
+                error={fieldErrors.bookGoal}
+              />
             </div>
           </Section>
 
@@ -506,7 +522,7 @@ export default function NewEbookPage() {
               disabled={submitting}
               className="flex h-12 w-full items-center justify-between rounded-xl bg-foreground pl-[18px] pr-2 text-sm font-semibold text-background transition-[background,color,transform] hover:bg-accent hover:text-white active:translate-y-px disabled:cursor-wait disabled:opacity-70"
             >
-              {submitting ? "Creating draft…" : "Continue to assets"}
+              {submitting ? "Creating draft…" : "Continue"}
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/15">
                 {submitting ? <Spinner /> : "→"}
               </span>
