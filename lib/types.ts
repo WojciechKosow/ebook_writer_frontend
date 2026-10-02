@@ -61,6 +61,10 @@ export interface EbookStatusResponse {
   actualPageCount: number;
   /** Credits actually charged for this generation (1 credit = 1 final page). */
   creditsCharged: number;
+  /** LEGACY = written from the brief; KNOWLEDGE = written from the author's knowledge + blueprint. */
+  generationMode: "LEGACY" | "KNOWLEDGE";
+  /** A failed generation that kept its written chapters and can be resumed. */
+  resumable: boolean;
   chapters: ChapterProgress[];
   createdAt: string | null;
   updatedAt: string | null;
@@ -149,6 +153,8 @@ export interface EbookImageUpdateInput {
 export interface EbookRequestInput {
   topic: string;
   targetAudience: string;
+  /** What the book should achieve for its reader (its goal / purpose). */
+  bookGoal?: string;
   style: string;
   language: string;
   additionalInstructions: string;
@@ -242,3 +248,187 @@ export interface OrderStatus {
   creditsGranted: number;
 }
 
+
+// ---- Knowledge ("Tell Scrivetta what you know") ---------------------------
+
+/**
+ * Lifecycle of a book's knowledge ingestion — separate from EbookStatus (the
+ * book stays a DRAFT throughout).
+ */
+export type KnowledgeStatus =
+  | "CREATED"
+  | "MATERIALS_UPLOADING"
+  | "PROCESSING"
+  | "ANALYZING"
+  | "KNOWLEDGE_READY"
+  | "READY_FOR_BLUEPRINT"
+  | "FAILED";
+
+export type KnowledgeSourceType = "ZIP" | "PDF" | "DOCX" | "TXT" | "MD" | "NOTES";
+
+export interface KnowledgeSource {
+  id: string;
+  sourceType: KnowledgeSourceType;
+  filename: string;
+  sizeBytes: number;
+  /** EXTRACTED, PARTIAL (some files skipped) or FAILED (unreadable — ignored). */
+  status: "EXTRACTED" | "PARTIAL" | "FAILED";
+  errorMessage: string | null;
+  documentCount: number;
+  skippedCount: number;
+  extractedChars: number;
+  skipped: { path: string; reason: string }[];
+  createdAt: string | null;
+}
+
+export interface KnowledgeSummary {
+  projectName: string | null;
+  projectType: string | null;
+  overallSummary: string | null;
+  technologies: string[];
+  topicsFound: number;
+  processesFound: number;
+  examplesFound: number;
+  userInsightsFound: number;
+  termsFound: number;
+  importantDetailsFound: number;
+  /** Uploaded sources (files + notes) that were analysed. */
+  sourcesAnalyzed: number;
+  /** Individual documents analysed (e.g. files inside a ZIP). */
+  documentsAnalyzed: number;
+  documentsNotAnalyzed: number;
+  duplicatesSkipped: number;
+  knowledgeGaps: number;
+  topTopics: string[];
+  intendedSequence: string[];
+  gapQuestions: string[];
+}
+
+export interface KnowledgeOverview {
+  ebookId: string;
+  status: KnowledgeStatus;
+  errorMessage: string | null;
+  hasKnowledge: boolean;
+  readyForBlueprint: boolean;
+  /** False when the server has no OpenAI key — processing can't start. */
+  processingAvailable: boolean;
+  sources: KnowledgeSource[];
+  /** The saved pasted notes, or null. */
+  notes: string | null;
+  summary: KnowledgeSummary | null;
+  usage: {
+    model: string | null;
+    openAiCalls: number;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCostUsd: number;
+    analyzedChars: number;
+    chunks: number;
+    processingRuns: number;
+    maxProcessingRuns: number;
+  } | null;
+  limits: { maxUploadBytes: number; maxSources: number; maxNotesChars: number; acceptedFormats: string[] };
+  warnings: string[];
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+// ---- Book Blueprint --------------------------------------------------------
+
+/** Lifecycle of a book's blueprint (the plan built from its knowledge). */
+export type BlueprintStatus =
+  | "NOT_STARTED"
+  | "BUILDING_BLUEPRINT"
+  | "BLUEPRINT_REVIEW"
+  | "QUESTIONS_REQUIRED"
+  | "BLUEPRINT_READY"
+  | "FAILED";
+
+export interface BlueprintChapter {
+  id: string;
+  order: number;
+  title: string;
+  purpose: string | null;
+  topics: string[];
+  keyPoints: { point: string; sources: string[] }[];
+  knowledgeReferences: { type: string; name: string }[];
+  /** Source documents the chapter draws on (paths in the author's materials, or "user-notes"). */
+  sourceReferences: string[];
+  gapIds: string[];
+  origin: "AI" | "AUTHOR";
+  edited: boolean;
+}
+
+export interface BlueprintGap {
+  id: string;
+  description: string;
+  whyItMatters: string | null;
+  severity: "critical" | "important" | "minor";
+  chapterIds: string[];
+  status: "OPEN" | "ANSWERED" | "SKIPPED" | "NOT_ASKED";
+  questionId: string | null;
+}
+
+export interface Blueprint {
+  concept: string | null;
+  workingTitle: string | null;
+  subtitle: string | null;
+  audience: string | null;
+  readerGoal: string | null;
+  promise: string | null;
+  structureRationale: string | null;
+  chapters: BlueprintChapter[];
+  knowledgeGaps: BlueprintGap[];
+  userEditedFields: string[];
+}
+
+export interface BlueprintQuestion {
+  id: string;
+  gapId: string | null;
+  chapterId: string | null;
+  chapterTitle: string | null;
+  question: string;
+  reason: string | null;
+  priority: number;
+  status: "OPEN" | "ANSWERED" | "SKIPPED";
+  answer: string | null;
+  answeredAt: string | null;
+}
+
+export interface BlueprintOverview {
+  ebookId: string;
+  status: BlueprintStatus;
+  errorMessage: string | null;
+  knowledgeReady: boolean;
+  /** The knowledge changed since the blueprint was built. */
+  knowledgeOutdated: boolean;
+  buildAvailable: boolean;
+  userEdited: boolean;
+  blueprint: Blueprint | null;
+  questions: BlueprintQuestion[];
+  summary: {
+    chapters: number;
+    groundedChapters: number;
+    knowledgeGaps: number;
+    openGaps: number;
+    questions: number;
+    answered: number;
+    skipped: number;
+    open: number;
+  } | null;
+  usage: { model: string | null; generation: number; maxGenerations: number } | null;
+  warnings: string[];
+  generatedAt: string | null;
+  readyAt: string | null;
+}
+
+export interface BlueprintUpdateInput {
+  workingTitle?: string;
+  subtitle?: string;
+  concept?: string;
+  audience?: string;
+  readerGoal?: string;
+  promise?: string;
+  /** Authoritative list: order = new order; id null = new chapter; missing = removed. */
+  chapters?: { id: string | null; title: string; purpose: string | null; topics?: string[] }[];
+}

@@ -1,5 +1,7 @@
 import type {
   AuthResponse,
+  BlueprintOverview,
+  BlueprintUpdateInput,
   CheckoutResponse,
   CreditBalanceResponse,
   CreditPack,
@@ -10,6 +12,8 @@ import type {
   EbookRequestInput,
   EbookStatusResponse,
   GenerationBudgetResponse,
+  KnowledgeOverview,
+  KnowledgeSource,
   OrderStatus,
   SubscriptionResponse,
   User,
@@ -173,6 +177,11 @@ export const ebookApi = {
     return request<EbookStatusResponse>(`/api/ebooks/${id}`, { token });
   },
 
+  /** Resume a failed generation: written chapters are kept, the missing ones are written (new credit hold). */
+  resume(token: string, id: string) {
+    return request<EbookStatusResponse>(`/api/ebooks/${id}/resume`, { method: "POST", token });
+  },
+
   /**
    * Describe the generation budget for the creation UI: minimum credits to
    * start, the orientational page range, the balance and whether the user can
@@ -274,6 +283,56 @@ export const ebookApi = {
   },
 };
 
+// ---- Multipart upload ------------------------------------------------------
+
+/**
+ * Upload a file via multipart form data. Uses XHR (not fetch) so the caller can
+ * show real upload progress. Resolves with the parsed JSON response.
+ */
+function uploadMultipart<T>(
+  token: string,
+  path: string,
+  file: File,
+  fields: Record<string, string> = {},
+  onProgress?: (percent: number) => void,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const form = new FormData();
+    form.append("file", file);
+    for (const [k, v] of Object.entries(fields)) form.append(k, v);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_URL}${path}`);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      const raw = xhr.responseText;
+      let data: unknown = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = raw;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(data as T);
+      } else {
+        const obj = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+        const message =
+          (obj && typeof obj.message === "string" && obj.message) ||
+          `Upload failed (${xhr.status})`;
+        reject(new ApiError(message, xhr.status, undefined, data));
+      }
+    };
+    xhr.onerror = () => reject(new ApiError("Upload failed", xhr.status || 0));
+    xhr.send(form);
+  });
+}
+
 // ---- Asset (image) endpoints -----------------------------------------------
 
 export const imageApi = {
@@ -291,41 +350,13 @@ export const imageApi = {
     file: File,
     opts: { role?: string; onProgress?: (percent: number) => void } = {},
   ): Promise<EbookImage> {
-    return new Promise<EbookImage>((resolve, reject) => {
-      const form = new FormData();
-      form.append("file", file);
-      if (opts.role) form.append("role", opts.role);
-
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${API_URL}/api/ebooks/${ebookId}/images`);
-      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable && opts.onProgress) {
-          opts.onProgress(Math.round((e.loaded / e.total) * 100));
-        }
-      };
-      xhr.onload = () => {
-        const raw = xhr.responseText;
-        let data: unknown = null;
-        try {
-          data = raw ? JSON.parse(raw) : null;
-        } catch {
-          data = raw;
-        }
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(data as EbookImage);
-        } else {
-          const obj = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
-          const message =
-            (obj && typeof obj.message === "string" && obj.message) ||
-            `Upload failed (${xhr.status})`;
-          reject(new ApiError(message, xhr.status, undefined, data));
-        }
-      };
-      xhr.onerror = () => reject(new ApiError("Upload failed", xhr.status || 0));
-      xhr.send(form);
-    });
+    return uploadMultipart<EbookImage>(
+      token,
+      `/api/ebooks/${ebookId}/images`,
+      file,
+      opts.role ? { role: opts.role } : {},
+      opts.onProgress,
+    );
   },
 
   /** Fetch an asset's bytes (auth required — the bucket is private) as a Blob. */
@@ -365,6 +396,85 @@ export const imageApi = {
       method: "DELETE",
       token,
     });
+  },
+};
+
+// ---- Knowledge endpoints ("Tell Scrivetta what you know") ------------------
+
+export const knowledgeApi = {
+  /** Status, uploaded sources, the learned-knowledge summary, usage and limits. */
+  overview(token: string, ebookId: string) {
+    return request<KnowledgeOverview>(`/api/ebooks/${ebookId}/knowledge`, { token });
+  },
+
+  /** Upload a ZIP / PDF / DOCX / TXT / MD file. It is read and normalised right away. */
+  upload(token: string, ebookId: string, file: File, onProgress?: (percent: number) => void) {
+    return uploadMultipart<KnowledgeSource>(token, `/api/ebooks/${ebookId}/knowledge/sources`, file, {}, onProgress);
+  },
+
+  /** Save the pasted notes (blank text removes them). */
+  setNotes(token: string, ebookId: string, text: string) {
+    return request<KnowledgeSource | null>(`/api/ebooks/${ebookId}/knowledge/notes`, {
+      method: "PUT",
+      body: { text },
+      token,
+    });
+  },
+
+  removeSource(token: string, ebookId: string, sourceId: string) {
+    return request<void>(`/api/ebooks/${ebookId}/knowledge/sources/${sourceId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
+  /** Start processing the materials in the background; poll `overview`. */
+  process(token: string, ebookId: string) {
+    return request<KnowledgeOverview>(`/api/ebooks/${ebookId}/knowledge/process`, {
+      method: "POST",
+      token,
+    });
+  },
+
+  /** Accept the learned knowledge — the book is ready for the Book Blueprint step. */
+  continue(token: string, ebookId: string) {
+    return request<KnowledgeOverview>(`/api/ebooks/${ebookId}/knowledge/continue`, {
+      method: "POST",
+      token,
+    });
+  },
+};
+
+// ---- Book Blueprint endpoints ----------------------------------------------
+
+export const blueprintApi = {
+  /** Status, the blueprint, the questions (with answers) and summary counts. */
+  get(token: string, ebookId: string) {
+    return request<BlueprintOverview>(`/api/ebooks/${ebookId}/blueprint`, { token });
+  },
+
+  /** Build (or rebuild) the blueprint in the background; poll `get`. `force` confirms rebuilding an edited one. */
+  build(token: string, ebookId: string, force = false) {
+    return request<BlueprintOverview>(`/api/ebooks/${ebookId}/blueprint/build${force ? "?force=true" : ""}`, {
+      method: "POST",
+      token,
+    });
+  },
+
+  update(token: string, ebookId: string, input: BlueprintUpdateInput) {
+    return request<BlueprintOverview>(`/api/ebooks/${ebookId}/blueprint`, { method: "PUT", body: input, token });
+  },
+
+  answer(token: string, ebookId: string, questionId: string, input: { answer?: string; skip?: boolean }) {
+    return request<BlueprintOverview>(`/api/ebooks/${ebookId}/blueprint/questions/${questionId}`, {
+      method: "PUT",
+      body: input,
+      token,
+    });
+  },
+
+  approve(token: string, ebookId: string) {
+    return request<BlueprintOverview>(`/api/ebooks/${ebookId}/blueprint/approve`, { method: "POST", token });
   },
 };
 
