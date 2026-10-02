@@ -11,6 +11,7 @@ import type { EbookStatusResponse, GenerationBudgetResponse } from "@/lib/types"
 import { StatusBadge, ProgressBar } from "@/components/ebook-ui";
 import { AssetManager } from "@/components/asset-manager";
 import { KnowledgeStep } from "@/components/knowledge-step";
+import { BlueprintStep } from "@/components/blueprint-step";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
 import {
   CHAPTER_STATUS_LABEL,
@@ -36,6 +37,8 @@ export default function EbookDetailPage() {
   const [starting, setStarting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [budget, setBudget] = useState<GenerationBudgetResponse | null>(null);
+  // Bumped when the knowledge step hands over to the blueprint step.
+  const [blueprintKey, setBlueprintKey] = useState(0);
 
   // Generation budget (min credits + orientational page range) — drives the
   // draft messaging and whether the Generate button is enabled.
@@ -191,10 +194,12 @@ export default function EbookDetailPage() {
                 will use them to understand your knowledge before building your book.
               </p>
               <div className="mt-4">
-                <KnowledgeStep token={token} ebookId={ebook.id} />
+                <KnowledgeStep token={token} ebookId={ebook.id} onContinued={() => setBlueprintKey((k) => k + 1)} />
               </div>
             </section>
           )}
+
+          {token && <BlueprintStep token={token} ebookId={ebook.id} refreshKey={blueprintKey} />}
 
           <div className="rounded-xl border border-hairline bg-surface-2 p-4">
             <h2 className="text-sm font-semibold text-foreground-2">Assets (optional)</h2>
@@ -353,3 +358,4 @@ export default function EbookDetailPage() {
     </div>
   );
 }
+

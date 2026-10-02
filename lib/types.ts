@@ -328,3 +328,103 @@ export interface KnowledgeOverview {
   startedAt: string | null;
   completedAt: string | null;
 }
+
+// ---- Book Blueprint --------------------------------------------------------
+
+/** Lifecycle of a book's blueprint (the plan built from its knowledge). */
+export type BlueprintStatus =
+  | "NOT_STARTED"
+  | "BUILDING_BLUEPRINT"
+  | "BLUEPRINT_REVIEW"
+  | "QUESTIONS_REQUIRED"
+  | "BLUEPRINT_READY"
+  | "FAILED";
+
+export interface BlueprintChapter {
+  id: string;
+  order: number;
+  title: string;
+  purpose: string | null;
+  topics: string[];
+  keyPoints: { point: string; sources: string[] }[];
+  knowledgeReferences: { type: string; name: string }[];
+  /** Source documents the chapter draws on (paths in the author's materials, or "user-notes"). */
+  sourceReferences: string[];
+  gapIds: string[];
+  origin: "AI" | "AUTHOR";
+  edited: boolean;
+}
+
+export interface BlueprintGap {
+  id: string;
+  description: string;
+  whyItMatters: string | null;
+  severity: "critical" | "important" | "minor";
+  chapterIds: string[];
+  status: "OPEN" | "ANSWERED" | "SKIPPED" | "NOT_ASKED";
+  questionId: string | null;
+}
+
+export interface Blueprint {
+  concept: string | null;
+  workingTitle: string | null;
+  subtitle: string | null;
+  audience: string | null;
+  readerGoal: string | null;
+  promise: string | null;
+  structureRationale: string | null;
+  chapters: BlueprintChapter[];
+  knowledgeGaps: BlueprintGap[];
+  userEditedFields: string[];
+}
+
+export interface BlueprintQuestion {
+  id: string;
+  gapId: string | null;
+  chapterId: string | null;
+  chapterTitle: string | null;
+  question: string;
+  reason: string | null;
+  priority: number;
+  status: "OPEN" | "ANSWERED" | "SKIPPED";
+  answer: string | null;
+  answeredAt: string | null;
+}
+
+export interface BlueprintOverview {
+  ebookId: string;
+  status: BlueprintStatus;
+  errorMessage: string | null;
+  knowledgeReady: boolean;
+  /** The knowledge changed since the blueprint was built. */
+  knowledgeOutdated: boolean;
+  buildAvailable: boolean;
+  userEdited: boolean;
+  blueprint: Blueprint | null;
+  questions: BlueprintQuestion[];
+  summary: {
+    chapters: number;
+    groundedChapters: number;
+    knowledgeGaps: number;
+    openGaps: number;
+    questions: number;
+    answered: number;
+    skipped: number;
+    open: number;
+  } | null;
+  usage: { model: string | null; generation: number; maxGenerations: number } | null;
+  warnings: string[];
+  generatedAt: string | null;
+  readyAt: string | null;
+}
+
+export interface BlueprintUpdateInput {
+  workingTitle?: string;
+  subtitle?: string;
+  concept?: string;
+  audience?: string;
+  readerGoal?: string;
+  promise?: string;
+  /** Authoritative list: order = new order; id null = new chapter; missing = removed. */
+  chapters?: { id: string | null; title: string; purpose: string | null; topics?: string[] }[];
+}

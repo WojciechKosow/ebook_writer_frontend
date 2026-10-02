@@ -1,5 +1,7 @@
 import type {
   AuthResponse,
+  BlueprintOverview,
+  BlueprintUpdateInput,
   CheckoutResponse,
   CreditBalanceResponse,
   CreditPack,
@@ -435,6 +437,39 @@ export const knowledgeApi = {
       method: "POST",
       token,
     });
+  },
+};
+
+// ---- Book Blueprint endpoints ----------------------------------------------
+
+export const blueprintApi = {
+  /** Status, the blueprint, the questions (with answers) and summary counts. */
+  get(token: string, ebookId: string) {
+    return request<BlueprintOverview>(`/api/ebooks/${ebookId}/blueprint`, { token });
+  },
+
+  /** Build (or rebuild) the blueprint in the background; poll `get`. `force` confirms rebuilding an edited one. */
+  build(token: string, ebookId: string, force = false) {
+    return request<BlueprintOverview>(`/api/ebooks/${ebookId}/blueprint/build${force ? "?force=true" : ""}`, {
+      method: "POST",
+      token,
+    });
+  },
+
+  update(token: string, ebookId: string, input: BlueprintUpdateInput) {
+    return request<BlueprintOverview>(`/api/ebooks/${ebookId}/blueprint`, { method: "PUT", body: input, token });
+  },
+
+  answer(token: string, ebookId: string, questionId: string, input: { answer?: string; skip?: boolean }) {
+    return request<BlueprintOverview>(`/api/ebooks/${ebookId}/blueprint/questions/${questionId}`, {
+      method: "PUT",
+      body: input,
+      token,
+    });
+  },
+
+  approve(token: string, ebookId: string) {
+    return request<BlueprintOverview>(`/api/ebooks/${ebookId}/blueprint/approve`, { method: "POST", token });
   },
 };
 

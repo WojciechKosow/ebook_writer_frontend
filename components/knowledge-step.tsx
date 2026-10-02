@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { knowledgeApi, ApiError } from "@/lib/api";
+import { blueprintApi, knowledgeApi, ApiError } from "@/lib/api";
 import type { KnowledgeOverview, KnowledgeSource, KnowledgeStatus } from "@/lib/types";
 import { Alert, Button, Spinner, controlBase } from "@/components/ui";
 
@@ -39,7 +39,16 @@ interface UploadState {
  * from your materials") and a Continue button that marks the book ready for the
  * Book Blueprint step.
  */
-export function KnowledgeStep({ token, ebookId }: { token: string; ebookId: string }) {
+export function KnowledgeStep({
+  token,
+  ebookId,
+  onContinued,
+}: {
+  token: string;
+  ebookId: string;
+  /** Called once the author continues and the blueprint build has been started. */
+  onContinued?: () => void;
+}) {
   const [overview, setOverview] = useState<KnowledgeOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploads, setUploads] = useState<UploadState[]>([]);
@@ -182,6 +191,13 @@ export function KnowledgeStep({ token, ebookId }: { token: string; ebookId: stri
     setContinuing(true);
     try {
       setOverview(await knowledgeApi.continue(token, ebookId));
+      try {
+        await blueprintApi.build(token, ebookId);
+      } catch (err) {
+        // 409 = already building / already built: the blueprint step shows its state.
+        if (!(err instanceof ApiError && err.status === 409)) throw err;
+      }
+      onContinued?.();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't continue.");
     } finally {
@@ -250,10 +266,9 @@ export function KnowledgeStep({ token, ebookId }: { token: string; ebookId: stri
         {error && <Alert>{error}</Alert>}
 
         {overview.readyForBlueprint ? (
-          <Alert variant="info">
-            Your knowledge is saved. The next step — building your Book Blueprint from it — is coming
-            soon. Until then you can still generate a book the classic way below.
-          </Alert>
+          <p className="text-xs text-muted">
+            Your knowledge is saved. Scrivetta uses it for your book blueprint below.
+          </p>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={continueToBlueprint} loading={continuing}>

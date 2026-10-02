@@ -263,6 +263,8 @@ export default function NewEbookPage() {
           <li aria-hidden className="h-px w-[18px] bg-hairline-2" />
           <Step>Knowledge</Step>
           <li aria-hidden className="h-px w-[18px] bg-hairline-2" />
+          <Step>Blueprint</Step>
+          <li aria-hidden className="h-px w-[18px] bg-hairline-2" />
           <Step>Assets</Step>
           <li aria-hidden className="h-px w-[18px] bg-hairline-2" />
           <Step>Generate</Step>
