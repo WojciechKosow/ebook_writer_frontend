@@ -317,7 +317,7 @@ export type KnowledgeStatus =
   | "READY_FOR_BLUEPRINT"
   | "FAILED";
 
-export type KnowledgeSourceType = "ZIP" | "PDF" | "DOCX" | "TXT" | "MD" | "NOTES";
+export type KnowledgeSourceType = "ZIP" | "RAR" | "PDF" | "DOCX" | "TXT" | "MD" | "NOTES";
 
 export interface KnowledgeSource {
   id: string;
@@ -347,7 +347,7 @@ export interface KnowledgeSummary {
   importantDetailsFound: number;
   /** Uploaded sources (files + notes) that were analysed. */
   sourcesAnalyzed: number;
-  /** Individual documents analysed (e.g. files inside a ZIP). */
+  /** Individual documents analysed (e.g. files inside a ZIP or RAR). */
   documentsAnalyzed: number;
   documentsNotAnalyzed: number;
   duplicatesSkipped: number;

@@ -438,7 +438,7 @@ export const knowledgeApi = {
     return request<KnowledgeOverview>(`/api/ebooks/${ebookId}/knowledge`, { token });
   },
 
-  /** Upload a ZIP / PDF / DOCX / TXT / MD file. It is read and normalised right away. */
+  /** Upload a ZIP / RAR / PDF / DOCX / TXT / MD file. It is read and normalised right away. */
   upload(token: string, ebookId: string, file: File, onProgress?: (percent: number) => void) {
     return uploadMultipart<KnowledgeSource>(token, `/api/ebooks/${ebookId}/knowledge/sources`, file, {}, onProgress);
   },

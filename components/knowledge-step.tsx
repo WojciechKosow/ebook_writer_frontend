@@ -5,8 +5,10 @@ import { blueprintApi, knowledgeApi, ApiError } from "@/lib/api";
 import type { KnowledgeOverview, KnowledgeSource, KnowledgeStatus } from "@/lib/types";
 import { Alert, Button, Spinner, controlBase } from "@/components/ui";
 
-const ACCEPT = ".zip,.pdf,.docx,.txt,.md,.markdown";
-const ACCEPTED_EXT = ["zip", "pdf", "docx", "txt", "md", "markdown"];
+const ACCEPT = ".zip,.rar,.pdf,.docx,.txt,.md,.markdown";
+const ACCEPTED_EXT = ["zip", "rar", "pdf", "docx", "txt", "md", "markdown"];
+/** Archives are unpacked on the server and each file inside is read with its path. */
+const ARCHIVE_TYPES = ["ZIP", "RAR"];
 const POLL_MS = 2000;
 
 const RUNNING: KnowledgeStatus[] = ["PROCESSING", "ANALYZING"];
@@ -18,6 +20,7 @@ const STAGE_LABEL: Partial<Record<KnowledgeStatus, string>> = {
 
 const SOURCE_LABEL: Record<string, string> = {
   ZIP: "ZIP",
+  RAR: "RAR",
   PDF: "PDF",
   DOCX: "Word",
   TXT: "Text",
@@ -34,7 +37,7 @@ interface UploadState {
 
 /**
  * "Tell Scrivetta what you know": the author uploads existing materials
- * (ZIP / PDF / DOCX / TXT / MD) and/or pastes notes, then Scrivetta processes
+ * (ZIP / RAR / PDF / DOCX / TXT / MD) and/or pastes notes, then Scrivetta processes
  * them into structured book knowledge. Shows the result ("Scrivetta has learned
  * from your materials") and a Continue button that marks the book ready for the
  * Book Blueprint step.
@@ -121,7 +124,7 @@ export function KnowledgeStep({
         const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
         const max = overview?.limits.maxUploadBytes ?? 25 * 1024 * 1024;
         if (!ACCEPTED_EXT.includes(ext)) {
-          setUploads((u) => [...u, { key, name: file.name, pct: 0, error: "Unsupported type" }]);
+          setUploads((u) => [...u, { key, name: file.name, pct: 0, error: "Unsupported file type — use ZIP, RAR, PDF, DOCX, TXT or MD" }]);
           continue;
         }
         if (file.size > max) {
@@ -355,7 +358,7 @@ export function KnowledgeStep({
         >
           <span className="text-sm font-medium text-foreground-2">Upload your materials</span>
           <span className="text-xs text-faint">
-            ZIP (e.g. a whole project), PDF, DOCX, TXT or MD · up to{" "}
+            ZIP or RAR (e.g. a whole project), PDF, DOCX, TXT or MD · up to{" "}
             {Math.round(overview!.limits.maxUploadBytes / 1024 / 1024)} MB each
           </span>
           <input
@@ -450,7 +453,7 @@ function SourceRow({
   const failed = source.status === "FAILED";
   const detail = failed
     ? source.errorMessage || "Could not be read"
-    : source.sourceType === "ZIP"
+    : ARCHIVE_TYPES.includes(source.sourceType)
       ? `${source.documentCount} file${source.documentCount === 1 ? "" : "s"} read${
           source.skippedCount ? ` · ${source.skippedCount} skipped` : ""
         }`
@@ -466,7 +469,7 @@ function SourceRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-foreground-2">{source.filename}</span>
-        <span className={`block truncate ${failed ? "text-red-600 dark:text-red-400" : "text-faint"}`}>{detail}</span>
+        <span className={`block ${failed ? "break-words text-red-600 dark:text-red-400" : "truncate text-faint"}`}>{detail}</span>
       </span>
       <button
         type="button"
