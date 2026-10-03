@@ -1,4 +1,4 @@
-import type { ChapterStatus, EbookStatus } from "./types";
+import type { BookDepth, ChapterStatus, EbookStatus, ScopeBasis } from "./types";
 
 export const STATUS_LABEL: Record<EbookStatus, string> = {
   DRAFT: "Draft",
@@ -62,13 +62,30 @@ export function inBook<T extends { status: ChapterStatus }>(chapters: T[]): T[] 
   return chapters.filter((c) => c.status !== "DEFERRED");
 }
 
-/**
- * Credits needed to start a book with this target: the standard minimum, but
- * never more than the target itself (a short book needs only enough for itself).
- * Mirrors the backend start gate.
- */
-export function creditsToStart(minCredits: number | null, targetPages: number | null): number | null {
-  if (minCredits === null) return null;
-  if (!targetPages || targetPages <= 0) return minCredits;
-  return Math.max(1, Math.min(minCredits, targetPages));
+export const DEPTHS: BookDepth[] = ["QUICK", "STANDARD", "COMPREHENSIVE"];
+
+/** Depth names and meanings (mirrors the backend BookDepth; used until estimates load). */
+export const DEPTH_INFO: Record<BookDepth, { name: string; detail: string }> = {
+  QUICK: { name: "Quick", detail: "A short, focused read: the essentials, without extended side topics." },
+  STANDARD: {
+    name: "Standard",
+    detail: "A full, practical treatment: detailed enough that the reader can actually apply it.",
+  },
+  COMPREHENSIVE: {
+    name: "Comprehensive",
+    detail: "A complete, in-depth treatment that uses your materials broadly and leaves nothing important out.",
+  },
+};
+
+/** "~120–160" (or "~24" when the range collapses) — always shown as an estimate. */
+export function approxRange(low: number, high: number): string {
+  return low >= high ? `~${high}` : `~${low}–${high}`;
 }
+
+/** What an estimate is based on, in the user's words. */
+export const SCOPE_BASIS_LABEL: Record<ScopeBasis, string> = {
+  BRIEF: "Based on your brief — refined once you add materials and Scrivetta plans the book.",
+  SOURCE_TEXT: "Based on your brief and the source text you added.",
+  KNOWLEDGE: "Based on your analysed materials.",
+  BLUEPRINT: "Based on your materials and approved blueprint.",
+};

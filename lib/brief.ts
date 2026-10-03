@@ -1,4 +1,4 @@
-import type { EbookRequestInput } from "./types";
+import type { BookDepth, EbookRequestInput } from "./types";
 
 /**
  * The unsent new-ebook brief is kept on this device under this key, so a
@@ -66,7 +66,7 @@ export const EXAMPLES: Example[] = [
  * Pre-fill the new-ebook form with an example brief. The form restores it on
  * load; returns false when storage is unavailable.
  */
-export function saveExampleBrief(example: Example, targetPages?: number): boolean {
+export function saveExampleBrief(example: Example, depth?: BookDepth): boolean {
   const form: Partial<EbookRequestInput> = {
     topic: example.topic,
     targetAudience: example.audience,
@@ -74,7 +74,7 @@ export function saveExampleBrief(example: Example, targetPages?: number): boolea
     additionalInstructions: example.instructions,
   };
   try {
-    localStorage.setItem(BRIEF_DRAFT_KEY, JSON.stringify({ form, target: targetPages ?? null }));
+    localStorage.setItem(BRIEF_DRAFT_KEY, JSON.stringify({ form, depth: depth ?? null }));
     return true;
   } catch {
     return false;

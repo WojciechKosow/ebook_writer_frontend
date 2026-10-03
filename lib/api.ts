@@ -12,6 +12,8 @@ import type {
   EbookRequestInput,
   EbookStatusResponse,
   GenerationBudgetResponse,
+  BookScopeResponse,
+  BookDepth,
   KnowledgeOverview,
   KnowledgeSource,
   OrderStatus,
@@ -183,12 +185,26 @@ export const ebookApi = {
   },
 
   /**
-   * Describe the generation budget for the creation UI: minimum credits to
-   * start, the orientational page range, the balance and whether the user can
-   * generate now. Communicates a budget, not a guaranteed page count.
+   * The creation form's depth options, each with a preliminary length/credit
+   * estimate from the brief typed so far, plus the balance. The user picks a
+   * depth, never a page count.
    */
-  generationBudget(token: string) {
-    return request<GenerationBudgetResponse>("/api/ebooks/generation-budget", { token });
+  generationBudget(token: string, brief?: { briefChars?: number; sourceChars?: number }) {
+    const q = new URLSearchParams();
+    if (brief?.briefChars) q.set("briefChars", String(brief.briefChars));
+    if (brief?.sourceChars) q.set("sourceChars", String(brief.sourceChars));
+    const qs = q.toString();
+    return request<GenerationBudgetResponse>(`/api/ebooks/generation-budget${qs ? `?${qs}` : ""}`, { token });
+  },
+
+  /** A draft's length + credit estimate (refined by its materials and blueprint). */
+  scope(token: string, id: string) {
+    return request<BookScopeResponse>(`/api/ebooks/${id}/scope`, { token });
+  },
+
+  /** Change a draft's depth; returns the updated scope. */
+  updateDepth(token: string, id: string, depth: BookDepth) {
+    return request<BookScopeResponse>(`/api/ebooks/${id}/depth`, { method: "PUT", body: { depth }, token });
   },
 
   list(token: string) {

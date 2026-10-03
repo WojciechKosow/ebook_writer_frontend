@@ -19,7 +19,7 @@ export const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: "How does the AI ebook writer work?",
     a:
-      "Describe your topic, genre, audience, and length — a sentence is enough " +
+      "Describe your topic, genre, audience, and how deep the book should go — a sentence is enough " +
       "to start. Scrivetta drafts an outline, then writes the book chapter by " +
       "chapter while you watch progress fill in. When it's done you can read " +
       "it, keep editing, or export.",

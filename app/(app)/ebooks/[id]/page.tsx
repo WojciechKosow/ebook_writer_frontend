@@ -7,16 +7,18 @@ import { useAuth } from "@/lib/auth-context";
 import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
 import { useAssets } from "@/lib/use-assets";
-import type { EbookStatusResponse, GenerationBudgetResponse } from "@/lib/types";
+import type { BookDepth, BookScopeResponse, EbookStatusResponse } from "@/lib/types";
 import { StatusBadge, ProgressBar } from "@/components/ebook-ui";
 import { AssetManager } from "@/components/asset-manager";
 import { KnowledgeStep } from "@/components/knowledge-step";
 import { BlueprintStep } from "@/components/blueprint-step";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
+import { DepthPicker } from "@/components/depth-picker";
 import {
   CHAPTER_STATUS_LABEL,
+  SCOPE_BASIS_LABEL,
   STAGE_MESSAGE,
-  creditsToStart,
+  approxRange,
   inBook,
   isGenerating,
   isTerminal,
@@ -36,7 +38,9 @@ export default function EbookDetailPage() {
   const [downloading, setDownloading] = useState(false);
   const [starting, setStarting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [budget, setBudget] = useState<GenerationBudgetResponse | null>(null);
+  // The draft's scope: Scrivetta's length + credit estimate for the chosen depth.
+  const [scope, setScope] = useState<BookScopeResponse | null>(null);
+  const [savingDepth, setSavingDepth] = useState(false);
   // Bumped when the knowledge step hands over to the blueprint step.
   const [blueprintKey, setBlueprintKey] = useState(0);
   // Knowledge flow state: a book with materials is written from its blueprint, so
@@ -45,15 +49,17 @@ export default function EbookDetailPage() {
   const [blueprintStatus, setBlueprintStatus] = useState<string>("NOT_STARTED");
   const [resuming, setResuming] = useState(false);
 
-  // Generation budget (min credits + orientational page range) — drives the
-  // draft messaging and whether the Generate button is enabled.
+  // The draft's scope — re-estimated whenever what Scrivetta knows changes
+  // (materials, blueprint) — drives the depth picker, the estimate and whether
+  // the Generate button is enabled.
+  const isDraft = ebook?.status === "DRAFT";
   useEffect(() => {
-    if (!token) return;
+    if (!token || !id || !isDraft) return;
     let active = true;
     ebookApi
-      .generationBudget(token)
-      .then((b) => {
-        if (active) setBudget(b);
+      .scope(token, id)
+      .then((s) => {
+        if (active) setScope(s);
       })
       .catch(() => {
         /* non-fatal */
@@ -61,7 +67,24 @@ export default function EbookDetailPage() {
     return () => {
       active = false;
     };
-  }, [token, reloadKey]);
+  }, [token, id, isDraft, reloadKey, blueprintKey, blueprintStatus, hasMaterials]);
+
+  const changeDepth = useCallback(
+    async (depth: BookDepth) => {
+      if (!token || !ebook || savingDepth || depth === scope?.depth) return;
+      setSavingDepth(true);
+      setError(null);
+      try {
+        setScope(await ebookApi.updateDepth(token, ebook.id, depth));
+        setEbook({ ...ebook, depth, errorMessage: null });
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : "Couldn't change the depth.");
+      } finally {
+        setSavingDepth(false);
+      }
+    },
+    [token, ebook, savingDepth, scope?.depth],
+  );
 
   // Poll while the generation is actively running (drafts and terminal states
   // don't poll). Re-armed via reloadKey when the user starts generation.
@@ -106,11 +129,13 @@ export default function EbookDetailPage() {
       setReloadKey((k) => k + 1); // begin polling
     } catch (err) {
       if (err instanceof ApiError && err.status === 402) {
-        const body = err.body as { required?: number; available?: number } | undefined;
+        const body = err.body as { required?: number; available?: number; message?: string } | undefined;
         setError(
-          `You need ${body?.required ?? "more"} credits but have ${body?.available ?? 0}. Buy more to generate.`,
+          body?.message ??
+            `This book needs up to ${body?.required ?? "more"} credits but you have ${body?.available ?? 0}. Buy more to generate.`,
         );
         credits?.refresh();
+        setReloadKey((k) => k + 1); // refresh the scope
       } else {
         setError(err instanceof ApiError ? err.message : "Couldn't start generation.");
       }
@@ -129,8 +154,10 @@ export default function EbookDetailPage() {
       setReloadKey((k) => k + 1); // poll again
     } catch (err) {
       if (err instanceof ApiError && err.status === 402) {
-        const body = err.body as { required?: number; available?: number } | undefined;
-        setError(`You need ${body?.required ?? "more"} credits but have ${body?.available ?? 0}. Buy more to resume.`);
+        const body = err.body as { required?: number; available?: number; message?: string } | undefined;
+        setError(
+          body?.message ?? `You need ${body?.required ?? "more"} credits but have ${body?.available ?? 0}. Buy more to resume.`,
+        );
       } else {
         setError(err instanceof ApiError ? err.message : "Couldn't resume generation.");
       }
@@ -179,15 +206,16 @@ export default function EbookDetailPage() {
   const active = isGenerating(ebook.status);
   const failed = ebook.status === "FAILED";
   const completed = ebook.status === "COMPLETED";
-  const balance = credits?.balance ?? budget?.balance ?? null;
-  const targetPages = ebook.targetPages > 0 ? ebook.targetPages : null;
-  // Credits needed to start at this book's target (mirrors the backend gate).
-  // Undecided until the budget loads, so we don't flash a "not enough" state.
-  const minCredits = creditsToStart(budget?.minCredits ?? null, targetPages);
-  const insufficient =
-    balance !== null && minCredits !== null && balance < minCredits;
-  const affordablePages =
-    balance === null ? null : Math.max(0, Math.min(balance, budget?.affordablePages ?? balance));
+  const balance = credits?.balance ?? scope?.balance ?? null;
+  // Credits needed to start: the high end of the estimate (mirrors the backend
+  // gate). Undecided until the scope loads, so we don't flash a "not enough" state.
+  const required = scope?.requiredCredits ?? null;
+  const insufficient = balance !== null && required !== null && balance < required;
+  const estimate = scope?.estimate ?? null;
+  const startEstimate =
+    ebook.estimatedPagesLow && ebook.estimatedPagesHigh
+      ? approxRange(ebook.estimatedPagesLow, ebook.estimatedPagesHigh)
+      : null;
   const deferred = ebook.chapters.filter((c) => c.status === "DEFERRED");
   const knowledgeFlow = hasMaterials || blueprintStatus !== "NOT_STARTED";
   const blueprintReady = blueprintStatus === "BLUEPRINT_READY";
@@ -255,32 +283,58 @@ export default function EbookDetailPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-600 dark:text-zinc-300">Target length</span>
-              <span className="font-medium text-zinc-900 dark:text-zinc-50">
-                {targetPages ? `~${targetPages} pages` : "Standard"}
-              </span>
-            </div>
-            <div className="mt-1 flex items-center justify-between text-sm">
-              <span className="text-zinc-600 dark:text-zinc-300">Your balance</span>
-              <span className="font-medium text-zinc-900 dark:text-zinc-50">
-                {balance === null ? "…" : `${balance} credits`}
-              </span>
-            </div>
-            <p className="mt-3 border-t border-zinc-200 pt-3 text-xs text-muted dark:border-zinc-800">
-              {insufficient
-                ? `You need at least ${minCredits} credits to generate this ebook. Buy more to start.`
-                : targetPages && affordablePages !== null && affordablePages < targetPages
-                  ? `Your credits cover about ${affordablePages} pages, so the book will be planned as a complete ~${affordablePages}-page ebook. Add credits first for the full ~${targetPages} pages.`
-                  : "The target guides the plan — the finished book may be a little shorter or longer, and is never cut off to fit. You're only billed for the pages actually produced (1 credit = 1 page)."}
+          <section className="rounded-xl border border-hairline bg-surface-2 p-4">
+            <h2 className="text-[15px] font-semibold text-foreground">Depth &amp; estimated length</h2>
+            <p className="mt-1 text-xs text-muted">
+              Choose how deep the book should go. Scrivetta works out the length from your topic,
+              materials and depth.
             </p>
-          </div>
+            <div className="mt-4">
+              <DepthPicker
+                options={scope?.options ?? null}
+                value={scope?.depth ?? ebook.depth ?? "STANDARD"}
+                onChange={changeDepth}
+                disabled={savingDepth}
+              />
+            </div>
+
+            {ebook.errorMessage && <div className="mt-4"><Alert>{ebook.errorMessage}</Alert></div>}
+
+            <dl className="mt-4 grid gap-1 border-t border-hairline pt-3 text-sm">
+              <ScopeRow
+                label="Estimated length"
+                value={estimate ? `${approxRange(estimate.pagesLow, estimate.pagesHigh)} pages` : "…"}
+              />
+              <ScopeRow
+                label="Estimated chapters"
+                value={estimate ? approxRange(estimate.chaptersLow, estimate.chaptersHigh) : "…"}
+              />
+              <ScopeRow
+                label="Estimated credits"
+                value={estimate ? `${approxRange(estimate.creditsLow, estimate.creditsHigh)} credits` : "…"}
+              />
+              {scope?.plannedPages ? (
+                <ScopeRow label="Last plan" value={`~${scope.plannedPages} pages`} />
+              ) : null}
+              <ScopeRow label="Your balance" value={balance === null ? "…" : `${balance} credits`} />
+            </dl>
+            <p className="mt-3 border-t border-hairline pt-3 text-xs text-muted">
+              {estimate && SCOPE_BASIS_LABEL[estimate.basis]}{" "}
+              {insufficient
+                ? `To generate, you need up to ${required} credits — the high end of the estimate, so the book is never cut short to fit your balance. Add credits or choose a lighter depth.`
+                : "These are estimates, not limits: the finished book may be shorter or longer if its content needs it. You're only billed for the pages actually produced (1 credit = 1 page)."}
+              {estimate?.capped && " Your materials suggest more than one book can hold — consider splitting them into several books."}
+            </p>
+          </section>
 
           {error && <Alert>{error}</Alert>}
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={startGeneration} loading={starting} disabled={insufficient || waitingForBlueprint}>
+            <Button
+              onClick={startGeneration}
+              loading={starting}
+              disabled={insufficient || waitingForBlueprint || savingDepth || scope === null}
+            >
               {blueprintReady ? "Generate my book" : "Generate ebook"}
             </Button>
             <ButtonLink href="/billing" variant="secondary">
@@ -288,7 +342,7 @@ export default function EbookDetailPage() {
             </ButtonLink>
             <span className="text-xs text-zinc-400">
               {insufficient
-                ? `A standard ebook needs at least ${minCredits} credits to generate.`
+                ? `This book needs up to ${required} credits to generate.`
                 : waitingForBlueprint
                   ? "Finish the steps above first — your book is written from your knowledge and blueprint."
                   : "This can take several minutes — you can watch progress here."}
@@ -305,6 +359,14 @@ export default function EbookDetailPage() {
             <span className="tabular-nums text-zinc-400">{ebook.progress}%</span>
           </div>
           <ProgressBar value={ebook.progress} />
+          {(ebook.plannedPages || startEstimate) && (
+            <p className="mt-2 text-xs text-muted">
+              {ebook.plannedPages
+                ? `Planned at ~${ebook.plannedPages} pages`
+                : `Estimated ${startEstimate} pages`}{" "}
+              · the final length follows the content.
+            </p>
+          )}
           {active && (
             <p className="mt-2 flex items-center gap-2 text-xs text-zinc-400">
               <Spinner className="h-3 w-3" /> Updating automatically…
@@ -344,15 +406,17 @@ export default function EbookDetailPage() {
           {ebook.actualPageCount > 0 && (
             <p className="mt-2 text-sm font-medium text-emerald-900 dark:text-emerald-200">
               {ebook.actualPageCount} pages
-              {targetPages ? ` (target ~${targetPages})` : ""} · {ebook.creditsCharged} credits used
+              {startEstimate ? ` (estimated ${startEstimate})` : ""} · {ebook.creditsCharged} credits used
               {balance !== null && ` · ${balance} credits remaining`}
             </p>
           )}
-          {deferred.length > 0 && (
+          {(ebook.creditLimited || deferred.length > 0) && (
             <p className="mt-2 text-xs text-emerald-900/80 dark:text-emerald-200/80">
-              To finish within your credits, the book was brought to a complete ending and{" "}
-              {deferred.length === 1 ? "1 planned chapter was" : `${deferred.length} planned chapters were`}{" "}
-              left out. They&apos;re listed below as &ldquo;saved for later&rdquo;.
+              This book ran longer than your credits covered, so it was brought to a complete ending
+              early
+              {deferred.length > 0
+                ? ` and ${deferred.length === 1 ? "1 planned chapter was" : `${deferred.length} planned chapters were`} left out. They're listed below as “saved for later”.`
+                : "."}
             </p>
           )}
           {ebook.description && (
@@ -417,3 +481,11 @@ export default function EbookDetailPage() {
   );
 }
 
+function ScopeRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <dt className="text-muted">{label}</dt>
+      <dd className="font-medium tabular-nums text-foreground">{value}</dd>
+    </div>
+  );
+}

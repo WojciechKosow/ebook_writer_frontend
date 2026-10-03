@@ -1,5 +1,5 @@
 import type { EbookStatusResponse } from "@/lib/types";
-import { isGenerating } from "@/lib/ebook-format";
+import { DEPTH_INFO, isGenerating } from "@/lib/ebook-format";
 import { STAGE_SHORT, displayPages, hashString } from "@/lib/library";
 
 /** Cover palettes: [from, to, ink] — the same family as the new-ebook preview. */
@@ -14,7 +14,15 @@ const PALETTES: [string, string, string][] = [
 
 type CoverBook = Pick<
   EbookStatusResponse,
-  "id" | "status" | "title" | "progress" | "targetPages" | "actualPageCount"
+  | "id"
+  | "status"
+  | "title"
+  | "progress"
+  | "depth"
+  | "plannedPages"
+  | "estimatedPagesLow"
+  | "estimatedPagesHigh"
+  | "actualPageCount"
 >;
 
 /**
@@ -32,14 +40,14 @@ export function BookCover({
   thumb?: boolean;
   className?: string;
 }) {
-  const { pages, exact } = displayPages(book as EbookStatusResponse);
+  const { pages, exact } = displayPages(book);
 
   if (book.status === "DRAFT") {
     return (
       <div className={`lib-cover draft ${thumb ? "thumb" : ""} ${className}`} aria-hidden>
         <div className="k">Draft</div>
         <div className="t">{book.title || "Untitled draft"}</div>
-        <div className="f">~{pages} pp planned</div>
+        <div className="f">{DEPTH_INFO[book.depth ?? "STANDARD"].name} depth</div>
       </div>
     );
   }

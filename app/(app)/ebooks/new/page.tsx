@@ -6,18 +6,17 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
-import type { EbookRequestInput, GenerationBudgetResponse } from "@/lib/types";
+import type { BookDepth, EbookRequestInput, GenerationBudgetResponse } from "@/lib/types";
 import { Alert, Spinner, controlBase } from "@/components/ui";
-import { TargetLengthPicker, lengthBand } from "@/components/target-length-picker";
+import { DepthPicker } from "@/components/depth-picker";
 import { LanguagePicker } from "@/components/language-picker";
 import { BookCoverPreview } from "@/components/book-cover-preview";
-import { creditsToStart } from "@/lib/ebook-format";
+import { DEPTHS, DEPTH_INFO, approxRange } from "@/lib/ebook-format";
 import { languageLabel } from "@/lib/languages";
 import { BRIEF_DRAFT_KEY as DRAFT_KEY, EXAMPLES, type Example } from "@/lib/brief";
 
-/** Used until the budget endpoint answers (mirrors the backend defaults). */
-const FALLBACK_TARGETS = [20, 30, 50, 75, 100];
-const FALLBACK_DEFAULT_TARGET = 30;
+/** A typical length per depth, only for the cover preview until estimates load. */
+const TYPICAL_PAGES: Record<BookDepth, number> = { QUICK: 18, STANDARD: 34, COMPREHENSIVE: 60 };
 
 const FORM_ID = "new-ebook-form";
 
@@ -52,8 +51,9 @@ export default function NewEbookPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [budget, setBudget] = useState<GenerationBudgetResponse | null>(null);
-  // null = "not chosen yet" → the server's default target once the budget loads.
-  const [target, setTarget] = useState<number | null>(null);
+  // The user's control over scope. There is no page-count input: Scrivetta
+  // determines the length from the topic, the materials and this depth.
+  const [depth, setDepth] = useState<BookDepth>("STANDARD");
   const [showSource, setShowSource] = useState(false);
   // Becomes true once the saved brief (if any) has been restored, so the first
   // render's empty form never overwrites it.
@@ -66,33 +66,39 @@ export default function NewEbookPage() {
   // Set once the draft is created, so a pending save can't bring the brief back.
   const createdRef = useRef(false);
 
-  // Load the generation budget (min credits + orientational page range) so we can
-  // frame this as a budget, never a fixed page order.
+  // Preliminary estimate per depth from the brief typed so far (debounced). It is
+  // refined on the next screen once materials are added and the book is planned.
+  const briefChars = form.topic.trim().length + (form.bookGoal ?? "").trim().length +
+    form.additionalInstructions.trim().length;
+  const sourceChars = form.sourceMaterial.trim().length;
   useEffect(() => {
     if (!token) return;
     let active = true;
-    ebookApi
-      .generationBudget(token)
-      .then((b) => {
-        if (active) setBudget(b);
-      })
-      .catch(() => {
-        /* non-fatal: the form still works, just without the estimate */
-      });
+    const t = setTimeout(() => {
+      ebookApi
+        .generationBudget(token, { briefChars, sourceChars })
+        .then((b) => {
+          if (active) setBudget(b);
+        })
+        .catch(() => {
+          /* non-fatal: the form still works, just without the estimate */
+        });
+    }, 500);
     return () => {
       active = false;
+      clearTimeout(t);
     };
-  }, [token]);
+  }, [token, briefChars, sourceChars]);
 
   // Restore an unsent brief from this device (client-only, after hydration).
   useEffect(() => {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
-        const saved = JSON.parse(raw) as { form?: Partial<EbookRequestInput>; target?: number | null };
+        const saved = JSON.parse(raw) as { form?: Partial<EbookRequestInput>; depth?: BookDepth | null };
         /* eslint-disable react-hooks/set-state-in-effect */
         if (saved.form) setForm((f) => ({ ...f, ...saved.form }));
-        if (typeof saved.target === "number") setTarget(saved.target);
+        if (saved.depth && DEPTHS.includes(saved.depth)) setDepth(saved.depth);
         if (saved.form?.sourceMaterial?.trim()) setShowSource(true);
         if (saved.form?.topic?.trim()) setSavedLocally(true);
       }
@@ -114,7 +120,7 @@ export default function NewEbookPage() {
           localStorage.removeItem(DRAFT_KEY);
           setSavedLocally(false);
         } else {
-          localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, target }));
+          localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, depth }));
           setSavedLocally(true);
         }
       } catch {
@@ -122,7 +128,7 @@ export default function NewEbookPage() {
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [form, target, restored]);
+  }, [form, depth, restored]);
 
   // Grow the topic field with its text instead of scrolling inside it.
   useEffect(() => {
@@ -144,24 +150,15 @@ export default function NewEbookPage() {
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  const targetOptions = budget?.targetOptions?.length ? budget.targetOptions : FALLBACK_TARGETS;
-  const targetPages = target ?? budget?.defaultTargetPages ?? FALLBACK_DEFAULT_TARGET;
   const balance = credits?.balance ?? budget?.balance ?? null;
-  // Credits needed to start at this target (never more than the target itself).
-  const minCredits = creditsToStart(budget?.minCredits ?? null, targetPages);
-  // Pages the balance covers (capped server-side); follows the live balance.
-  const affordablePages =
-    balance === null ? null : Math.max(0, Math.min(balance, budget?.affordablePages ?? balance));
-  // Enough budget to *generate* on the next step. Creating a draft is always
-  // free, so this only drives messaging, not whether they can continue.
-  const insufficient =
-    balance !== null && minCredits !== null && balance < minCredits;
-  // The book is planned at the smaller of the target and what the balance covers.
-  const plannedPages = affordablePages === null ? targetPages : Math.min(targetPages, affordablePages);
-  const overBudget = !insufficient && affordablePages !== null && targetPages > affordablePages;
-  const estimate = insufficient ? targetPages : plannedPages;
-
-  const band = lengthBand(targetPages);
+  // Scrivetta's preliminary estimate for the selected depth (null while loading).
+  const estimate = budget?.options.find((o) => o.depth === depth) ?? null;
+  const required = estimate?.requiredCredits ?? null;
+  // Enough credits to *generate* the estimated book on the next step. Creating a
+  // draft is always free, so this only drives messaging, not whether they can continue.
+  const insufficient = balance !== null && required !== null && balance < required;
+  const previewPages = estimate ? Math.round((estimate.pagesLow + estimate.pagesHigh) / 2) : TYPICAL_PAGES[depth];
+  const depthName = estimate?.label ?? DEPTH_INFO[depth].name;
   const topicError = fieldErrors.topic;
   const activeStyles = styleParts(form.style).map((s) => s.toLowerCase());
 
@@ -220,7 +217,7 @@ export default function NewEbookPage() {
         ...form,
         authorName: form.authorName?.trim() || undefined,
         bookGoal: form.bookGoal?.trim() || undefined,
-        targetPages,
+        depth,
       });
       createdRef.current = true;
       try {
@@ -437,15 +434,13 @@ export default function NewEbookPage() {
             </div>
           </Section>
 
-          <Section n={4} done title="How long?">
-            <TargetLengthPicker
-              options={targetOptions}
-              value={targetPages}
-              onChange={setTarget}
-              // With too few credits to generate at all, the credits card below
-              // says so — don't also flag every length as uncovered.
-              affordablePages={insufficient ? null : affordablePages}
-            />
+          <Section
+            n={4}
+            done
+            title="How deep should it go?"
+            sub="You choose the depth — Scrivetta works out the length the content needs."
+          >
+            <DepthPicker options={budget?.options ?? null} value={depth} onChange={setDepth} />
           </Section>
         </form>
 
@@ -463,13 +458,13 @@ export default function NewEbookPage() {
               topic={form.topic}
               audience={form.targetAudience}
               author={form.authorName ?? ""}
-              pages={targetPages}
+              pages={previewPages}
             />
             <p className="mt-2.5 text-center text-[11.5px] text-muted">
               Working title — the final title and cover are designed during generation.
             </p>
             <dl className="mt-4 grid grid-cols-3 overflow-hidden rounded-[10px] border border-hairline bg-surface">
-              <Spec label="Length" value={`~${targetPages} pp`} />
+              <Spec label="Depth" value={depthName} />
               <Spec label="Language" value={languageLabel(form.language) || "English"} />
               <Spec label="Tone" value={styleParts(form.style)[0] ?? "—"} />
             </dl>
@@ -477,40 +472,57 @@ export default function NewEbookPage() {
 
           <div
             className={`rounded-[14px] border p-4 ${
-              insufficient || overBudget
+              insufficient
                 ? "border-[color-mix(in_oklab,var(--warn)_40%,transparent)] bg-warn-soft"
                 : "border-hairline bg-surface"
             }`}
           >
-            <BillRow label="Estimated usage" value={`~${estimate} credits`} />
+            <BillRow
+              label="Estimated length"
+              value={estimate ? `${approxRange(estimate.pagesLow, estimate.pagesHigh)} pages` : "…"}
+            />
+            <BillRow
+              label="Estimated credits"
+              value={estimate ? `${approxRange(estimate.creditsLow, estimate.creditsHigh)} credits` : "…"}
+            />
             <BillRow label="Your balance" value={balance === null ? "…" : `${balance.toLocaleString("en")} credits`} />
             <div className="mb-1 mt-3 h-[5px] overflow-hidden rounded-full bg-surface-3">
               <i
                 className={`block h-full rounded-full transition-[width] duration-300 ${
-                  insufficient || overBudget ? "bg-warn" : "bg-accent"
+                  insufficient ? "bg-warn" : "bg-accent"
                 }`}
                 style={{
-                  width: `${balance ? Math.min(100, (estimate / balance) * 100) : balance === 0 ? 100 : 0}%`,
+                  width: `${
+                    balance && estimate
+                      ? Math.min(100, (estimate.creditsHigh / balance) * 100)
+                      : balance === 0
+                        ? 100
+                        : 0
+                  }%`,
                 }}
               />
             </div>
             <div className="mt-1.5 border-t border-dashed border-hairline-2 pt-2.5">
               {insufficient ? (
-                <BillRow label="Needed to generate" value={`${minCredits} credits`} strong />
+                <BillRow label="Needed to generate" value={`up to ${required} credits`} strong />
               ) : (
                 <BillRow
                   label="After this book"
-                  value={balance === null ? "…" : `~${(balance - plannedPages).toLocaleString("en")} credits`}
+                  value={
+                    balance === null || !estimate
+                      ? "…"
+                      : `${approxRange(balance - estimate.creditsHigh, balance - estimate.creditsLow)} credits`
+                  }
                   strong
                 />
               )}
             </div>
             <p className={`mt-2.5 text-[11.5px] leading-normal ${insufficient ? "text-foreground-2" : "text-muted"}`}>
               {insufficient
-                ? `You need at least ${minCredits} credits to generate this book. You can still continue — add your images first and top up before generating.`
-                : "1 credit = 1 final page, charged when you generate and only for the pages actually produced. Unused credits stay on your account."}
+                ? `At ${depthName} depth this book is estimated to need up to ${required} credits. You can still continue — add your materials first (the estimate gets sharper) and top up before generating.`
+                : "Estimates only — Scrivetta refines them once you add materials, and the book is as long as its content needs. 1 credit = 1 final page, charged only for the pages actually produced."}
             </p>
-            {(insufficient || overBudget) && (
+            {insufficient && (
               <Link href="/billing" className="mt-2.5 inline-block text-[12.5px] font-semibold text-accent hover:underline">
                 Buy credits →
               </Link>
@@ -547,9 +559,9 @@ export default function NewEbookPage() {
       {/* Sticky action bar on small screens. */}
       <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-hairline bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-md lg:hidden">
         <div className="flex flex-col text-[11px] leading-tight text-muted">
-          <span>Estimated · {band.name.toLowerCase()}</span>
+          <span>Estimated · {depthName.toLowerCase()}</span>
           <b className="text-sm font-semibold text-foreground tabular-nums">
-            ~{estimate} credits · {targetPages} pp
+            {estimate ? `${approxRange(estimate.pagesLow, estimate.pagesHigh)} pp · credits` : "Estimating…"}
           </b>
         </div>
         <button
