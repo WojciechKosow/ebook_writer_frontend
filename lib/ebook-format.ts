@@ -5,6 +5,7 @@ export const STATUS_LABEL: Record<EbookStatus, string> = {
   PENDING: "Queued",
   PLANNING: "Planning",
   WRITING: "Writing",
+  AWAITING_APPROVAL: "Needs your OK",
   EDITING: "Editing",
   PLANNING_IMAGES: "Planning images",
   GENERATING_IMAGES: "Generating images",
@@ -19,6 +20,7 @@ export const STATUS_CLASSES: Record<EbookStatus, string> = {
   PENDING: "bg-surface-3 text-muted",
   PLANNING: "bg-accent-soft text-accent-ink",
   WRITING: "bg-accent-soft text-accent-ink",
+  AWAITING_APPROVAL: "bg-warn-soft text-amber-800 dark:text-amber-300",
   EDITING: "bg-accent-soft text-accent-ink",
   PLANNING_IMAGES: "bg-accent-soft text-accent-ink",
   GENERATING_IMAGES: "bg-accent-soft text-accent-ink",
@@ -32,6 +34,7 @@ export const STAGE_MESSAGE: Record<EbookStatus, string> = {
   PENDING: "Queued — starting shortly.",
   PLANNING: "Planning the outline and chapters…",
   WRITING: "Writing chapters one by one…",
+  AWAITING_APPROVAL: "Paused — the book is turning out longer than estimated. Your decision is needed.",
   EDITING: "Editing for consistency and flow…",
   PLANNING_IMAGES: "Planning where images add value…",
   GENERATING_IMAGES: "Generating illustrations…",
@@ -47,6 +50,11 @@ export function isTerminal(status: EbookStatus): boolean {
 /** True while the generation pipeline is actively running (worth polling). */
 export function isGenerating(status: EbookStatus): boolean {
   return status !== "DRAFT" && !isTerminal(status);
+}
+
+/** Paused until the user decides how long the book may be (nothing runs meanwhile). */
+export function needsDecision(status: EbookStatus): boolean {
+  return status === "AWAITING_APPROVAL";
 }
 
 export const CHAPTER_STATUS_LABEL: Record<ChapterStatus, string> = {

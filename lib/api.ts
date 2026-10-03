@@ -14,6 +14,7 @@ import type {
   GenerationBudgetResponse,
   BookScopeResponse,
   BookDepth,
+  ScopeDecision,
   KnowledgeOverview,
   KnowledgeSource,
   OrderStatus,
@@ -200,6 +201,20 @@ export const ebookApi = {
   /** A draft's length + credit estimate (refined by its materials and blueprint). */
   scope(token: string, id: string) {
     return request<BookScopeResponse>(`/api/ebooks/${id}/scope`, { token });
+  },
+
+  /** Have Scrivetta's AI assess the draft's scope (cached server-side until inputs change). */
+  assessScope(token: string, id: string) {
+    return request<BookScopeResponse>(`/api/ebooks/${id}/scope/assess`, { method: "POST", token });
+  },
+
+  /** Answer a book paused because it turned out longer than agreed. */
+  decideScope(token: string, id: string, decision: ScopeDecision) {
+    return request<EbookStatusResponse>(`/api/ebooks/${id}/scope-decision`, {
+      method: "POST",
+      body: { decision },
+      token,
+    });
   },
 
   /** Change a draft's depth; returns the updated scope. */

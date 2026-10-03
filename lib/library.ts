@@ -6,6 +6,7 @@ export const STAGE_SHORT: Partial<Record<EbookStatus, string>> = {
   PENDING: "Queued",
   PLANNING: "Planning",
   WRITING: "Writing",
+  AWAITING_APPROVAL: "Needs your OK",
   EDITING: "Editing",
   PLANNING_IMAGES: "Planning images",
   GENERATING_IMAGES: "Illustrating",
@@ -15,7 +16,7 @@ export const STAGE_SHORT: Partial<Record<EbookStatus, string>> = {
 /** The pipeline as the reader sees it, each step covering one or more statuses. */
 export const PIPELINE: { label: string; statuses: EbookStatus[] }[] = [
   { label: "Plan", statuses: ["PENDING", "PLANNING"] },
-  { label: "Write", statuses: ["WRITING"] },
+  { label: "Write", statuses: ["WRITING", "AWAITING_APPROVAL"] },
   { label: "Edit", statuses: ["EDITING"] },
   { label: "Images", statuses: ["PLANNING_IMAGES", "GENERATING_IMAGES"] },
   { label: "Typeset", statuses: ["RENDERING"] },
