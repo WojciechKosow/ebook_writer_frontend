@@ -42,7 +42,7 @@ export function Features() {
               Guided from one prompt
             </h3>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Give it a topic, an audience, and a length. Scrivetta asks the right
+              Give it a topic, an audience, and a depth. Scrivetta asks the right
               follow-ups, then takes it from there.
             </p>
           </Card>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { EbookStatusResponse } from "@/lib/types";
-import { STAGE_MESSAGE, inBook } from "@/lib/ebook-format";
+import { DEPTH_INFO, STAGE_MESSAGE, inBook } from "@/lib/ebook-format";
 import { PIPELINE, chapterStats, relativeDay, toDate } from "@/lib/library";
 import { Spinner } from "@/components/ui";
 import { BookCover } from "./book-cover";
@@ -187,7 +187,7 @@ export function DraftFeature({ book }: { book: EbookStatusResponse }) {
           are only reserved when you do.
         </p>
         <div className="mt-4 flex flex-wrap gap-1.5 text-xs text-foreground-2">
-          <Chip>~{book.targetPages} pages planned</Chip>
+          <Chip>{DEPTH_INFO[book.depth ?? "STANDARD"].name} depth</Chip>
           {created && <Chip>Started {relativeDay(created)}</Chip>}
         </div>
       </div>

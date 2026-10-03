@@ -1,4 +1,4 @@
-import type { EbookStatus, EbookStatusResponse } from "./types";
+import type { BookDepth, EbookStatus, EbookStatusResponse } from "./types";
 import { inBook, isGenerating } from "./ebook-format";
 
 /** Short stage names for covers and list pills while a book is generating. */
@@ -32,10 +32,22 @@ export function chapterStats(e: EbookStatusResponse): { done: number; edited: nu
 }
 
 /** Pages to show for a book: the real count once rendered, else the target. */
-export function displayPages(e: EbookStatusResponse): { pages: number; exact: boolean } {
-  return e.actualPageCount > 0
-    ? { pages: e.actualPageCount, exact: true }
-    : { pages: e.targetPages, exact: false };
+/** A typical length per depth, only for decorating a book that has no estimate yet. */
+const TYPICAL_PAGES: Record<BookDepth, number> = { QUICK: 18, STANDARD: 34, COMPREHENSIVE: 60 };
+
+/**
+ * The length to show for a book: the real page count once finished, otherwise
+ * the plan, otherwise the middle of the estimate (approximate — never a target).
+ */
+export function displayPages(
+  e: Pick<EbookStatusResponse, "actualPageCount" | "plannedPages" | "estimatedPagesLow" | "estimatedPagesHigh" | "depth">,
+): { pages: number; exact: boolean } {
+  if (e.actualPageCount > 0) return { pages: e.actualPageCount, exact: true };
+  if (e.plannedPages) return { pages: e.plannedPages, exact: false };
+  if (e.estimatedPagesLow && e.estimatedPagesHigh) {
+    return { pages: Math.round((e.estimatedPagesLow + e.estimatedPagesHigh) / 2), exact: false };
+  }
+  return { pages: TYPICAL_PAGES[e.depth ?? "STANDARD"], exact: false };
 }
 
 export function bookTitle(e: EbookStatusResponse): string {

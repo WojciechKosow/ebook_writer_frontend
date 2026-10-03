@@ -4,7 +4,7 @@ const steps = [
   {
     k: "01",
     title: "Describe your book",
-    body: "Topic, genre, audience, and length. A sentence is enough to start.",
+    body: "Topic, genre, audience, and how deep to go. A sentence is enough to start.",
   },
   {
     k: "02",

@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { EXAMPLES, saveExampleBrief } from "@/lib/brief";
+import { DEPTH_INFO } from "@/lib/ebook-format";
 import { BookCover } from "./book-cover";
 
 /** Starter ideas: a short cover title plus the full example brief they pre-fill. */
 const IDEAS = [
-  { title: "Your First $1,000", tag: "Personal finance", pages: 30 },
-  { title: "From First Product to Repeat Customers", tag: "E-commerce", pages: 50 },
-  { title: "The Little Fox Who Feared the Dark", tag: "Children's book", pages: 20 },
+  { title: "Your First $1,000", tag: "Personal finance", depth: "STANDARD" as const, pages: 34 },
+  { title: "From First Product to Repeat Customers", tag: "E-commerce", depth: "COMPREHENSIVE" as const, pages: 60 },
+  { title: "The Little Fox Who Feared the Dark", tag: "Children's book", depth: "QUICK" as const, pages: 18 },
 ].flatMap((idea) => {
   const example = EXAMPLES.find((e) => e.tag === idea.tag);
   return example ? [{ ...idea, example }] : [];
@@ -30,7 +31,7 @@ export function EmptyLibrary({ balance }: { balance: number | null }) {
   const router = useRouter();
 
   function pickIdea(idea: (typeof IDEAS)[number]) {
-    saveExampleBrief(idea.example, idea.pages);
+    saveExampleBrief(idea.example, idea.depth);
     router.push("/ebooks/new");
   }
 
@@ -96,14 +97,17 @@ export function EmptyLibrary({ balance }: { balance: number | null }) {
                   status: "COMPLETED",
                   title: idea.title,
                   progress: 100,
-                  targetPages: idea.pages,
+                  depth: idea.depth,
+                  plannedPages: null,
+                  estimatedPagesLow: null,
+                  estimatedPagesHigh: null,
                   actualPageCount: idea.pages,
                 }}
               />
               <span className="min-w-0">
                 <span className="block font-semibold leading-snug text-foreground">{idea.title}</span>
                 <span className="mt-1 block text-xs text-muted">
-                  {idea.tag} · ~{idea.pages} pages
+                  {idea.tag} · {DEPTH_INFO[idea.depth].name} depth
                 </span>
                 <span className="mt-2 block text-xs font-semibold text-accent">Use this idea →</span>
               </span>
@@ -115,8 +119,8 @@ export function EmptyLibrary({ balance }: { balance: number | null }) {
       {balance !== null && (
         <p className="border-t border-dashed border-hairline-2 bg-surface-2 px-5 py-4 text-center text-[13px] text-muted">
           You have <b className="font-semibold text-foreground">{balance.toLocaleString("en")} credits</b>
-          {balance >= 30 ? ` — about ${Math.floor(balance / 30)} books of ~30 pages` : ""}. You only pay
-          for pages actually written.
+          . 1 credit ≈ 1 page — Scrivetta estimates each book&apos;s length from its topic, materials and
+          depth, and you only pay for pages actually written.
         </p>
       )}
     </section>

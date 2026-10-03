@@ -36,7 +36,7 @@ export const metadata: Metadata = {
 const STEPS: { title: string; body: string }[] = [
   {
     title: "Describe your idea",
-    body: "Write one honest sentence about who the book helps and what it helps them do. Add topic, genre, audience, and rough length — enough for the AI to work from.",
+    body: "Write one honest sentence about who the book helps and what it helps them do. Add topic, genre, audience, and how deep it should go — the AI works out the length from there.",
   },
   {
     title: "Generate the outline",

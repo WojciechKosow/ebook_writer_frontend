@@ -38,7 +38,6 @@ const PAGE_SIZE = 24;
 /** The library controls only appear once there's something to sift through. */
 const TOOLS_FROM = 4;
 /** Standard book length used for the "about N books" hint (the backend default target). */
-const STANDARD_PAGES = 30;
 /** View, sort and filter are remembered on this device. */
 const PREFS_KEY = "scrivetta:library-view";
 
@@ -518,7 +517,7 @@ function Hero({ name, books, balance }: { name: string; books: EbookStatusRespon
         {balance !== null && books.length > 0 && (
           <p className="text-center text-xs text-muted sm:text-right">
             {balance.toLocaleString("en")} credits
-            {balance >= STANDARD_PAGES ? ` · about ${Math.floor(balance / STANDARD_PAGES)} books of ~${STANDARD_PAGES} pages` : ""}
+            {" · 1 credit ≈ 1 page"}
             {" · "}
             <Link href="/billing" className="font-semibold text-accent hover:underline">
               Buy

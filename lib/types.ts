@@ -34,6 +34,13 @@ export type EbookStatus =
  */
 export type ChapterStatus = "PENDING" | "WRITTEN" | "EDITED" | "FAILED" | "DEFERRED";
 
+/**
+ * How deep the book goes — the user's only control over scope. Scrivetta
+ * determines the length from the topic, the materials and the depth; the page
+ * count is a result of generation, never an input.
+ */
+export type BookDepth = "QUICK" | "STANDARD" | "COMPREHENSIVE";
+
 export interface ChapterProgress {
   chapterNumber: number;
   title: string;
@@ -49,11 +56,21 @@ export interface EbookStatusResponse {
   description: string | null;
   errorMessage: string | null;
   downloadReady: boolean;
+  /** The depth the user selected. */
+  depth: BookDepth;
   /**
-   * The target length the user selected — a soft content budget. The finished
-   * book lands around it but may be a little shorter or longer.
+   * Scrivetta's length estimate taken when generation started (whole-book pages).
+   * An estimate, not a target. Null for drafts — see `ebookApi.scope`.
    */
-  targetPages: number;
+  estimatedPagesLow: number | null;
+  estimatedPagesHigh: number | null;
+  /** Pages of the actual plan once planned (still a plan, not a promise). */
+  plannedPages: number | null;
+  /**
+   * True when the writing ran past what the credits cover and the book was
+   * brought to its planned ending early (see the DEFERRED chapters).
+   */
+  creditLimited: boolean;
   /**
    * The real number of pages in the finished PDF (0 until COMPLETED) — the
    * result of generation, not an order.
@@ -161,41 +178,56 @@ export interface EbookRequestInput {
   sourceMaterial: string;
   /** Optional author/pen name printed on the cover ("by …"). */
   authorName?: string;
-  /**
-   * Selected target length in pages — a soft content budget that shapes the
-   * plan (chapters, depth, exercises). Never a hard limit: the book isn't cut to
-   * fit it or padded to reach it. Omit to use the default.
-   */
-  targetPages?: number;
+  /** How deep the book should go. Omit for STANDARD. */
+  depth?: BookDepth;
 }
 
+/** What an estimate is based on, from least to most informed. */
+export type ScopeBasis = "BRIEF" | "SOURCE_TEXT" | "KNOWLEDGE" | "BLUEPRINT";
+
 /**
- * What the creation UI needs: the target-length options (a soft content budget
- * that shapes the plan) and the credit budget (the only hard limit — 1 credit
- * pays for 1 final page, billed on the real result).
+ * One length estimate. Every figure is an ESTIMATE: the real length follows the
+ * content and may land outside the range. 1 credit ≈ 1 final page.
  */
+export interface ScopeEstimate {
+  depth: BookDepth;
+  label: string;
+  description: string;
+  pagesLow: number;
+  pagesHigh: number;
+  chaptersLow: number;
+  chaptersHigh: number;
+  creditsLow: number;
+  creditsHigh: number;
+  /** Credits needed to start (the high end), so the book is never cut short for credits. */
+  requiredCredits: number;
+  basis: ScopeBasis;
+  /** Provided material, in pages of source text. */
+  sourcePages: number;
+  /** True when the content suggested more than the per-book maximum. */
+  capped: boolean;
+}
+
+/** The creation form, before a draft exists: a preliminary estimate per depth. */
 export interface GenerationBudgetResponse {
-  /** Smallest balance that may start a standard generation. */
-  minCredits: number;
-  /** Low end of the orientational page range (~20). */
-  estimatedPagesLow: number;
-  /** High end of the orientational page range (~30). */
-  estimatedPagesHigh: number;
-  /** The user's current credit balance. */
   balance: number;
-  /** Whether the balance is enough to start now (at the default target). */
+  defaultDepth: BookDepth;
+  options: ScopeEstimate[];
+  maxPages: number;
+}
+
+/** A draft's scope (refined by materials and the blueprint) and whether it can start. */
+export interface BookScopeResponse {
+  depth: BookDepth;
+  estimate: ScopeEstimate;
+  options: ScopeEstimate[];
+  balance: number;
+  /** The estimate's high end — or the size of an earlier plan that came out larger. */
+  requiredCredits: number;
   canGenerate: boolean;
-  /** Target lengths offered by the form (e.g. 20, 30, 50, 75, 100). */
-  targetOptions: number[];
-  /** Target used when none is selected. */
-  defaultTargetPages: number;
-  /** Largest target accepted. */
-  maxTargetPages: number;
-  /**
-   * Roughly how many pages the balance pays for. A target above this is planned
-   * down to what the user can afford, and ends naturally rather than being cut.
-   */
-  affordablePages: number;
+  /** Size of an earlier plan that needed more credits than the user had. */
+  plannedPages: number | null;
+  maxPages: number;
 }
 
 // ---- Credits & billing -----------------------------------------------------
