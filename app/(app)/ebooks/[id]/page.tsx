@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
 import { useAssets } from "@/lib/use-assets";
-import type { BookDepth, BookScopeResponse, EbookStatusResponse } from "@/lib/types";
+import type { BookDepth, BookScopeResponse, EbookStatusResponse, ScopeDecision } from "@/lib/types";
 import { StatusBadge, ProgressBar } from "@/components/ebook-ui";
 import { AssetManager } from "@/components/asset-manager";
 import { KnowledgeStep } from "@/components/knowledge-step";
@@ -22,6 +22,7 @@ import {
   inBook,
   isGenerating,
   isTerminal,
+  needsDecision,
 } from "@/lib/ebook-format";
 
 const POLL_MS = 3000;
@@ -41,6 +42,9 @@ export default function EbookDetailPage() {
   // The draft's scope: Scrivetta's length + credit estimate for the chosen depth.
   const [scope, setScope] = useState<BookScopeResponse | null>(null);
   const [savingDepth, setSavingDepth] = useState(false);
+  // Set when an AI assessment attempt failed, so the UI stops waiting for it.
+  const [assessFailed, setAssessFailed] = useState(false);
+  const [deciding, setDeciding] = useState<ScopeDecision | null>(null);
   // Bumped when the knowledge step hands over to the blueprint step.
   const [blueprintKey, setBlueprintKey] = useState(0);
   // Knowledge flow state: a book with materials is written from its blueprint, so
@@ -68,6 +72,54 @@ export default function EbookDetailPage() {
       active = false;
     };
   }, [token, id, isDraft, reloadKey, blueprintKey, blueprintStatus, hasMaterials]);
+
+  // Let Scrivetta's AI judge the scope whenever what it knows changed (cached
+  // server-side, so this is a no-op until the brief, materials or blueprint change).
+  const assessmentNeeded = scope?.aiAssessment === "NEEDED";
+  const assessing = isDraft && assessmentNeeded && !assessFailed;
+  useEffect(() => {
+    if (!token || !id || !isDraft || !assessmentNeeded) return;
+    let active = true;
+    ebookApi
+      .assessScope(token, id)
+      .then((s) => {
+        if (!active) return;
+        setScope(s);
+        // Still NEEDED means the assessment couldn't be made (e.g. OpenAI down):
+        // keep the material-based estimate and stop waiting.
+        setAssessFailed(s.aiAssessment === "NEEDED");
+      })
+      .catch(() => {
+        if (active) setAssessFailed(true); // non-fatal: the material-based estimate stays
+      });
+    return () => {
+      active = false;
+    };
+  }, [token, id, isDraft, assessmentNeeded]);
+
+  const decide = useCallback(
+    async (decision: ScopeDecision) => {
+      if (!token || !ebook || deciding) return;
+      setDeciding(decision);
+      setError(null);
+      try {
+        setEbook(await ebookApi.decideScope(token, ebook.id, decision));
+        credits?.refresh();
+        setReloadKey((k) => k + 1); // poll again (or reload the draft after a cancel)
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 402) {
+          const body = err.body as { message?: string } | undefined;
+          setError(body?.message ?? "Continuing needs more credits. Add credits, or keep the book within the agreed length.");
+          credits?.refresh();
+        } else {
+          setError(err instanceof ApiError ? err.message : "Couldn't save your decision.");
+        }
+      } finally {
+        setDeciding(null);
+      }
+    },
+    [token, ebook, deciding, credits],
+  );
 
   const changeDepth = useCallback(
     async (depth: BookDepth) => {
@@ -98,7 +150,7 @@ export default function EbookDetailPage() {
         const data = await ebookApi.get(token, id);
         if (!active) return;
         setEbook(data);
-        if (isGenerating(data.status)) {
+        if (isGenerating(data.status) && !needsDecision(data.status)) {
           timer = setTimeout(poll, POLL_MS);
         } else if (isTerminal(data.status)) {
           // A failed generation refunds its credits; refresh the balance.
@@ -319,7 +371,17 @@ export default function EbookDetailPage() {
               <ScopeRow label="Your balance" value={balance === null ? "…" : `${balance} credits`} />
             </dl>
             <p className="mt-3 border-t border-hairline pt-3 text-xs text-muted">
-              {estimate && SCOPE_BASIS_LABEL[estimate.basis]}{" "}
+              {assessing ? (
+                <span className="mr-1 inline-flex items-center gap-1.5 text-foreground-2">
+                  <Spinner className="h-3 w-3" /> Scrivetta is analysing the scope of your book…
+                </span>
+              ) : (
+                <>
+                  {estimate && SCOPE_BASIS_LABEL[estimate.basis]}
+                  {estimate?.aiAssessed && " Checked by Scrivetta's AI against your topic and materials."}
+                  {scope?.aiRationale && ` ${scope.aiRationale}`}
+                </>
+              )}{" "}
               {insufficient
                 ? `To generate, you need up to ${required} credits — the high end of the estimate, so the book is never cut short to fit your balance. Add credits or choose a lighter depth.`
                 : "These are estimates, not limits: the finished book may be shorter or longer if its content needs it. You're only billed for the pages actually produced (1 credit = 1 page)."}
@@ -333,7 +395,7 @@ export default function EbookDetailPage() {
             <Button
               onClick={startGeneration}
               loading={starting}
-              disabled={insufficient || waitingForBlueprint || savingDepth || scope === null}
+              disabled={insufficient || waitingForBlueprint || savingDepth || assessing || scope === null}
             >
               {blueprintReady ? "Generate my book" : "Generate ebook"}
             </Button>
@@ -351,8 +413,13 @@ export default function EbookDetailPage() {
         </div>
       )}
 
+      {/* Paused: the book turned out clearly longer than agreed — ask, never decide silently. */}
+      {needsDecision(ebook.status) && (
+        <ScopeDecisionCard ebook={ebook} balance={balance} deciding={deciding} onDecide={decide} error={error} />
+      )}
+
       {/* Progress */}
-      {!draft && !failed && (
+      {!draft && !failed && !needsDecision(ebook.status) && (
         <div className="mt-6">
           <div className="mb-2 flex items-center justify-between text-sm">
             <span className="text-zinc-600 dark:text-zinc-300">{stageMessage}</span>
@@ -487,5 +554,95 @@ function ScopeRow({ label, value }: { label: string; value: string }) {
       <dt className="text-muted">{label}</dt>
       <dd className="font-medium tabular-nums text-foreground">{value}</dd>
     </div>
+  );
+}
+
+function ScopeDecisionCard({
+  ebook,
+  balance,
+  deciding,
+  onDecide,
+  error,
+}: {
+  ebook: EbookStatusResponse;
+  balance: number | null;
+  deciding: ScopeDecision | null;
+  onDecide: (decision: ScopeDecision) => void;
+  error: string | null;
+}) {
+  const proposed = ebook.proposedPages ?? 0;
+  const agreed = ebook.approvedPages ?? 0;
+  const extra = ebook.extraCreditsToContinue;
+  const short = extra > 0 && balance !== null && balance < extra;
+  const afterPlan = ebook.approvalStage === "PLAN";
+  const written = ebook.chapters.filter((c) => c.status === "WRITTEN" || c.status === "EDITED").length;
+
+  return (
+    <section className="mt-6 rounded-xl border border-[color-mix(in_oklab,var(--warn)_40%,transparent)] bg-warn-soft p-5">
+      <h2 className="text-[15px] font-semibold text-foreground">This book is turning out longer than estimated</h2>
+      <p className="mt-2 text-sm text-foreground-2">
+        {afterPlan
+          ? `While planning, Scrivetta found that covering everything properly needs about ${proposed} pages — more than the ~${agreed} pages estimated when you started.`
+          : `While writing (${written} ${written === 1 ? "chapter" : "chapters"} done), the book is heading for about ${proposed} pages — more than the ~${agreed} pages agreed.`}{" "}
+        Nothing continues until you decide.
+      </p>
+      <dl className="mt-3 grid gap-1 text-sm">
+        <div className="flex justify-between">
+          <dt className="text-muted">Agreed length</dt>
+          <dd className="font-medium tabular-nums">~{agreed} pages</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-muted">Now expected</dt>
+          <dd className="font-medium tabular-nums">~{proposed} pages · ~{proposed} credits</dd>
+        </div>
+        {extra > 0 && (
+          <div className="flex justify-between">
+            <dt className="text-muted">To continue, reserve</dt>
+            <dd className="font-medium tabular-nums">
+              {extra} more credits{balance !== null && ` (you have ${balance})`}
+            </dd>
+          </div>
+        )}
+      </dl>
+      <p className="mt-2 text-xs text-muted">
+        You only pay for the pages actually produced; anything reserved but unused is returned.
+      </p>
+
+      {error && <div className="mt-3"><Alert>{error}</Alert></div>}
+
+      <div className="mt-4 flex flex-wrap gap-2.5">
+        <Button onClick={() => onDecide("CONTINUE")} loading={deciding === "CONTINUE"} disabled={short || deciding !== null}>
+          Yes, continue (~{proposed} pages)
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => onDecide("FIT")}
+          loading={deciding === "FIT"}
+          disabled={deciding !== null}
+        >
+          No, keep it to ~{agreed} pages
+        </Button>
+        {afterPlan && (
+          <Button
+            variant="secondary"
+            onClick={() => onDecide("CANCEL")}
+            loading={deciding === "CANCEL"}
+            disabled={deciding !== null}
+          >
+            Cancel and refund
+          </Button>
+        )}
+        {short && (
+          <ButtonLink href="/billing" variant="secondary">
+            Buy credits
+          </ButtonLink>
+        )}
+      </div>
+      <p className="mt-3 text-xs text-muted">
+        {afterPlan
+          ? "Keeping it shorter plans every chapter more tightly — nothing is dropped. Cancelling refunds all credits and returns the book to a draft."
+          : "Keeping it shorter writes the remaining chapters more tightly and, if needed, brings the book to its planned ending early."}
+      </p>
+    </section>
   );
 }

@@ -20,6 +20,8 @@ export type EbookStatus =
   | "PENDING"
   | "PLANNING"
   | "WRITING"
+  /** Paused: the book turned out clearly longer than agreed — waiting for the user's decision. */
+  | "AWAITING_APPROVAL"
   | "EDITING"
   | "PLANNING_IMAGES"
   | "GENERATING_IMAGES"
@@ -71,6 +73,16 @@ export interface EbookStatusResponse {
    * brought to its planned ending early (see the DEFERRED chapters).
    */
   creditLimited: boolean;
+  /** The whole-book length the user has agreed to (estimate's high end, or a later approval). */
+  approvedPages: number | null;
+  /** While AWAITING_APPROVAL: the length Scrivetta now expects. */
+  proposedPages: number | null;
+  /** While AWAITING_APPROVAL: "PLAN" (after planning) or "WRITING" (mid-book). */
+  approvalStage: "PLAN" | "WRITING" | null;
+  /** Credits that must be additionally reserved to continue at the proposed length (0 = none). */
+  extraCreditsToContinue: number;
+  /** The user chose to keep the book within the agreed length. */
+  fitToBudget: boolean;
   /**
    * The real number of pages in the finished PDF (0 until COMPLETED) — the
    * result of generation, not an order.
@@ -206,6 +218,8 @@ export interface ScopeEstimate {
   sourcePages: number;
   /** True when the content suggested more than the per-book maximum. */
   capped: boolean;
+  /** True when OpenAI's scope assessment shaped the range. */
+  aiAssessed: boolean;
 }
 
 /** The creation form, before a draft exists: a preliminary estimate per depth. */
@@ -228,7 +242,14 @@ export interface BookScopeResponse {
   /** Size of an earlier plan that needed more credits than the user had. */
   plannedPages: number | null;
   maxPages: number;
+  /** UNAVAILABLE (no OpenAI) · NEEDED (call ebookApi.assessScope) · READY */
+  aiAssessment: "UNAVAILABLE" | "NEEDED" | "READY";
+  /** What drives the length, per the AI assessment. */
+  aiRationale: string | null;
 }
+
+/** The user's answer when a book paused because it turned out longer. */
+export type ScopeDecision = "CONTINUE" | "FIT" | "CANCEL";
 
 // ---- Credits & billing -----------------------------------------------------
 

@@ -127,6 +127,7 @@ export default function DashboardPage() {
       };
       const finished = data.filter((e) => e.status === "COMPLETED" && wasGenerating(e.id));
       const stopped = data.filter((e) => e.status === "FAILED" && wasGenerating(e.id));
+      const paused = data.filter((e) => e.status === "AWAITING_APPROVAL" && before.get(e.id) !== "AWAITING_APPROVAL");
       itemsRef.current = data;
       setItems(data);
       if (finished.length === 1) {
@@ -136,6 +137,8 @@ export default function DashboardPage() {
         setToast({ text: `${finished.length} books are ready.` });
       } else if (stopped.length > 0) {
         setToast({ text: `“${bookTitle(stopped[0])}” stopped — your credits were refunded.` });
+      } else if (paused.length > 0) {
+        setToast({ text: `“${bookTitle(paused[0])}” is turning out longer than estimated — open it to decide.` });
       }
       // The final charge (or refund) lands when a book finishes.
       if (finished.length || stopped.length) void refreshCredits?.();
