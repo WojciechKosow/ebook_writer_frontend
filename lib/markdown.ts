@@ -70,11 +70,109 @@ turndown.addRule("ebookImage", {
   },
 });
 
+// ---- Design-component blocks (`:::name … :::`) ------------------------------
+//
+// The book's components — boxes, exercises, checklists, action plans, verbatim
+// blocks (verse, addresses, line-based lists) — are written as `:::name` …
+// `:::` blocks whose line breaks and indentation carry meaning, and which may
+// nest or sit inside a list item. Neither marked nor TipTap knows them: as a
+// plain paragraph their lines would be collapsed into one, and on save the
+// block would come back as `:::warning text :::`, which the backend can no
+// longer close. So each block travels through the editor untouched, as a code
+// block in the `directive` language: loaded verbatim, edited as text, and
+// written back exactly as it is. The preview and the PDF render it properly.
+
+/** Code-block language that carries a raw `:::` block through the editor. */
+export const DIRECTIVE_LANGUAGE = "directive";
+
+const DIRECTIVE_OPEN = /^:::\s*[a-zA-Z][\w-]*.*$/;
+const DIRECTIVE_CLOSE = /^:::\s*$/;
+const FENCE_OPEN = /^(`{3,}|~{3,})/;
+/** Verbatim blocks are literal: their first `:::` closes them (mirrors the backend). */
+const VERBATIM_OPEN = /^:::\s*(verbatim|preformatted|lines|verse|poem)\b/i;
+
+function closesFence(line: string, marker: string): boolean {
+  const run = line.match(/^(`+|~+)\s*$/);
+  return !!run && run[1][0] === marker[0] && run[1].length >= marker.length;
+}
+
+/**
+ * Wrap every top-level `:::` block in a fenced `directive` code block at the
+ * same indentation (so a block inside a list item stays in it). Nesting and
+ * code fences are respected exactly as the backend parses them; an unclosed
+ * block runs to the end of the chapter, as it does there.
+ */
+export function protectDirectives(markdown: string): string {
+  const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
+  const out: string[] = [];
+  let fence: string | null = null;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const t = line.trim();
+    if (fence) {
+      if (closesFence(t, fence)) fence = null;
+      out.push(line);
+      continue;
+    }
+    const opened = t.match(FENCE_OPEN);
+    if (opened) {
+      fence = opened[1];
+      out.push(line);
+      continue;
+    }
+    if (!DIRECTIVE_OPEN.test(t)) {
+      out.push(line);
+      continue;
+    }
+    const indent = line.slice(0, line.indexOf(":"));
+    const verbatim = VERBATIM_OPEN.test(t);
+    const block = [line];
+    let depth = 1;
+    let innerFence: string | null = null;
+    let j = i + 1;
+    for (; j < lines.length && depth > 0; j++) {
+      const u = lines[j].trim();
+      block.push(lines[j]);
+      if (innerFence) {
+        if (closesFence(u, innerFence)) innerFence = null;
+      } else if (!verbatim && u.match(FENCE_OPEN)) {
+        innerFence = u.match(FENCE_OPEN)![1];
+      } else if (DIRECTIVE_CLOSE.test(u)) {
+        depth--;
+      } else if (!verbatim && DIRECTIVE_OPEN.test(u)) {
+        depth++;
+      }
+    }
+    i = j - 1;
+    const raw = block.map((l) => (l.startsWith(indent) ? l.slice(indent.length) : l.trimStart())).join("\n");
+    // A fence longer than any backtick run inside, so the block's own code survives.
+    const longest = Math.max(2, ...(raw.match(/`+/g) ?? []).map((r) => r.length));
+    const ticks = "`".repeat(longest + 1);
+    out.push("", `${indent}${ticks}${DIRECTIVE_LANGUAGE}`, ...raw.split("\n").map((l) => indent + l), `${indent}${ticks}`, "");
+  }
+  return out.join("\n");
+}
+
+// A `directive` code block is written back as the raw block it carries.
+turndown.addRule("directiveBlock", {
+  filter: (node) =>
+    node.nodeName === "PRE" &&
+    !!node.firstChild &&
+    node.firstChild.nodeName === "CODE" &&
+    ((node.firstChild as HTMLElement).getAttribute("class") || "")
+      .split(/\s+/)
+      .includes(`language-${DIRECTIVE_LANGUAGE}`),
+  replacement: (_content, node) => {
+    const text = (node.firstChild as HTMLElement).textContent || "";
+    return `\n\n${text.replace(/\n+$/, "")}\n\n`;
+  },
+});
+
 /** Markdown (from the DB) -> HTML (for the editor). */
 export function markdownToHtml(markdown: string | null | undefined): string {
   if (!markdown) return "";
   // async:false keeps this synchronous so callers get a string, not a Promise.
-  return marked.parse(markdown, { async: false }) as string;
+  return marked.parse(protectDirectives(markdown), { async: false }) as string;
 }
 
 /** HTML (from the editor) -> Markdown (to store). */
