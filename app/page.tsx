@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -9,6 +10,22 @@ import { Faq } from "@/components/landing/faq";
 import { Reveal } from "@/components/landing/reveal";
 import { LandingGate } from "@/components/landing/landing-gate";
 import { StructuredData } from "@/components/landing/structured-data";
+import { BRAND } from "@/lib/brand";
+import { SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/site";
+
+// Title/description come from the root layout defaults; only the URL is set here.
+// openGraph is restated in full because metadata objects merge shallowly.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: BRAND,
+    title: `${BRAND} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    url: "/",
+    locale: "en_US",
+  },
+};
 
 export default function Home() {
   return (
