@@ -108,15 +108,15 @@ export default async function BlogPostPage({
           {/* Closing CTA */}
           <div className="mt-14 rounded-2xl border border-hairline bg-surface-2 p-8 text-center">
             <p className="font-[family-name:var(--font-display)] text-2xl tracking-tight text-foreground">
-              Turn your idea into a finished ebook
+              Turn what you know into a finished ebook
             </p>
             <p className="mx-auto mt-2 max-w-md text-muted">
-              {BRAND} plans, writes, and typesets your book — cover to cover. Start
-              free, no card required.
+              {BRAND} maps your notes into a chapter blueprint, then writes, edits,
+              and typesets the book. Planning is free.
             </p>
             <div className="mt-6 flex justify-center">
               <ButtonLink href="/register" className="px-5 py-3">
-                Start writing free
+                Plan your book free
               </ButtonLink>
             </div>
           </div>

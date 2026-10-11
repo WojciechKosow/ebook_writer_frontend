@@ -67,7 +67,7 @@ Publishing is the start, not the finish. Watch which keywords bring readers, ref
 
 ---
 
-Ready to skip the blank page? [Start writing free](/register) and have a complete draft to publish today.`,
+Ready to skip the blank page? [Plan your book free](/register): add your notes, approve the blueprint, and get a complete draft to review before you publish.`,
   },
   {
     slug: "plan-an-ebook-outline-with-ai",
@@ -110,7 +110,7 @@ Once the outline holds together, the writing is the easy part. ${BRAND} takes th
 
 ---
 
-Stop planning in circles. [Start writing free](/register) and get an AI-drafted outline for your book in minutes.`,
+Stop planning in circles. [Plan your book free](/register): upload what you know and get a chapter blueprint built from your own material.`,
   },
 ];
 

@@ -11,45 +11,83 @@ export const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: `What is ${BRAND}?`,
     a:
-      `${BRAND} is an AI ebook generator and writing studio. From a short ` +
-      `description of your idea it plans an outline, writes every chapter, ` +
-      `edits the manuscript for consistency, and exports a typeset, ` +
-      `print-ready PDF — cover to cover.`,
+      `${BRAND} is an AI ebook generator that turns what you already know into ` +
+      `a finished ebook. You share your notes, documents, or project; it maps ` +
+      `your knowledge into a chapter blueprint, asks about the gaps, writes ` +
+      `and edits every chapter, and exports a typeset PDF — cover to cover.`,
   },
   {
     q: "How does the AI ebook writer work?",
     a:
-      "Describe your topic, genre, audience, and how deep the book should go — a sentence is enough " +
-      "to start. Scrivetta drafts an outline, then writes the book chapter by " +
-      "chapter while you watch progress fill in. When it's done you can read " +
-      "it, keep editing, or export.",
+      "Describe the book and who it's for, then upload your materials — ZIP, PDF, " +
+      "DOCX, TXT, Markdown, or pasted notes. Scrivetta organises what you know, " +
+      "proposes a chapter blueprint, and asks a few questions where your material " +
+      "has gaps. You edit and approve the blueprint, choose a depth, and Scrivetta " +
+      "writes the book chapter by chapter, edits it against the whole manuscript, " +
+      "and typesets it as a PDF.",
+  },
+  {
+    q: "Can I write a book without uploading anything?",
+    a:
+      "Yes — that's the quick path. Skip the materials and Scrivetta drafts the " +
+      "book from your brief alone. It's a fast way to get a first draft you then " +
+      "rework in the editor. Because that draft leans on the AI's general " +
+      "knowledge rather than yours, read it, check the facts, and add your own " +
+      "experience before you publish it.",
+  },
+  {
+    q: "Will the AI make things up?",
+    a:
+      "Scrivetta is built not to. Chapters are written from your material and " +
+      "your answers first. Where something is missing, it asks you during the " +
+      "blueprint step; anything you don't provide is covered only in general " +
+      "terms, never with invented facts, numbers, or citations.",
+  },
+  {
+    q: "How long will my book be?",
+    a:
+      "You choose a depth — Quick, Standard, or Comprehensive — and Scrivetta " +
+      "estimates the length from your material before you start. You agree to " +
+      "that estimate; if the book turns out to need noticeably more, generation " +
+      "pauses and asks whether to continue, keep it shorter, or cancel.",
+  },
+  {
+    q: "Can I write fiction with it?",
+    a:
+      "Yes. Novels and stories work through the quick path today: describe the " +
+      "premise, characters, and tone, and refine the draft in the editor. A " +
+      "dedicated fiction builder — characters, world, mood, and plot threads " +
+      "planned before writing — is on the way.",
   },
   {
     q: "Can I edit the book after it's generated?",
     a:
       "Yes. Every book opens in a full editor where you can rewrite text, add, " +
-      "remove, or reorder chapters, drop in images, and design the cover before " +
-      "you export.",
+      "remove, or reorder chapters, place and resize images, and change the " +
+      "cover. The PDF updates with every change.",
   },
   {
     q: "What format do I get, and can I publish it?",
     a:
-      "You get a typeset PDF that's ready to read, share, or self-publish. The " +
-      "manuscript is yours to keep, publish, and sell.",
+      "A typeset 6×9 inch PDF with embedded fonts, a table of contents, and a " +
+      "cover — ready to read, share, or self-publish. The manuscript is yours to " +
+      "keep, publish, and sell. Review it before publishing, as you would any draft.",
   },
   {
     q: "How much does it cost?",
     a:
-      `You can start free. After that, 1 credit writes roughly one page: ` +
-      `subscribe for ${SUBSCRIPTION.priceLabel}/${SUBSCRIPTION.period} for ` +
-      `${SUBSCRIPTION.credits} credits, or buy one-time credit packs. Credits ` +
-      `never expire, and unused subscription credits roll over.`,
+      `Planning is free: creating an account, adding materials, building your ` +
+      `blueprint, and getting a length estimate cost nothing. Writing the book ` +
+      `uses credits — 1 credit is 1 finished page, and you're only charged for ` +
+      `the pages actually produced. Subscribe for ${SUBSCRIPTION.priceLabel}/` +
+      `${SUBSCRIPTION.period} for ${SUBSCRIPTION.credits} credits a month, or ` +
+      `buy one-time credit packs. Credits never expire.`,
   },
   {
     q: "Do I need any writing or design experience?",
     a:
-      "No. If you can describe the book you want, Scrivetta handles the blank " +
-      "page, the structure, and the typesetting — you stay in control and edit " +
+      "No. If you know your subject, Scrivetta handles the structure, the " +
+      "writing, and the typesetting — you stay in control and can edit " +
       "anything you like.",
   },
 ];

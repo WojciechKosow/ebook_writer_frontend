@@ -4,9 +4,9 @@ import { Reveal } from "./reveal";
 
 const SUB_FEATURES = [
   "Full-length ebooks, cover to cover",
-  "Outline, chapters, and an editorial pass",
+  "Blueprint, chapters, and an editorial pass",
   "Typeset PDF export",
-  "Unused credits roll over",
+  "Credits never expire",
 ];
 
 export function Plans() {
@@ -17,11 +17,11 @@ export function Plans() {
           Pricing
         </p>
         <h2 className="mt-3 text-balance text-4xl font-semibold tracking-tight text-foreground">
-          Pay for the pages you write
+          Pay only for the pages you get
         </h2>
         <p className="mt-3 text-lg text-muted">
-          1 credit writes roughly one page. Subscribe for monthly credits, or top up
-          any time — credits never expire.
+          Planning your book is free. 1 credit = 1 finished page, charged only for the
+          pages actually produced. Subscribe for monthly credits, or top up any time.
         </p>
       </Reveal>
 
@@ -44,7 +44,7 @@ export function Plans() {
             </div>
             <p className="mt-3 text-foreground-2">
               <span className="font-semibold text-foreground">{SUBSCRIPTION.credits} credits</span> every{" "}
-              {SUBSCRIPTION.period} — enough budget for several complete ebooks.
+              {SUBSCRIPTION.period} — enough for a full book or several shorter guides.
             </p>
             <ul className="mt-6 space-y-3 text-sm text-foreground-2">
               {SUB_FEATURES.map((f) => (

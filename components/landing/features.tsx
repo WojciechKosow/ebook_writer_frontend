@@ -8,11 +8,11 @@ export function Features() {
           Everything in one studio
         </p>
         <h2 className="mt-3 text-balance text-4xl font-semibold tracking-tight text-foreground">
-          From premise to polished manuscript
+          From your knowledge to a polished book
         </h2>
         <p className="mt-3 text-lg text-muted">
-          Not a chat window. A writing pipeline that keeps voice, plot, and structure
-          consistent across a whole book.
+          Not a chat window. A writing pipeline that starts from what you know and keeps
+          voice, facts, and structure consistent across a whole book.
         </p>
       </Reveal>
 
@@ -23,12 +23,13 @@ export function Features() {
             <div>
               <Icon>{IconBook}</Icon>
               <h3 className="mt-4 text-lg font-semibold tracking-tight text-foreground">
-                Written chapter by chapter
+                Written from your material, chapter by chapter
               </h3>
               <p className="mt-2 max-w-md text-sm leading-6 text-muted">
-                Scrivetta drafts a full outline first, then writes each chapter in
-                sequence — carrying characters, arguments, and tone forward so the last
-                page still sounds like the first.
+                Scrivetta reads your notes, documents, or project, maps them to a chapter
+                blueprint, and writes each chapter from the knowledge that belongs to it —
+                carrying terms, arguments, and tone forward so the last page still sounds
+                like the first.
               </p>
             </div>
             <ChapterRail />
@@ -39,11 +40,11 @@ export function Features() {
           <Card className="h-full">
             <Icon>{IconPen}</Icon>
             <h3 className="mt-4 text-lg font-semibold tracking-tight text-foreground">
-              Guided from one prompt
+              Asks instead of inventing
             </h3>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Give it a topic, an audience, and a depth. Scrivetta asks the right
-              follow-ups, then takes it from there.
+              Where your material has gaps, Scrivetta asks you. Anything you don’t
+              provide is kept general — never filled with made-up facts.
             </p>
           </Card>
         </Reveal>
@@ -55,8 +56,8 @@ export function Features() {
               Typeset PDF export
             </h3>
             <p className="mt-2 text-sm leading-6 text-muted">
-              A properly laid-out book with title page, chapters, and a cover — ready to
-              publish or share.
+              A 6×9″ book with a cover, a real table of contents, and designed chapter
+              openers. The cover text stays editable — no AI typos baked into the art.
             </p>
           </Card>
         </Reveal>
@@ -65,11 +66,11 @@ export function Features() {
           <Card className="h-full">
             <Icon>{IconCheck}</Icon>
             <h3 className="mt-4 text-lg font-semibold tracking-tight text-foreground">
-              Consistency editor
+              Editorial pass & quality check
             </h3>
             <p className="mt-2 text-sm leading-6 text-muted">
-              A final editing pass catches contradictions, repeated points, and drifting
-              tone across chapters.
+              Every chapter is edited against the whole book, then a quality check flags
+              unfinished sections, repeats, and layout issues before you publish.
             </p>
           </Card>
         </Reveal>
@@ -78,11 +79,11 @@ export function Features() {
           <Card className="h-full">
             <Icon>{IconClock}</Icon>
             <h3 className="mt-4 text-lg font-semibold tracking-tight text-foreground">
-              Live progress
+              No surprises on length
             </h3>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Watch chapters land in real time. Pick up any draft where you left off, from
-              any device.
+              You agree to an estimated length up front. If the book needs more, Scrivetta
+              pauses and asks — it never grows or shrinks silently.
             </p>
           </Card>
         </Reveal>

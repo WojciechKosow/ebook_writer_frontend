@@ -44,8 +44,8 @@ export function SiteFooter() {
           <div>
             <Wordmark />
             <p className="mt-3 max-w-xs text-sm text-muted">
-              The AI writing studio that turns one idea into a finished, typeset
-              ebook — cover to cover.
+              The AI writing studio that turns what you know into a finished,
+              typeset ebook — cover to cover.
             </p>
           </div>
           {COLUMNS.map((col) => (
