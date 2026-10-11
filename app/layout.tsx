@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Instrument_Sans, Newsreader, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
-import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { ConsentedAnalytics } from "@/components/consented-analytics";
+import { CookieConsent } from "@/components/cookie-consent";
 import { ThemeProvider, themeScript } from "@/lib/theme-context";
 import { sessionBootScript } from "@/lib/session-boot";
 import { BRAND } from "@/lib/brand";
@@ -35,7 +36,8 @@ const geistMono = Geist_Mono({
 
 // GA4 measurement ID (e.g. "G-XXXXXXXXXX"). Set NEXT_PUBLIC_GA_ID in the
 // environment to switch Google Analytics on; left unset (local/preview) it
-// renders nothing, so no gtag.js loads and no hits are sent.
+// renders nothing. Even when set, gtag.js loads only after the visitor accepts
+// analytics cookies (components/cookie-consent.tsx).
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
@@ -113,8 +115,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
         <Analytics />
+        {GA_ID ? <ConsentedAnalytics gaId={GA_ID} /> : null}
+        <CookieConsent />
       </body>
-      {GA_ID ? <GoogleAnalytics gaId={GA_ID} /> : null}
     </html>
   );
 }

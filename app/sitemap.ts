@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 import { BLOG_POSTS, postModified } from "@/lib/blog";
+import { LEGAL_UPDATED } from "@/lib/legal";
 
 // When each static page's content last meaningfully changed. Bump the date when
 // you edit a page's copy. Google only trusts <lastmod> while it stays accurate,
@@ -42,6 +43,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
+  const legal: MetadataRoute.Sitemap = ["/privacy", "/terms"].map((path) => ({
+    url: `${SITE_URL}${path}`,
+    lastModified: day(LEGAL_UPDATED),
+    changeFrequency: "yearly",
+    priority: 0.2,
+  }));
+
   const posts: MetadataRoute.Sitemap = BLOG_POSTS.map((post) => ({
     url: `${SITE_URL}/blog/${post.slug}`,
     lastModified: day(postModified(post)),
@@ -49,5 +57,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticPages, ...posts];
+  return [...staticPages, ...posts, ...legal];
 }

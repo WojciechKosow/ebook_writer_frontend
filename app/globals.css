@@ -422,6 +422,10 @@ body {
   color: var(--muted);
   font-style: italic;
 }
+.prose-post table { width: 100%; border-collapse: collapse; font-size: 0.9rem; line-height: 1.55; display: block; overflow-x: auto; }
+.prose-post th, .prose-post td { border-bottom: 1px solid var(--hairline); padding: 0.55em 0.75em 0.55em 0; text-align: left; vertical-align: top; }
+.prose-post th { color: var(--foreground); font-weight: 600; border-bottom-color: var(--hairline-2); }
+.prose-post h2[id] { scroll-margin-top: 6rem; }
 .prose-post hr { border: 0; border-top: 1px solid var(--hairline); margin: 2.4em 0; }
 .prose-post code {
   font-family: var(--font-mono, ui-monospace, monospace);
