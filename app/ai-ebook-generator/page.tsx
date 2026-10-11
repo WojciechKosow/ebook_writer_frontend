@@ -11,9 +11,9 @@ import { SITE_URL } from "@/lib/site";
 const PATH = "/ai-ebook-generator";
 const TITLE = "AI Ebook Generator";
 const DESCRIPTION =
-  `${BRAND} is an AI ebook generator that turns one idea into a complete, ` +
-  `typeset ebook — outline, every chapter, an editorial pass, and a ` +
-  `print-ready PDF. Start free.`;
+  `${BRAND} is an AI ebook generator that writes from what you know: upload ` +
+  `your notes or documents, approve a chapter blueprint, and get a complete, ` +
+  `typeset ebook as a print-ready PDF. Plan your book free.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -45,7 +45,7 @@ const jsonLd = {
 
 const USE_CASES = [
   { title: "Non-fiction & how-to", body: "Guides, playbooks, and manuals that teach one thing well." },
-  { title: "Fiction", body: "Novels and novellas with a consistent voice, chapter to chapter." },
+  { title: "Fiction", body: "Novels and novellas drafted from your premise via the quick path — a dedicated fiction builder for characters and worlds is on the way." },
   { title: "Lead magnets", body: "Branded ebooks that grow your list and establish authority." },
   { title: "Courses & workbooks", body: "Structured, chaptered material ready to hand to students." },
 ];
@@ -70,13 +70,13 @@ export default function AiEbookGeneratorPage() {
               An AI ebook generator that finishes the book
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-muted">
-              Describe your idea and {BRAND} plans the outline, writes every chapter,
-              edits for consistency, and hands you a typeset, print-ready PDF — cover
-              to cover.
+              Share what you know — notes, documents, a project — and {BRAND} maps it
+              into a chapter blueprint, asks about the gaps, writes and edits every
+              chapter, and hands you a typeset, print-ready PDF.
             </p>
             <div className="mt-8 flex items-center justify-center gap-3">
               <ButtonLink href="/register" className="px-5 py-3 text-[15px]">
-                Start writing free
+                Plan your book free
               </ButtonLink>
               <ButtonLink href="#pricing" variant="secondary" className="px-5 py-3 text-[15px]">
                 See pricing →
@@ -92,11 +92,14 @@ export default function AiEbookGeneratorPage() {
               What is an AI ebook generator?
             </h2>
             <p className="mt-4 text-[17px] leading-8 text-foreground-2">
-              An AI ebook generator turns a short description of your idea into a
-              complete manuscript. Instead of facing a blank page, you start from a
-              full draft — a structured outline, written chapters, and a consistency
-              pass — then edit it into exactly the book you want. {BRAND} handles the
-              heavy lifting so you can focus on voice, accuracy, and publishing.
+              An AI ebook generator turns your knowledge into a complete manuscript.
+              Most tools write from a one-line prompt, so the result is generic.{" "}
+              {BRAND} starts from your own material instead: it organises what you
+              know, plans the chapters around it, and asks you to fill the gaps rather
+              than inventing facts. You get a full draft — a blueprint you approved,
+              written chapters, and an editorial pass — to refine into exactly the book
+              you want. In a hurry, you can also draft from a brief alone and rework it
+              in the editor.
             </p>
           </Reveal>
         </section>
@@ -130,11 +133,12 @@ export default function AiEbookGeneratorPage() {
               Generate your first ebook today
             </h2>
             <p className="mx-auto mt-3 max-w-md text-muted">
-              Start free — no card required. Your first chapter is one prompt away.
+              Planning is free — add your material, review the blueprint, and see the
+              estimated length before you spend a credit.
             </p>
             <div className="mt-7 flex justify-center">
               <ButtonLink href="/register" className="px-5 py-3">
-                Start writing free
+                Plan your book free
               </ButtonLink>
             </div>
           </Reveal>

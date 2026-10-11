@@ -31,7 +31,7 @@ export function Hero() {
         </span>
 
         <h1 className="mx-auto mt-6 max-w-3xl text-5xl font-semibold leading-[1.02] tracking-tight text-foreground sm:text-6xl">
-          One idea in.
+          Your knowledge in.
           <br />
           A{" "}
           <span className="font-[family-name:var(--font-display)] italic font-medium text-accent">
@@ -41,13 +41,13 @@ export function Hero() {
         </h1>
 
         <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-muted">
-          Describe what you want to write. Scrivetta plans the outline, writes every
-          chapter, edits for consistency, and hands you a typeset PDF — cover to cover.
+          Upload your notes, documents, or project. Scrivetta maps what you know, asks
+          about the gaps, and writes a typeset ebook in your voice — cover to cover.
         </p>
 
         <div className="mt-8 flex items-center justify-center gap-3">
           <ButtonLink href="/register" className="px-5 py-3 text-[15px]">
-            Start writing free
+            Plan your book free
           </ButtonLink>
           <ButtonLink href="#how" variant="secondary" className="px-5 py-3 text-[15px]">
             See how it works →
@@ -55,9 +55,9 @@ export function Hero() {
         </div>
 
         <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-faint">
-          <span>✓ No blank page</span>
-          <span>✓ Chapter-by-chapter</span>
-          <span>✓ Export-ready PDF</span>
+          <span>✓ Built from your own material</span>
+          <span>✓ You approve the plan</span>
+          <span>✓ Pay only for pages you get</span>
         </div>
 
         <ProductPreview />

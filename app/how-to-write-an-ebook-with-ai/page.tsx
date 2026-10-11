@@ -10,8 +10,8 @@ import { SITE_URL } from "@/lib/site";
 const PATH = "/how-to-write-an-ebook-with-ai";
 const TITLE = "How to Write an Ebook with AI";
 const DESCRIPTION =
-  `A simple, five-step guide to writing an ebook with AI — from your first ` +
-  `idea to a typeset, publish-ready PDF. Written by the team behind ${BRAND}.`;
+  `A six-step guide to writing an ebook with AI from what you already know — ` +
+  `from your notes to a typeset, publish-ready PDF. Written by the team behind ${BRAND}.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -35,16 +35,20 @@ export const metadata: Metadata = {
 // so the schema always matches what's on the page.
 const STEPS: { title: string; body: string }[] = [
   {
-    title: "Describe your idea",
-    body: "Write one honest sentence about who the book helps and what it helps them do. Add topic, genre, audience, and how deep it should go — the AI works out the length from there.",
+    title: "Define the book",
+    body: "Write one honest sentence about who the book helps and what it helps them do. Add the audience, the tone, and how deep it should go.",
   },
   {
-    title: "Generate the outline",
-    body: "Let the AI draft a chapter-by-chapter outline. Reacting to a full skeleton is far easier than inventing one, and it keeps the finished book coherent.",
+    title: "Gather what you already know",
+    body: `Collect your notes, documents, slides, or project files — rough is fine. This is what makes the book yours: ${BRAND} writes from your material instead of guessing.`,
+  },
+  {
+    title: "Plan the outline and fill the gaps",
+    body: "Let the AI turn your material into a chapter-by-chapter outline (a blueprint), then answer its questions about anything your material doesn't cover. Edit the chapters until the structure is right.",
   },
   {
     title: "Write the chapters",
-    body: `Have ${BRAND} write each chapter from the approved outline, then run a consistency pass across the whole manuscript so voice and details line up.`,
+    body: `Choose a depth, check the estimated length, and have ${BRAND} write each chapter from your approved blueprint, then edit it against the whole manuscript so voice and details line up.`,
   },
   {
     title: "Edit for your voice",
@@ -100,8 +104,8 @@ export default function HowToWriteEbookPage() {
               How to write an ebook with AI
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-muted">
-              You don&apos;t need to be a writer to publish a real book. Here are the
-              five steps — and how an{" "}
+              You don&apos;t need to be a writer to publish a real book — you need to
+              know your subject. Here are the six steps, and how an{" "}
               <Link href="/ai-ebook-generator" className="font-medium text-accent-ink underline underline-offset-2">
                 AI ebook generator
               </Link>{" "}
@@ -137,10 +141,11 @@ export default function HowToWriteEbookPage() {
             </h2>
             <p className="mt-4 text-[17px] leading-8 text-foreground-2">
               The blank page is where most books die. AI removes it: you always have a
-              draft to react to, so momentum never stalls. You stay the author —
-              making the calls on structure, voice, and truth — while the tool handles
-              outlining, drafting, and typesetting. That&apos;s the difference between
-              a book you mean to write and one you actually finish.
+              draft to react to, so momentum never stalls. The catch is that AI
+              writing from a one-line prompt sounds generic and can get facts wrong.
+              Feed it your own knowledge and it writes your book instead of an average
+              one. You stay the author — making the calls on structure, voice, and
+              truth — while the tool handles outlining, drafting, and typesetting.
             </p>
           </Reveal>
         </section>
@@ -152,11 +157,12 @@ export default function HowToWriteEbookPage() {
               Write your ebook with {BRAND}
             </h2>
             <p className="mx-auto mt-3 max-w-md text-muted">
-              Start free — no card required. Go from idea to finished PDF today.
+              Planning is free — add your notes, review the blueprint, and see the
+              estimated length before you spend a credit.
             </p>
             <div className="mt-7 flex justify-center">
               <ButtonLink href="/register" className="px-5 py-3">
-                Start writing free
+                Plan your book free
               </ButtonLink>
             </div>
           </Reveal>

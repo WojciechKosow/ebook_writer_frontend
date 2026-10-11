@@ -3,18 +3,23 @@ import { Reveal } from "./reveal";
 const steps = [
   {
     k: "01",
-    title: "Describe your book",
-    body: "Topic, genre, audience, and how deep to go. A sentence is enough to start.",
+    title: "Share what you know",
+    body: "Describe the book, then upload notes, documents, or a project. Rough notes are fine.",
   },
   {
     k: "02",
-    title: "Scrivetta writes it",
-    body: "Outline, chapters, and a consistency edit — while you watch progress fill in.",
+    title: "Review your blueprint",
+    body: "Scrivetta proposes the chapters and asks about anything your material doesn’t cover. Edit, answer, approve.",
   },
   {
     k: "03",
-    title: "Export & publish",
-    body: "Download a typeset PDF, or keep editing. It’s your manuscript.",
+    title: "Choose the depth",
+    body: "Quick, Standard, or Comprehensive. Scrivetta estimates the length before you spend a credit.",
+  },
+  {
+    k: "04",
+    title: "Get your book",
+    body: "Chapters written from your knowledge, edited, and typeset as a PDF. Keep refining it in the editor.",
   },
 ];
 
@@ -27,11 +32,11 @@ export function HowItWorks() {
             How it works
           </p>
           <h2 className="mt-3 text-balance text-4xl font-semibold tracking-tight text-foreground">
-            Three steps to a finished book
+            From what you know to a finished book
           </h2>
         </Reveal>
 
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
+        <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {steps.map((s, i) => (
             <Reveal key={s.k} delay={i * 110}>
               <div className="relative h-full rounded-2xl border border-hairline bg-surface p-6">
@@ -42,7 +47,7 @@ export function HowItWorks() {
                 <p className="mt-1.5 text-sm leading-6 text-muted">{s.body}</p>
                 {i < steps.length - 1 && (
                   <svg
-                    className="absolute right-[-13px] top-9 hidden text-hairline-2 md:block"
+                    className="absolute right-[-13px] top-9 hidden text-hairline-2 lg:block"
                     width="26"
                     height="26"
                     viewBox="0 0 24 24"
@@ -58,6 +63,16 @@ export function HowItWorks() {
             </Reveal>
           ))}
         </div>
+
+        <Reveal className="mx-auto mt-8 max-w-2xl">
+          <p className="rounded-2xl border border-hairline bg-surface px-5 py-4 text-sm leading-6 text-muted">
+            <span className="font-semibold text-foreground">In a hurry? Take the quick path.</span>{" "}
+            Skip the materials and Scrivetta drafts the book from your brief alone — great
+            for a fast first draft you rework in the editor. That draft leans on general
+            knowledge, so read it, check the facts, and add your own experience before you
+            publish.
+          </p>
+        </Reveal>
       </div>
     </section>
   );

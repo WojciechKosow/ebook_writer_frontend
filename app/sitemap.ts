@@ -6,9 +6,9 @@ import { BLOG_POSTS } from "@/lib/blog";
 // you edit a page's copy. Google only trusts <lastmod> while it stays accurate,
 // so it must not move on every deploy.
 const UPDATED = {
-  home: "2026-10-03",
-  aiEbookGenerator: "2026-09-20",
-  howToWriteAnEbook: "2026-09-20",
+  home: "2026-10-11",
+  aiEbookGenerator: "2026-10-11",
+  howToWriteAnEbook: "2026-10-11",
 };
 
 const day = (date: string) => new Date(`${date}T00:00:00Z`);

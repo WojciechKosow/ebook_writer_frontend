@@ -57,10 +57,10 @@ export default function OpengraphImage() {
               maxWidth: "900px",
             }}
           >
-            One idea in. A finished book out.
+            Your knowledge in. A finished book out.
           </div>
           <div style={{ fontSize: "34px", color: "rgba(255,255,255,0.82)", maxWidth: "820px" }}>
-            {`${SITE_TAGLINE} — outline, chapters, editing, and a print-ready PDF.`}
+            {`${SITE_TAGLINE} — blueprint, chapters, editing, and a print-ready PDF.`}
           </div>
         </div>
 

@@ -23,9 +23,10 @@ import { BRAND } from "./brand";
 // One-line value proposition, kept keyword-aware for search without reading as
 // keyword stuffing. Used as the default meta description and OG/Twitter copy.
 export const SITE_DESCRIPTION =
-  `${BRAND} is an AI ebook generator that turns one idea into a finished, ` +
-  `typeset ebook. It plans the outline, writes every chapter, edits for ` +
-  `consistency, and exports a print-ready PDF — cover to cover. Start free.`;
+  `${BRAND} is an AI ebook generator that turns what you know into a ` +
+  `finished, typeset ebook. Upload your notes or documents, approve the ` +
+  `chapter blueprint, and get every chapter written, edited, and exported ` +
+  `as a print-ready PDF. Plan your book free.`;
 
 // The phrase people actually search for. Feeds keywords + the OG image.
 export const SITE_TAGLINE = "AI Ebook Generator & Writing Studio";

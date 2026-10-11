@@ -54,22 +54,22 @@ export default function Home() {
                 }}
               />
               <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-                Your first chapter is{" "}
+                Your book is already in{" "}
                 <span className="font-[family-name:var(--font-display)] italic font-medium">
-                  one prompt
-                </span>{" "}
-                away.
+                  your notes
+                </span>
+                .
               </h2>
               <p className="mx-auto mt-3 max-w-md text-white/80">
-                Turn an idea into a complete, readable ebook in minutes. Start free — no
-                card required.
+                Plan it free: add your material, review the blueprint, and see the
+                estimated length before you spend a credit.
               </p>
               <div className="mt-8 flex justify-center">
                 <Link
                   href="/register"
                   className="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-[#3f32b0] shadow-soft transition hover:bg-white/90"
                 >
-                  Start writing free
+                  Plan your book free
                 </Link>
               </div>
             </div>
@@ -90,8 +90,8 @@ function WhatYouGet() {
           What you get
         </p>
         <p className="mt-5 text-balance font-[family-name:var(--font-display)] text-2xl leading-snug tracking-tight text-foreground sm:text-3xl">
-          A complete ebook — outline, every chapter, a consistency pass, and a typeset
-          PDF ready to read, publish, or share.
+          A complete ebook built from your knowledge — a blueprint you approved, every
+          chapter, an editorial pass, a quality check, and a typeset PDF.
         </p>
       </Reveal>
     </section>
