@@ -18,6 +18,7 @@ import type {
   KnowledgeOverview,
   KnowledgeSource,
   OrderStatus,
+  QualityReport,
   SubscriptionResponse,
   User,
 } from "./types";
@@ -224,6 +225,19 @@ export const ebookApi = {
 
   list(token: string) {
     return request<EbookStatusResponse[]>("/api/ebooks", { token });
+  },
+
+  /**
+   * The quality report of the book's latest render — what to review before
+   * publishing. Null until the book has been rendered (404).
+   */
+  async qualityReport(token: string, id: string): Promise<QualityReport | null> {
+    try {
+      return await request<QualityReport>(`/api/ebooks/${id}/quality-report`, { token });
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
   },
 
   /** Load the editable manuscript (all chapters + their Markdown bodies). */

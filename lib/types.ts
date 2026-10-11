@@ -94,6 +94,9 @@ export interface EbookStatusResponse {
   generationMode: "LEGACY" | "KNOWLEDGE";
   /** A failed generation that kept its written chapters and can be resumed. */
   resumable: boolean;
+  /** From the latest render's quality report: errors / warnings found (null until rendered). */
+  qualityErrors: number | null;
+  qualityWarnings: number | null;
   chapters: ChapterProgress[];
   createdAt: string | null;
   updatedAt: string | null;
@@ -484,4 +487,45 @@ export interface BlueprintUpdateInput {
   promise?: string;
   /** Authoritative list: order = new order; id null = new chapter; missing = removed. */
   chapters?: { id: string | null; title: string; purpose: string | null; topics?: string[] }[];
+}
+
+// ---- Quality report ---------------------------------------------------------
+
+export type QualitySeverity = "ERROR" | "WARNING" | "INFO";
+
+export type QualityCategory =
+  | "INCOMPLETE_UNIT"
+  | "EMPTY_HEADING"
+  | "ORPHAN_LIST_MARKER"
+  | "DUPLICATE_BLOCK"
+  | "TEMPLATE_MISMATCH"
+  | "INTERNAL_LEAK"
+  | "TRUNCATED_READER_TEXT"
+  | "VERBATIM_OVERFLOW"
+  | "REPETITION"
+  | "LENGTH_BUDGET";
+
+/** One finding, located in the book (chapter null = the book as a whole; page null = not printed). */
+export interface QualityFinding {
+  category: QualityCategory;
+  severity: QualitySeverity;
+  chapter: number | null;
+  chapterTitle: string | null;
+  page: number | null;
+  message: string;
+  excerpt: string | null;
+}
+
+/** The quality report of a book's latest render (GET /api/ebooks/{id}/quality-report). */
+export interface QualityReport {
+  generatedAt: string;
+  pages: number;
+  plannedPages: number | null;
+  errors: number;
+  warnings: number;
+  readyToPublish: boolean;
+  /** Most severe first, then in book order. */
+  findings: QualityFinding[];
+  lengths: { chapter: number; title: string; plannedPages: number; actualPages: number; deviation: number }[];
+  repeatedPhrases: { phrase: string; occurrences: number; chapters: number[] }[];
 }

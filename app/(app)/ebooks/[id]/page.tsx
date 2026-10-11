@@ -14,6 +14,7 @@ import { KnowledgeStep } from "@/components/knowledge-step";
 import { BlueprintStep } from "@/components/blueprint-step";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
 import { DepthPicker } from "@/components/depth-picker";
+import { QualityReportPanel } from "@/components/quality-report";
 import {
   CHAPTER_STATUS_LABEL,
   SCOPE_BASIS_LABEL,
@@ -500,6 +501,13 @@ export default function EbookDetailPage() {
           {error && (
             <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>
           )}
+        </div>
+      )}
+
+      {/* Quality check of the latest render: what to fix before publishing */}
+      {completed && token && (
+        <div className="mt-6">
+          <QualityReportPanel token={token} ebookId={ebook.id} version={ebook.updatedAt} />
         </div>
       )}
 
