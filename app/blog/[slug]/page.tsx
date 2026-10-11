@@ -8,7 +8,7 @@ import { Prose } from "@/components/prose";
 import { ButtonLink } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
-import { BLOG_SLUGS, getPost, formatPostDate } from "@/lib/blog";
+import { BLOG_SLUGS, getPost, formatPostDate, postModified } from "@/lib/blog";
 
 // Prerender every known post; unknown slugs 404 instead of rendering on demand.
 export function generateStaticParams() {
@@ -34,6 +34,7 @@ export async function generateMetadata({
       description: post.description,
       url,
       publishedTime: post.date,
+      modifiedTime: postModified(post),
     },
   };
 }
@@ -57,7 +58,7 @@ export default async function BlogPostPage({
         headline: post.title,
         description: post.description,
         datePublished: post.date,
-        dateModified: post.date,
+        dateModified: postModified(post),
         mainEntityOfPage: canonical,
         url: canonical,
         author: { "@id": `${SITE_URL}/#organization` },
@@ -92,6 +93,14 @@ export default async function BlogPostPage({
           <header className="mt-6">
             <div className="flex items-center gap-2 text-xs text-faint">
               <time dateTime={post.date}>{formatPostDate(post.date)}</time>
+              {post.updated && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>
+                    Updated <time dateTime={post.updated}>{formatPostDate(post.updated)}</time>
+                  </span>
+                </>
+              )}
               <span aria-hidden>·</span>
               <span>{post.readingMinutes} min read</span>
             </div>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { HowItWorks } from "@/components/landing/how-it-works";
@@ -20,6 +21,8 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   keywords: [
     "AI ebook generator",
+    "ebook writing AI",
+    "AI to write an ebook",
     "AI book generator",
     "generate a book with AI",
     "ebook creator",
@@ -42,6 +45,30 @@ const jsonLd = {
     { "@type": "ListItem", position: 2, name: TITLE, item: `${SITE_URL}${PATH}` },
   ],
 };
+
+// Prompt-only generators vs writing from the author's own material — the core of
+// how Scrivetta is positioned. Rendered as two side-by-side columns.
+const COMPARISON = {
+  prompt: [
+    "Starts from one sentence",
+    "Fills every gap with general knowledge",
+    "Sounds like every other book on the topic",
+    "You find the made-up details while editing",
+  ],
+  knowledge: [
+    "Starts from your notes, documents, or project",
+    "Asks you about gaps instead of inventing",
+    "Keeps your examples, terms, and opinions",
+    "You approve the chapter plan before it writes",
+  ],
+};
+
+const AUDIENCES = [
+  { title: "Experts & consultants", body: "Turn years of notes, workshops, and client questions into a book that shows what you know." },
+  { title: "Creators & coaches", body: "Package your newsletter, course, or method into a lead magnet or a paid guide." },
+  { title: "Founders & teams", body: "Turn product docs, playbooks, or a codebase into a guide your customers or new hires will actually read." },
+  { title: "Writers in a hurry", body: "Use the quick path for a fast first draft from a brief, then make it yours in the editor." },
+];
 
 const USE_CASES = [
   { title: "Non-fiction & how-to", body: "Guides, playbooks, and manuals that teach one thing well." },
@@ -104,6 +131,61 @@ export default function AiEbookGeneratorPage() {
           </Reveal>
         </section>
 
+        {/* Prompt vs knowledge */}
+        <section className="mx-auto w-full max-w-4xl px-6 py-12">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              Why most AI-written ebooks feel generic
+            </h2>
+            <p className="mt-3 text-[17px] leading-8 text-foreground-2">
+              Ebook writing AI is only as good as what you give it. A one-line prompt
+              gets you the average of the internet. Your own material gets you your
+              book.
+            </p>
+          </Reveal>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2">
+            <Reveal>
+              <div className="h-full rounded-2xl border border-hairline bg-surface p-6">
+                <h3 className="text-[17px] font-semibold text-foreground">Prompt-only AI writers</h3>
+                <ul className="mt-3 flex flex-col gap-2 text-sm leading-6 text-muted">
+                  {COMPARISON.prompt.map((line) => (
+                    <li key={line}>— {line}</li>
+                  ))}
+                </ul>
+              </div>
+            </Reveal>
+            <Reveal delay={80}>
+              <div className="h-full rounded-2xl border border-[color-mix(in_oklab,var(--accent)_45%,var(--hairline))] bg-surface p-6">
+                <h3 className="text-[17px] font-semibold text-foreground">{BRAND}</h3>
+                <ul className="mt-3 flex flex-col gap-2 text-sm leading-6 text-muted">
+                  {COMPARISON.knowledge.map((line) => (
+                    <li key={line}>✓ {line}</li>
+                  ))}
+                </ul>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* Who it's for */}
+        <section className="mx-auto w-full max-w-4xl px-6 py-12">
+          <Reveal className="text-center">
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              Who uses AI to write an ebook with {BRAND}
+            </h2>
+          </Reveal>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2">
+            {AUDIENCES.map((a, i) => (
+              <Reveal key={a.title} delay={i * 70}>
+                <div className="h-full rounded-2xl border border-hairline bg-surface p-6">
+                  <h3 className="text-[17px] font-semibold text-foreground">{a.title}</h3>
+                  <p className="mt-1.5 text-sm leading-6 text-muted">{a.body}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
         {/* Use cases */}
         <section className="mx-auto w-full max-w-4xl px-6 py-12">
           <Reveal className="text-center">
@@ -125,6 +207,30 @@ export default function AiEbookGeneratorPage() {
 
         <HowItWorks />
         <Plans />
+
+        {/* Further reading */}
+        <section className="mx-auto w-full max-w-2xl px-6 pb-8 pt-4">
+          <Reveal>
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">Before you start</h2>
+            <ul className="mt-4 flex flex-col gap-2 text-[15px] leading-7">
+              <li>
+                <Link href="/blog/plan-an-ebook-outline-with-ai" className="font-medium text-accent-ink underline underline-offset-2">
+                  How to write an ebook outline (with free templates)
+                </Link>
+              </li>
+              <li>
+                <Link href="/blog/can-you-publish-a-book-written-by-ai" className="font-medium text-accent-ink underline underline-offset-2">
+                  Can you publish a book written by AI? KDP rules and copyright
+                </Link>
+              </li>
+              <li>
+                <Link href="/how-to-write-an-ebook-with-ai" className="font-medium text-accent-ink underline underline-offset-2">
+                  How to write an ebook with AI, step by step
+                </Link>
+              </li>
+            </ul>
+          </Reveal>
+        </section>
 
         {/* Closing CTA */}
         <section className="mx-auto w-full max-w-2xl px-6 pb-24 pt-4 text-center">
