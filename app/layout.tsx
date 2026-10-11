@@ -53,15 +53,14 @@ export const metadata: Metadata = {
   creator: BRAND,
   publisher: BRAND,
   category: "technology",
-  alternates: {
-    canonical: "/",
-  },
+  // No canonical / og:url here: metadata is inherited by every route, so a
+  // root-level canonical would point any page without its own at the home page.
+  // Each indexable page declares its own (see app/page.tsx).
   openGraph: {
     type: "website",
     siteName: BRAND,
     title: `${BRAND} — ${SITE_TAGLINE}`,
     description: SITE_DESCRIPTION,
-    url: "/",
     locale: "en_US",
     // og image is supplied by app/opengraph-image.tsx (auto-detected).
   },

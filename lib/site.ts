@@ -1,12 +1,13 @@
 // Central SEO / site-identity config. One place to tune how Scrivetta presents
 // itself to search engines and social/link-preview crawlers.
 //
-// The canonical marketing origin. Set NEXT_PUBLIC_SITE_URL in the environment
-// (e.g. Vercel project env vars) to the real production domain — it must be an
-// absolute URL with no trailing slash. The default is a safe fallback for
-// local/preview builds so `metadataBase` never breaks the build.
+// The canonical marketing origin. Production serves from www — the bare domain
+// redirects there — so every canonical, sitemap, and JSON-LD URL must use the
+// www host. Pointing them at the bare domain makes Search Console flag each
+// sitemap entry as "Page with redirect" and splits signals across both hosts.
+// NEXT_PUBLIC_SITE_URL can override it (absolute URL, no trailing slash).
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://scrivetta.com"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.scrivetta.com"
 ).replace(/\/$/, "");
 
 // Google Search Console site-verification token (the value of the
