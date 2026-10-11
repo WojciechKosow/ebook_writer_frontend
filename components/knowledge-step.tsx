@@ -119,7 +119,7 @@ export function KnowledgeStep({
       for (const file of Array.from(files)) {
         const key = `${file.name}-${file.size}-${Math.random().toString(36).slice(2)}`;
         const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-        const max = overview?.limits.maxUploadBytes ?? 25 * 1024 * 1024;
+        const max = overview?.limits.maxUploadBytes ?? 200 * 1024 * 1024;
         if (!ACCEPTED_EXT.includes(ext)) {
           setUploads((u) => [...u, { key, name: file.name, pct: 0, error: "Unsupported type" }]);
           continue;
