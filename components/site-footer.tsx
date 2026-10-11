@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
 import { Wordmark } from "./brand-mark";
+import { CookieSettingsLink } from "./cookie-consent";
 
 const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -30,8 +31,8 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Legal",
     links: [
-      { label: "Privacy", href: "/#" },
-      { label: "Terms", href: "/#" },
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
     ],
   },
 ];
@@ -64,6 +65,11 @@ export function SiteFooter() {
                     </Link>
                   </li>
                 ))}
+                {col.title === "Legal" && (
+                  <li>
+                    <CookieSettingsLink className="inline-block py-1 text-sm text-muted transition-colors hover:text-foreground" />
+                  </li>
+                )}
               </ul>
             </div>
           ))}

@@ -102,6 +102,17 @@ export default function RegisterPage() {
         <Button type="submit" variant="contrast" loading={submitting} className="w-full py-3">
           Create account
         </Button>
+        <p className="text-center text-xs leading-5 text-muted">
+          By creating an account you agree to the{" "}
+          <Link href="/terms" className="underline underline-offset-2 hover:text-foreground">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground">
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">
