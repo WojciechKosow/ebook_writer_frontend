@@ -56,14 +56,14 @@ Some providers are in the USA. Transfers rely on the EU–US Data Privacy Framew
 
 ## How long we keep it
 
-- **Account data and content** — while your account exists. When you delete your account or ask us to, we delete it within 30 days, except where we must keep something by law.
+- **Account data and content** — while your account exists. When you ask us to delete your account, we delete your data, except where we must keep something by law.
 - **Payment records** — as long as tax and accounting law requires.
 - **Server logs** — only as long as needed to keep the service secure and fix errors.
 - **Google Analytics data** — for the retention period set in Google Analytics, at most 14 months.
 
 ## Your rights
 
-You can ask to **access**, **correct**, **delete**, or **export** your data, to **restrict** its processing, and to **object** to processing based on legitimate interests. Where processing is based on consent, you can **withdraw** it at any time without affecting earlier processing. Write to [${OPERATOR.email}](mailto:${OPERATOR.email}); we reply within one month.
+You can ask to **access**, **correct**, **delete**, or **export** your data, to **restrict** its processing, and to **object** to processing based on legitimate interests. Where processing is based on consent, you can **withdraw** it at any time without affecting earlier processing. Write to [${OPERATOR.email}](mailto:${OPERATOR.email}); we reply within the time the GDPR requires.
 
 You can also complain to a data protection authority. In Poland that is the President of the Personal Data Protection Office (Prezes Urzędu Ochrony Danych Osobowych, [uodo.gov.pl](https://uodo.gov.pl)).
 
@@ -86,7 +86,7 @@ ${BRAND} isn't intended for children under 16, and we don't knowingly collect th
 
 ## Changes
 
-If we change this policy, we'll update the date at the top. For significant changes we'll also let account holders know by email.`;
+We may update this policy. The date at the top shows when it last changed.`;
 
 export default function PrivacyPage() {
   return (
