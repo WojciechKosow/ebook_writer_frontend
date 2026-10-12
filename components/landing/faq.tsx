@@ -1,6 +1,5 @@
 import { BRAND } from "@/lib/brand";
 import { SUBSCRIPTION } from "@/lib/pricing";
-import { Reveal } from "./reveal";
 
 // Single source of truth for the FAQ. The visible <details> list below and the
 // FAQPage JSON-LD (components/landing/structured-data.tsx) are both built from
@@ -94,37 +93,21 @@ export const FAQ_ITEMS: { q: string; a: string }[] = [
 
 export function Faq() {
   return (
-    <section id="faq" className="mx-auto w-full max-w-3xl px-6 py-20">
-      <Reveal className="text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-accent-ink">
-          FAQ
-        </p>
-        <h2 className="mt-3 text-balance text-4xl font-semibold tracking-tight text-foreground">
-          Questions, answered
-        </h2>
-      </Reveal>
-
-      <div className="mt-12 divide-y divide-hairline overflow-hidden rounded-2xl border border-hairline bg-surface">
-        {FAQ_ITEMS.map((item, i) => (
-          <Reveal key={item.q} delay={i * 70}>
-            <details className="group px-6 open:bg-surface-2">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-[15px] font-semibold text-foreground [&::-webkit-details-marker]:hidden">
-                {item.q}
-                <svg
-                  className="h-5 w-5 shrink-0 text-muted transition-transform duration-200 group-open:rotate-45"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  aria-hidden
-                >
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-              </summary>
-              <p className="pb-5 pr-9 text-[15px] leading-7 text-muted">{item.a}</p>
-            </details>
-          </Reveal>
+    <section id="faq" className="mx-auto w-full max-w-[860px] px-4 pb-10 pt-24 sm:px-6 md:pt-[110px]">
+      <h2 className="ip-display ip-rv mb-8 mt-0 text-center text-[clamp(36px,4.4vw,56px)]">
+        Questions, <em className="text-ip-brass">answered</em>
+      </h2>
+      <div className="border-t border-ip-line">
+        {FAQ_ITEMS.map((item) => (
+          <details key={item.q} className="ip-faq ip-rv border-b border-ip-line">
+            <summary className="flex items-center justify-between gap-4 py-[22px] font-display text-[clamp(19px,2.4vw,22px)]">
+              {item.q}
+              <span className="ip-plus shrink-0 text-[26px] font-light leading-none text-ip-brass" aria-hidden="true">
+                +
+              </span>
+            </summary>
+            <p className="mb-[22px] mt-0 text-ip-ink-2">{item.a}</p>
+          </details>
         ))}
       </div>
     </section>
