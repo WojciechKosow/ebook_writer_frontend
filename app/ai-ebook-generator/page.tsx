@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { HowItWorks } from "@/components/landing/how-it-works";
-import { Plans } from "@/components/landing/plans";
-import { Reveal } from "@/components/landing/reveal";
-import { ButtonLink } from "@/components/ui";
+import { MarketingShell } from "@/components/marketing-shell";
+import { LandingDemo } from "@/components/landing/landing-demo";
+import { LandingPricing } from "@/components/landing/landing-sections";
 import { BRAND } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
 
@@ -77,180 +74,165 @@ const USE_CASES = [
   { title: "Courses & workbooks", body: "Structured, chaptered material ready to hand to students." },
 ];
 
+const h2 = "ip-display m-0 text-[clamp(32px,4.2vw,52px)]";
+const card = "ip-card ip-rv min-w-0 rounded-3xl border border-ip-hair bg-ip-surface p-6 sm:p-7";
+
 export default function AiEbookGeneratorPage() {
   return (
-    <>
+    <MarketingShell>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <SiteHeader />
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="mx-auto w-full max-w-3xl px-6 pb-10 pt-20 text-center sm:pt-24">
-          <Reveal>
-            <span className="inline-flex items-center gap-2 rounded-full border border-hairline-2 bg-surface px-3 py-1 text-xs font-semibold text-muted">
-              <span className="h-1.5 w-1.5 rounded-full bg-brass" />
-              AI ebook generator
-            </span>
-            <h1 className="mx-auto mt-6 max-w-2xl text-balance text-5xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-6xl">
-              An AI ebook generator that finishes the book
-            </h1>
-            <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-muted">
-              Share what you know — notes, documents, a project — and {BRAND} maps it
-              into a chapter blueprint, asks about the gaps, writes and edits every
-              chapter, and hands you a typeset, print-ready PDF.
-            </p>
-            <div className="mt-8 flex items-center justify-center gap-3">
-              <ButtonLink href="/register" className="px-5 py-3 text-[15px]">
-                Plan your book free
-              </ButtonLink>
-              <ButtonLink href="#pricing" variant="secondary" className="px-5 py-3 text-[15px]">
-                See pricing →
-              </ButtonLink>
-            </div>
-          </Reveal>
-        </section>
 
-        {/* What it is */}
-        <section className="mx-auto w-full max-w-2xl px-6 py-12">
-          <Reveal>
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              What is an AI ebook generator?
-            </h2>
-            <p className="mt-4 text-[17px] leading-8 text-foreground-2">
-              An AI ebook generator turns your knowledge into a complete manuscript.
-              Most tools write from a one-line prompt, so the result is generic.{" "}
-              {BRAND} starts from your own material instead: it organises what you
-              know, plans the chapters around it, and asks you to fill the gaps rather
-              than inventing facts. You get a full draft — a blueprint you approved,
-              written chapters, and an editorial pass — to refine into exactly the book
-              you want. In a hurry, you can also draft from a brief alone and rework it
-              in the editor.
-            </p>
-          </Reveal>
-        </section>
-
-        {/* Prompt vs knowledge */}
-        <section className="mx-auto w-full max-w-4xl px-6 py-12">
-          <Reveal className="mx-auto max-w-2xl text-center">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              Why most AI-written ebooks feel generic
-            </h2>
-            <p className="mt-3 text-[17px] leading-8 text-foreground-2">
-              Ebook writing AI is only as good as what you give it. A one-line prompt
-              gets you the average of the internet. Your own material gets you your
-              book.
-            </p>
-          </Reveal>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2">
-            <Reveal>
-              <div className="h-full rounded-2xl border border-hairline bg-surface p-6">
-                <h3 className="text-[17px] font-semibold text-foreground">Prompt-only AI writers</h3>
-                <ul className="mt-3 flex flex-col gap-2 text-sm leading-6 text-muted">
-                  {COMPARISON.prompt.map((line) => (
-                    <li key={line}>— {line}</li>
-                  ))}
-                </ul>
-              </div>
-            </Reveal>
-            <Reveal delay={80}>
-              <div className="h-full rounded-2xl border border-[color-mix(in_oklab,var(--accent)_45%,var(--hairline))] bg-surface p-6">
-                <h3 className="text-[17px] font-semibold text-foreground">{BRAND}</h3>
-                <ul className="mt-3 flex flex-col gap-2 text-sm leading-6 text-muted">
-                  {COMPARISON.knowledge.map((line) => (
-                    <li key={line}>✓ {line}</li>
-                  ))}
-                </ul>
-              </div>
-            </Reveal>
+      {/* Hero */}
+      <section className="mx-auto w-full max-w-[900px] px-4 pb-12 pt-16 text-center sm:px-6 md:pt-24">
+        <div className="ip-in">
+          <span className="ip-eyebrow">AI ebook generator</span>
+          <h1 className="ip-display mx-auto mb-0 mt-5 max-w-[820px] text-[clamp(44px,6.4vw,84px)] leading-none tracking-[-0.025em]">
+            An AI ebook generator that <em className="text-ip-brass">finishes the book</em>
+          </h1>
+          <p className="mx-auto mb-0 mt-6 max-w-xl text-lg leading-relaxed text-ip-ink-2">
+            Share what you know — notes, documents, a project — and {BRAND} maps it into a
+            chapter blueprint, asks about the gaps, writes and edits every chapter, and hands
+            you a typeset, print-ready PDF.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link href="/register" className="ip-cta rounded-[14px] bg-ip-ink px-6 py-4 font-semibold text-ip-bg">
+              Plan your book free
+            </Link>
+            <Link href="#pricing" className="ip-cta rounded-[14px] border border-ip-line bg-ip-surface px-[22px] py-4 font-medium">
+              See pricing
+            </Link>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Who it's for */}
-        <section className="mx-auto w-full max-w-4xl px-6 py-12">
-          <Reveal className="text-center">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              Who uses AI to write an ebook with {BRAND}
-            </h2>
-          </Reveal>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2">
-            {AUDIENCES.map((a, i) => (
-              <Reveal key={a.title} delay={i * 70}>
-                <div className="h-full rounded-2xl border border-hairline bg-surface p-6">
-                  <h3 className="text-[17px] font-semibold text-foreground">{a.title}</h3>
-                  <p className="mt-1.5 text-sm leading-6 text-muted">{a.body}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </section>
+      {/* What it is */}
+      <section className="mx-auto w-full max-w-[760px] px-4 py-14 sm:px-6">
+        <div className="ip-rv">
+          <span className="ip-eyebrow">The short answer</span>
+          <h2 className={`${h2} mt-3`}>What is an AI ebook generator?</h2>
+          <p className="mb-0 mt-5 text-[17px] leading-8 text-ip-ink-2">
+            An AI ebook generator turns your knowledge into a complete manuscript. Most tools
+            write from a one-line prompt, so the result is generic. {BRAND} starts from your
+            own material instead: it organises what you know, plans the chapters around it,
+            and asks you to fill the gaps rather than inventing facts. You get a full draft —
+            a blueprint you approved, written chapters, and an editorial pass — to refine into
+            exactly the book you want. In a hurry, you can also draft from a brief alone and
+            rework it in the editor.
+          </p>
+        </div>
+      </section>
 
-        {/* Use cases */}
-        <section className="mx-auto w-full max-w-4xl px-6 py-12">
-          <Reveal className="text-center">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              What you can create
-            </h2>
-          </Reveal>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2">
-            {USE_CASES.map((u, i) => (
-              <Reveal key={u.title} delay={i * 70}>
-                <div className="h-full rounded-2xl border border-hairline bg-surface p-6">
-                  <h3 className="text-[17px] font-semibold text-foreground">{u.title}</h3>
-                  <p className="mt-1.5 text-sm leading-6 text-muted">{u.body}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        <HowItWorks />
-        <Plans />
-
-        {/* Further reading */}
-        <section className="mx-auto w-full max-w-2xl px-6 pb-8 pt-4">
-          <Reveal>
-            <h2 className="text-xl font-semibold tracking-tight text-foreground">Before you start</h2>
-            <ul className="mt-4 flex flex-col gap-2 text-[15px] leading-7">
-              <li>
-                <Link href="/blog/plan-an-ebook-outline-with-ai" className="font-medium text-accent-ink underline underline-offset-2">
-                  How to write an ebook outline (with free templates)
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog/can-you-publish-a-book-written-by-ai" className="font-medium text-accent-ink underline underline-offset-2">
-                  Can you publish a book written by AI? KDP rules and copyright
-                </Link>
-              </li>
-              <li>
-                <Link href="/how-to-write-an-ebook-with-ai" className="font-medium text-accent-ink underline underline-offset-2">
-                  How to write an ebook with AI, step by step
-                </Link>
-              </li>
+      {/* Prompt vs knowledge */}
+      <section className="mx-auto w-full max-w-[1000px] px-4 py-14 sm:px-6">
+        <div className="ip-rv mx-auto max-w-[680px] text-center">
+          <h2 className={h2}>
+            Why most AI-written ebooks <em className="text-ip-brass">feel generic</em>
+          </h2>
+          <p className="mb-0 mt-4 text-[17px] leading-8 text-ip-ink-2">
+            Ebook writing AI is only as good as what you give it. A one-line prompt gets you the
+            average of the internet. Your own material gets you your book.
+          </p>
+        </div>
+        <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className={card}>
+            <h3 className="m-0 font-display text-2xl font-normal">Prompt-only AI writers</h3>
+            <ul className="m-0 mt-4 flex list-none flex-col gap-2.5 p-0 text-[15px] text-ip-muted">
+              {COMPARISON.prompt.map((line) => (
+                <li key={line} className="flex gap-2.5">
+                  <span aria-hidden="true">—</span>
+                  {line}
+                </li>
+              ))}
             </ul>
-          </Reveal>
-        </section>
+          </div>
+          <div className={`${card} !border-ip-brass-l ip-shadow`}>
+            <h3 className="m-0 font-display text-2xl font-normal">{BRAND}</h3>
+            <ul className="m-0 mt-4 flex list-none flex-col gap-2.5 p-0 text-[15px] text-ip-ink-2">
+              {COMPARISON.knowledge.map((line) => (
+                <li key={line} className="flex gap-2.5">
+                  <span aria-hidden="true" className="text-ip-brass">✓</span>
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
 
-        {/* Closing CTA */}
-        <section className="mx-auto w-full max-w-2xl px-6 pb-24 pt-4 text-center">
-          <Reveal>
-            <h2 className="text-balance text-3xl font-semibold tracking-tight text-foreground">
-              Generate your first ebook today
-            </h2>
-            <p className="mx-auto mt-3 max-w-md text-muted">
-              Planning is free — add your material, review the blueprint, and see the
-              estimated length before you spend a credit.
-            </p>
-            <div className="mt-7 flex justify-center">
-              <ButtonLink href="/register" className="px-5 py-3">
-                Plan your book free
-              </ButtonLink>
+      {/* Who it's for */}
+      <section className="mx-auto w-full max-w-[1200px] px-4 py-14 sm:px-6">
+        <h2 className={`${h2} ip-rv mb-10`}>
+          Who uses AI to write an ebook with <em className="text-ip-brass">{BRAND}</em>
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {AUDIENCES.map((a) => (
+            <article key={a.title} className={card}>
+              <h3 className="m-0 font-display text-[23px] font-normal">{a.title}</h3>
+              <p className="mb-0 mt-2 text-[15px] text-ip-ink-2">{a.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Use cases */}
+      <section className="mx-auto w-full max-w-[1200px] px-4 py-14 sm:px-6">
+        <h2 className={`${h2} ip-rv mb-10`}>What you can create</h2>
+        <div className="grid grid-cols-1 border-t border-ip-line sm:grid-cols-2">
+          {USE_CASES.map((u, i) => (
+            <div
+              key={u.title}
+              className={`ip-rv flex flex-col gap-2 border-b border-ip-line py-7 sm:px-6 ${i % 2 ? "sm:border-l" : "sm:pl-0"}`}
+            >
+              <span className="ip-eyebrow">{String(i + 1).padStart(2, "0")}</span>
+              <h3 className="m-0 font-display text-2xl font-normal">{u.title}</h3>
+              <p className="m-0 text-[15px] text-ip-ink-2">{u.body}</p>
             </div>
-          </Reveal>
-        </section>
-      </main>
-      <SiteFooter />
-    </>
+          ))}
+        </div>
+      </section>
+
+      <LandingDemo />
+      <LandingPricing />
+
+      {/* Further reading */}
+      <section className="mx-auto w-full max-w-[760px] px-4 pb-6 pt-20 sm:px-6">
+        <div className="ip-rv">
+          <span className="ip-eyebrow">Before you start</span>
+          <ul className="m-0 mt-4 flex list-none flex-col border-t border-ip-line p-0">
+            {[
+              ["/blog/plan-an-ebook-outline-with-ai", "How to write an ebook outline (with free templates)"],
+              ["/blog/can-you-publish-a-book-written-by-ai", "Can you publish a book written by AI? KDP rules and copyright"],
+              ["/how-to-write-an-ebook-with-ai", "How to write an ebook with AI, step by step"],
+            ].map(([href, label]) => (
+              <li key={href} className="border-b border-ip-line">
+                <Link href={href} className="group flex items-center justify-between gap-4 py-4 font-display text-xl text-ip-ink hover:text-ip-brass">
+                  {label}
+                  <span aria-hidden="true" className="shrink-0 transition-transform group-hover:translate-x-1">→</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Closing CTA */}
+      <section className="mx-auto w-full max-w-[900px] px-4 pb-28 pt-20 text-center sm:px-6">
+        <div className="ip-rv flex flex-col items-center gap-6">
+          <h2 className="ip-display m-0 text-[clamp(40px,5.6vw,72px)] leading-none">
+            Generate your <em className="text-ip-brass">first ebook</em> today
+          </h2>
+          <p className="m-0 max-w-md text-lg text-ip-ink-2">
+            Planning is free — add your material, review the blueprint, and see the estimated
+            length before you spend a credit.
+          </p>
+          <Link href="/register" className="ip-cta rounded-2xl bg-ip-ink px-7 py-[18px] font-semibold text-ip-bg">
+            Plan your book free
+          </Link>
+        </div>
+      </section>
+    </MarketingShell>
   );
 }

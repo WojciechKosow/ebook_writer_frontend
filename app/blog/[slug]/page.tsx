@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { marked } from "marked";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import { MarketingShell } from "@/components/marketing-shell";
 import { Prose } from "@/components/prose";
-import { ButtonLink } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
 import { BLOG_SLUGS, getPost, formatPostDate, postModified } from "@/lib/blog";
@@ -76,62 +74,60 @@ export default async function BlogPostPage({
   };
 
   return (
-    <>
+    <MarketingShell ambient="none">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <SiteHeader />
-      <main className="flex-1">
-        <article className="mx-auto w-full max-w-2xl px-6 pb-20 pt-16 sm:pt-20">
-          <nav aria-label="Breadcrumb" className="text-sm text-faint">
-            <Link href="/blog" className="transition-colors hover:text-foreground">
-              ← Blog
-            </Link>
-          </nav>
+      <article className="mx-auto w-full max-w-[720px] px-4 pb-24 pt-12 sm:px-6 md:pt-16">
+        <nav aria-label="Breadcrumb" className="text-sm">
+          <Link href="/blog" className="text-ip-muted transition-colors hover:text-ip-ink">
+            ← All guides
+          </Link>
+        </nav>
 
-          <header className="mt-6">
-            <div className="flex items-center gap-2 text-xs text-faint">
-              <time dateTime={post.date}>{formatPostDate(post.date)}</time>
-              {post.updated && (
-                <>
-                  <span aria-hidden>·</span>
-                  <span>
-                    Updated <time dateTime={post.updated}>{formatPostDate(post.updated)}</time>
-                  </span>
-                </>
-              )}
-              <span aria-hidden>·</span>
-              <span>{post.readingMinutes} min read</span>
-            </div>
-            <h1 className="mt-3 text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-foreground">
-              {post.title}
-            </h1>
-            <p className="mt-4 text-lg leading-8 text-muted">{post.description}</p>
-          </header>
-
-          <hr className="my-8 border-hairline" />
-
-          <Prose html={html} />
-
-          {/* Closing CTA */}
-          <div className="mt-14 rounded-2xl border border-hairline bg-surface-2 p-8 text-center">
-            <p className="font-[family-name:var(--font-display)] text-2xl tracking-tight text-foreground">
-              Turn what you know into a finished ebook
-            </p>
-            <p className="mx-auto mt-2 max-w-md text-muted">
-              {BRAND} maps your notes into a chapter blueprint, then writes, edits,
-              and typesets the book. Planning is free.
-            </p>
-            <div className="mt-6 flex justify-center">
-              <ButtonLink href="/register" className="px-5 py-3">
-                Plan your book free
-              </ButtonLink>
-            </div>
+        <header className="mt-8">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tracking-[0.1em] text-ip-muted">
+            <time dateTime={post.date}>{formatPostDate(post.date)}</time>
+            {post.updated && (
+              <>
+                <span aria-hidden>·</span>
+                <span>
+                  Updated <time dateTime={post.updated}>{formatPostDate(post.updated)}</time>
+                </span>
+              </>
+            )}
+            <span aria-hidden>·</span>
+            <span>{post.readingMinutes} min read</span>
           </div>
-        </article>
-      </main>
-      <SiteFooter />
-    </>
+          <h1 className="ip-display mb-0 mt-4 text-[clamp(38px,5.4vw,56px)] leading-[1.05]">{post.title}</h1>
+          <p className="mb-0 mt-5 text-lg leading-relaxed text-ip-ink-2">{post.description}</p>
+        </header>
+
+        <div className="my-10 flex items-center gap-3" aria-hidden="true">
+          <span className="h-px flex-1 bg-ip-line" />
+          <span className="text-ip-brass-l">✦</span>
+          <span className="h-px flex-1 bg-ip-line" />
+        </div>
+
+        <Prose html={html} />
+
+        {/* Closing CTA */}
+        <div className="mt-16 rounded-[28px] bg-ip-ink p-8 text-center text-ip-bg sm:p-12">
+          <p className="ip-display m-0 text-[clamp(28px,4vw,40px)]">
+            Turn what you know into a <em className="text-ip-brass-l">finished ebook</em>
+          </p>
+          <p className="mx-auto mb-0 mt-3 max-w-md opacity-80">
+            {BRAND} maps your notes into a chapter blueprint, then writes, edits, and
+            typesets the book. Planning is free.
+          </p>
+          <div className="mt-7 flex justify-center">
+            <Link href="/register" className="ip-cta rounded-[14px] bg-ip-bg px-6 py-4 font-semibold text-ip-ink">
+              Plan your book free
+            </Link>
+          </div>
+        </div>
+      </article>
+    </MarketingShell>
   );
 }

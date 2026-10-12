@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
-import { Wordmark } from "./brand-mark";
-import { CookieSettingsLink } from "./cookie-consent";
+import { CookieSettingsLink } from "@/components/cookie-consent";
 
 const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -28,56 +27,47 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
       { label: "Start writing", href: "/register" },
     ],
   },
-  {
-    title: "Legal",
-    links: [
-      { label: "Privacy", href: "/privacy" },
-      { label: "Terms", href: "/terms" },
-    ],
-  },
 ];
 
+const linkClass = "py-0.5 text-ip-ink-2 transition-colors hover:text-ip-ink";
+
+/** Footer of the public site, in the Ink & Paper look (inside a `.ink-paper` shell). */
 export function SiteFooter() {
   return (
-    <footer className="border-t border-hairline">
-      <div className="mx-auto w-full max-w-6xl px-6 py-14">
-        <div className="grid gap-10 md:grid-cols-[1.5fr_repeat(4,1fr)]">
-          <div>
-            <Wordmark />
-            <p className="mt-3 max-w-xs text-sm text-muted">
-              The AI writing studio that turns what you know into a finished,
-              typeset ebook — cover to cover.
-            </p>
+    <footer className="relative z-[1] border-t border-ip-hair bg-ip-glass">
+      <div className="mx-auto grid w-full max-w-[1200px] grid-cols-2 gap-8 px-4 py-12 text-sm sm:px-6 md:grid-cols-[1.6fr_repeat(4,1fr)]">
+        <div className="col-span-2 flex min-w-0 flex-col gap-2.5 md:col-span-1">
+          <span className="font-display text-2xl">{BRAND}</span>
+          <span className="max-w-[320px] text-ip-muted">
+            The AI writing studio that turns what you know into a finished, typeset ebook.
+          </span>
+        </div>
+        {COLUMNS.map((col) => (
+          <div key={col.title} className="flex flex-col gap-2">
+            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ip-muted">{col.title}</span>
+            {col.links.map((l) => (
+              <Link key={l.label} href={l.href} className={linkClass}>
+                {l.label}
+              </Link>
+            ))}
           </div>
-          {COLUMNS.map((col) => (
-            <div key={col.title}>
-              <h4 className="text-xs font-semibold uppercase tracking-[0.08em] text-faint">
-                {col.title}
-              </h4>
-              <ul className="mt-3.5 space-y-1">
-                {col.links.map((l) => (
-                  <li key={l.label}>
-                    <Link
-                      href={l.href}
-                      className="inline-block py-1 text-sm text-muted transition-colors hover:text-foreground"
-                    >
-                      {l.label}
-                    </Link>
-                  </li>
-                ))}
-                {col.title === "Legal" && (
-                  <li>
-                    <CookieSettingsLink className="inline-block py-1 text-sm text-muted transition-colors hover:text-foreground" />
-                  </li>
-                )}
-              </ul>
-            </div>
-          ))}
+        ))}
+        <div className="flex flex-col gap-2">
+          <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ip-muted">Legal</span>
+          <Link href="/privacy" className={linkClass}>
+            Privacy
+          </Link>
+          <Link href="/terms" className={linkClass}>
+            Terms
+          </Link>
+          <CookieSettingsLink className={`text-left ${linkClass}`} />
         </div>
-        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-6 text-sm text-faint">
-          <span>© {new Date().getFullYear()} {BRAND}. All rights reserved.</span>
-          <span>www.scrivetta.com</span>
-        </div>
+      </div>
+      <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-3 border-t border-ip-hair px-4 py-6 text-sm text-ip-muted sm:px-6">
+        <span>
+          © {new Date().getFullYear()} {BRAND}. All rights reserved.
+        </span>
+        <span>www.scrivetta.com</span>
       </div>
     </footer>
   );

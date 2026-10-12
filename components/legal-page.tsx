@@ -1,6 +1,5 @@
 import { marked } from "marked";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import { MarketingShell } from "@/components/marketing-shell";
 import { Prose } from "@/components/prose";
 import { formatPostDate } from "@/lib/blog";
 import { LEGAL_UPDATED } from "@/lib/legal";
@@ -19,23 +18,17 @@ export async function LegalPage({
 }) {
   const html = await marked.parse(body);
   return (
-    <>
-      <SiteHeader />
-      <main className="flex-1">
-        <article className="mx-auto w-full max-w-2xl px-6 pb-20 pt-16 sm:pt-20">
-          <p className="text-xs text-faint">
-            Last updated <time dateTime={LEGAL_UPDATED}>{formatPostDate(LEGAL_UPDATED)}</time>
-          </p>
-          <h1 className="mt-3 text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-foreground">
-            {title}
-          </h1>
-          <p className="mt-4 text-lg leading-8 text-muted">{intro}</p>
-          <hr className="my-8 border-hairline" />
-          <Prose html={html} />
-          {children}
-        </article>
-      </main>
-      <SiteFooter />
-    </>
+    <MarketingShell ambient="none">
+      <article className="mx-auto w-full max-w-[720px] px-4 pb-24 pt-12 sm:px-6 md:pt-16">
+        <p className="m-0 font-mono text-[11px] uppercase tracking-[0.1em] text-ip-muted">
+          Last updated <time dateTime={LEGAL_UPDATED}>{formatPostDate(LEGAL_UPDATED)}</time>
+        </p>
+        <h1 className="ip-display mb-0 mt-4 text-[clamp(40px,5.6vw,60px)] leading-[1.02]">{title}</h1>
+        <p className="mb-0 mt-5 text-lg leading-relaxed text-ip-ink-2">{intro}</p>
+        <hr className="my-10 border-ip-line" />
+        <Prose html={html} />
+        {children}
+      </article>
+    </MarketingShell>
   );
 }

@@ -51,7 +51,7 @@ export function CookieConsent() {
     <div
       role="dialog"
       aria-labelledby={titleId}
-      className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-lg rounded-2xl border border-hairline bg-surface p-5 shadow-float sm:left-6 sm:right-auto sm:mx-0"
+      className="ink-paper fixed inset-x-4 bottom-4 z-50 mx-auto max-w-lg rounded-[20px] border border-ip-hair !bg-ip-surface p-5 shadow-float sm:left-6 sm:right-auto sm:mx-0"
     >
       <h2 id={titleId} className="text-[15px] font-semibold text-foreground">
         Cookies on Scrivetta
