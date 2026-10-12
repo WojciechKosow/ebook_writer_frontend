@@ -25,6 +25,7 @@
   --accent-2: #7c6ff0;
   --accent-soft: #eeebfc;
   --accent-ink: #3f32b0;
+  --accent-fg: #ffffff;  /* text on an accent fill */
   --gold: #c0873a;       /* brass — literary nod, used sparingly */
   --brass: #c0873a;
   --brass-soft: #f6ecdb;
@@ -78,6 +79,7 @@
   --color-accent-2: var(--accent-2);
   --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);
+  --color-accent-fg: var(--accent-fg);
   --color-gold: var(--gold);
   --color-brass: var(--brass);
   --color-brass-soft: var(--brass-soft);
@@ -495,8 +497,22 @@ body {
   --faint: var(--ip-muted);
   --hairline: var(--ip-hair);
   --hairline-2: var(--ip-line);
+  --surface-3: var(--ip-paper);
+  --ink-soft: var(--ip-muted);
   --accent: var(--ip-accent);
+  --accent-2: var(--ip-accent);
+  --accent-soft: var(--ip-accent-soft);
   --accent-ink: var(--ip-accent);
+  --accent-fg: var(--ip-accent-ink);
+  --gold: var(--ip-brass);
+  --brass: var(--ip-brass);
+  --brass-soft: var(--ip-brass-soft);
+  --good: var(--ip-good);
+  --good-soft: var(--ip-good-soft);
+  --warn: var(--ip-warn);
+  --warn-soft: var(--ip-warn-soft);
+  --paper: var(--ip-surface);
+  --paper-soft: var(--ip-bg);
 
   background: var(--ip-bg);
   color: var(--ip-ink);
@@ -544,6 +560,7 @@ body:has(.ink-paper) { background: #f3efe6; }
   color: var(--ip-brass);
 }
 .ink-paper .ip-shadow { box-shadow: 0 40px 80px -48px var(--ip-shadow); }
+.ink-paper .shadow-float { box-shadow: 0 1px 2px var(--ip-shadow), 0 30px 70px -40px var(--ip-shadow); }
 .ink-paper .ip-shadow-sm { box-shadow: 0 18px 40px -22px var(--ip-shadow); }
 .ink-paper section[id] { scroll-margin-top: 5rem; }
 
@@ -625,6 +642,7 @@ body:has(.ink-paper) { background: #f3efe6; }
 .ip-faq[open] .ip-plus { transform: rotate(45deg); }
 .ip-faq[open] p { animation: ip-fade .4s ease both; }
 
+.ink-paper input[type="checkbox"], .ink-paper input[type="radio"] { accent-color: var(--ip-accent); }
 .ink-paper :focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; }
 
 @media (max-width: 760px) {

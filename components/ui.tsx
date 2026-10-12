@@ -5,7 +5,6 @@ import type {
   ReactNode,
   TextareaHTMLAttributes,
 } from "react";
-import { Wordmark } from "./brand-mark";
 
 // ---- Button ----------------------------------------------------------------
 
@@ -19,7 +18,7 @@ const buttonBase =
 
 const buttonVariants: Record<string, string> = {
   primary:
-    "bg-accent text-white shadow-soft hover:brightness-95",
+    "bg-accent text-accent-fg shadow-soft hover:brightness-95",
   secondary:
     "border border-hairline-2 bg-surface text-foreground hover:border-muted",
   ghost: "text-foreground hover:bg-surface-2",
@@ -156,17 +155,15 @@ export function Spinner({ className = "" }: { className?: string }) {
 
 // ---- Auth card shell -------------------------------------------------------
 
+/** The auth form card. The surrounding layout (app/(auth)/layout.tsx) carries the brand. */
 export function AuthCard({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
-    <div className="w-full max-w-md">
-      <div className="rounded-2xl border border-hairline bg-surface p-8 shadow-soft sm:p-9">
-        <div className="flex justify-center">
-          <Wordmark href="/" />
-        </div>
-        <h1 className="mt-7 text-center text-2xl font-bold tracking-tight text-foreground">
+    <div className="w-full max-w-[440px]">
+      <div className="rounded-[28px] border border-hairline bg-surface p-6 shadow-float sm:p-9">
+        <h1 className="font-display text-[34px] font-light leading-[1.08] tracking-[-0.02em] text-foreground text-balance">
           {title}
         </h1>
-        {subtitle && <p className="mt-2 text-center text-sm text-muted">{subtitle}</p>}
+        {subtitle && <p className="mt-2 text-[15px] text-muted">{subtitle}</p>}
         <div className="mt-7">{children}</div>
       </div>
     </div>

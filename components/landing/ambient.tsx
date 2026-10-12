@@ -19,10 +19,13 @@ const SHEETS: [number, number, number, number, string, number, number][] = [
 
 const GLYPHS = ["¶", "&", "A", "§", "ff", "“", "Q", "†", "g", "R"];
 
-export function AmbientLayer() {
+/** `sparse` keeps a few sheets at the edges, for short pages (auth) where the full set crowds. */
+export function AmbientLayer({ sparse = false }: { sparse?: boolean }) {
+  const sheets = sparse ? SHEETS.filter((_, i) => i % 3 === 0) : SHEETS;
+  const glyphs = sparse ? GLYPHS.slice(0, 3) : GLYPHS;
   return (
     <div className="ip-ambient" aria-hidden="true">
-      {SHEETS.map(([left, top, width, r, anim, dur, delay], i) => (
+      {sheets.map(([left, top, width, r, anim, dur, delay], i) => (
         <div
           key={`s${i}`}
           className="ip-sheet"
@@ -37,7 +40,7 @@ export function AmbientLayer() {
           }
         />
       ))}
-      {GLYPHS.map((ch, i) => (
+      {glyphs.map((ch, i) => (
         <span
           key={`g${i}`}
           className="ip-glyph"
