@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { Reveal } from "@/components/landing/reveal";
+import { MarketingShell } from "@/components/marketing-shell";
 import { BRAND } from "@/lib/brand";
 import { BLOG_POSTS, formatPostDate } from "@/lib/blog";
 
@@ -20,54 +18,46 @@ export const metadata: Metadata = {
 
 export default function BlogIndex() {
   return (
-    <>
-      <SiteHeader />
-      <main className="flex-1">
-        <section className="mx-auto w-full max-w-3xl px-6 pb-20 pt-20 sm:pt-24">
-          <Reveal>
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-accent-ink">
-              The {BRAND} blog
-            </p>
-            <h1 className="mt-3 text-balance text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-              Write, plan, and publish with AI
-            </h1>
-            <p className="mt-4 max-w-xl text-lg leading-8 text-muted">
-              Practical guides on turning an idea into a finished, published ebook —
-              faster than you thought possible.
-            </p>
-          </Reveal>
+    <MarketingShell>
+      <section className="mx-auto w-full max-w-[860px] px-4 pb-24 pt-16 sm:px-6 md:pt-24">
+        <div className="ip-in">
+          <span className="ip-eyebrow">The {BRAND} blog</span>
+          <h1 className="ip-display mb-0 mt-4 text-[clamp(44px,6vw,72px)] leading-none">
+            Write, plan and publish <em className="text-ip-brass">with AI</em>
+          </h1>
+          <p className="mb-0 mt-5 max-w-xl text-lg leading-relaxed text-ip-ink-2">
+            Practical guides on turning an idea into a finished, published ebook —
+            faster than you thought possible.
+          </p>
+        </div>
 
-          <div className="mt-12 flex flex-col gap-4">
-            {BLOG_POSTS.map((post, i) => (
-              <Reveal key={post.slug} delay={i * 80}>
-                <Link
-                  href={`/blog/${post.slug}`}
-                  className="group block rounded-2xl border border-hairline bg-surface p-6 transition-colors hover:border-hairline-2 hover:bg-surface-2"
-                >
-                  <div className="flex items-center gap-2 text-xs text-faint">
-                    <time dateTime={post.date}>{formatPostDate(post.date)}</time>
-                    <span aria-hidden>·</span>
-                    <span>{post.readingMinutes} min read</span>
-                  </div>
-                  <h2 className="mt-2 text-xl font-semibold text-foreground">
-                    {post.title}
-                  </h2>
-                  <p className="mt-2 text-[15px] leading-7 text-muted">
-                    {post.description}
-                  </p>
-                  <span className="mt-3 inline-block text-sm font-medium text-accent-ink">
-                    Read more{" "}
-                    <span className="transition-transform group-hover:translate-x-0.5 inline-block">
-                      →
-                    </span>
+        <div className="mt-14 border-t border-ip-line">
+          {BLOG_POSTS.map((post) => (
+            <Link
+              key={post.slug}
+              href={`/blog/${post.slug}`}
+              className="ip-rv group grid gap-2 border-b border-ip-line py-8 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-8"
+            >
+              <div className="flex flex-wrap items-baseline gap-x-2 font-mono text-[11px] uppercase tracking-[0.1em] text-ip-muted sm:flex-col sm:gap-1">
+                <time dateTime={post.date}>{formatPostDate(post.date)}</time>
+                <span>{post.readingMinutes} min read</span>
+              </div>
+              <div className="min-w-0">
+                <h2 className="m-0 font-display text-[28px] font-normal leading-[1.15] text-ip-ink transition-colors group-hover:text-ip-brass">
+                  {post.title}
+                </h2>
+                <p className="mb-0 mt-2.5 text-[15px] leading-7 text-ip-ink-2">{post.description}</p>
+                <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-ip-ink">
+                  Read the guide
+                  <span className="inline-block transition-transform group-hover:translate-x-1" aria-hidden="true">
+                    →
                   </span>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-      </main>
-      <SiteFooter />
-    </>
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </MarketingShell>
   );
 }

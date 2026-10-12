@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { Reveal } from "@/components/landing/reveal";
-import { ButtonLink } from "@/components/ui";
+import { MarketingShell } from "@/components/marketing-shell";
 import { BRAND } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
 
@@ -86,89 +83,77 @@ const jsonLd = {
 
 export default function HowToWriteEbookPage() {
   return (
-    <>
+    <MarketingShell>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <SiteHeader />
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="mx-auto w-full max-w-3xl px-6 pb-8 pt-20 text-center sm:pt-24">
-          <Reveal>
-            <span className="inline-flex items-center gap-2 rounded-full border border-hairline-2 bg-surface px-3 py-1 text-xs font-semibold text-muted">
-              <span className="h-1.5 w-1.5 rounded-full bg-brass" />
-              Guide
-            </span>
-            <h1 className="mx-auto mt-6 max-w-2xl text-balance text-5xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-6xl">
-              How to write an ebook with AI
-            </h1>
-            <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-muted">
-              You don&apos;t need to be a writer to publish a real book — you need to
-              know your subject. Here are the six steps, and how an{" "}
-              <Link href="/ai-ebook-generator" className="font-medium text-accent-ink underline underline-offset-2">
-                AI ebook generator
-              </Link>{" "}
-              handles the hardest ones for you.
-            </p>
-          </Reveal>
-        </section>
 
-        {/* Steps */}
-        <section className="mx-auto w-full max-w-2xl px-6 py-12">
-          <ol className="flex flex-col gap-4">
-            {STEPS.map((s, i) => (
-              <Reveal key={s.title} delay={i * 60}>
-                <li className="flex gap-5 rounded-2xl border border-hairline bg-surface p-6">
-                  <span className="font-[family-name:var(--font-display)] text-3xl italic font-medium text-accent tabular-nums">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <div>
-                    <h2 className="text-[19px] font-semibold text-foreground">{s.title}</h2>
-                    <p className="mt-1.5 text-[15px] leading-7 text-muted">{s.body}</p>
-                  </div>
-                </li>
-              </Reveal>
-            ))}
-          </ol>
-        </section>
+      {/* Hero */}
+      <section className="mx-auto w-full max-w-[900px] px-4 pb-10 pt-16 text-center sm:px-6 md:pt-24">
+        <div className="ip-in">
+          <span className="ip-eyebrow">Guide · 6 steps</span>
+          <h1 className="ip-display mx-auto mb-0 mt-5 max-w-[760px] text-[clamp(44px,6.4vw,84px)] leading-none tracking-[-0.025em]">
+            How to write an ebook <em className="text-ip-brass">with AI</em>
+          </h1>
+          <p className="mx-auto mb-0 mt-6 max-w-xl text-lg leading-relaxed text-ip-ink-2">
+            You don&apos;t need to be a writer to publish a real book — you need to know your
+            subject. Here are the six steps, and how an{" "}
+            <Link href="/ai-ebook-generator" className="font-medium text-ip-ink underline decoration-ip-brass-l underline-offset-4">
+              AI ebook generator
+            </Link>{" "}
+            handles the hardest ones for you.
+          </p>
+        </div>
+      </section>
 
-        {/* Why AI */}
-        <section className="mx-auto w-full max-w-2xl px-6 py-12">
-          <Reveal>
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Why write with AI?
-            </h2>
-            <p className="mt-4 text-[17px] leading-8 text-foreground-2">
-              The blank page is where most books die. AI removes it: you always have a
-              draft to react to, so momentum never stalls. The catch is that AI
-              writing from a one-line prompt sounds generic and can get facts wrong.
-              Feed it your own knowledge and it writes your book instead of an average
-              one. You stay the author — making the calls on structure, voice, and
-              truth — while the tool handles outlining, drafting, and typesetting.
-            </p>
-          </Reveal>
-        </section>
+      {/* Steps */}
+      <section className="mx-auto w-full max-w-[860px] px-4 py-12 sm:px-6">
+        <ol className="m-0 flex list-none flex-col border-t border-ip-line p-0">
+          {STEPS.map((s, i) => (
+            <li key={s.title} className="ip-rv grid grid-cols-[56px_minmax(0,1fr)] gap-4 border-b border-ip-line py-8 sm:grid-cols-[96px_minmax(0,1fr)] sm:gap-6">
+              <span className="font-display text-[40px] font-light italic leading-none text-ip-brass tabular-nums sm:text-[56px]">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div className="min-w-0">
+                <h2 className="m-0 font-display text-[26px] font-normal leading-tight text-ip-ink">{s.title}</h2>
+                <p className="mb-0 mt-2.5 text-[16px] leading-7 text-ip-ink-2">{s.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
 
-        {/* CTA */}
-        <section className="mx-auto w-full max-w-2xl px-6 pb-24 pt-4 text-center">
-          <Reveal>
-            <h2 className="text-balance text-3xl font-semibold tracking-tight text-foreground">
-              Write your ebook with {BRAND}
-            </h2>
-            <p className="mx-auto mt-3 max-w-md text-muted">
-              Planning is free — add your notes, review the blueprint, and see the
-              estimated length before you spend a credit.
-            </p>
-            <div className="mt-7 flex justify-center">
-              <ButtonLink href="/register" className="px-5 py-3">
-                Plan your book free
-              </ButtonLink>
-            </div>
-          </Reveal>
-        </section>
-      </main>
-      <SiteFooter />
-    </>
+      {/* Why AI */}
+      <section className="mx-auto w-full max-w-[860px] px-4 py-12 sm:px-6">
+        <div className="ip-rv rounded-[28px] border border-ip-hair bg-ip-surface p-7 sm:p-10">
+          <span className="ip-eyebrow">Why write with AI?</span>
+          <p className="mb-0 mt-4 font-display text-[clamp(20px,2.4vw,24px)] leading-[1.55] text-ip-ink">
+            The blank page is where most books die. AI removes it: you always have a draft to
+            react to, so momentum never stalls. The catch is that AI writing from a one-line
+            prompt sounds generic and can get facts wrong. Feed it your own knowledge and it
+            writes your book instead of an average one. You stay the author — making the calls
+            on structure, voice, and truth — while the tool handles outlining, drafting, and
+            typesetting.
+          </p>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="mx-auto w-full max-w-[900px] px-4 pb-28 pt-16 text-center sm:px-6">
+        <div className="ip-rv flex flex-col items-center gap-6">
+          <h2 className="ip-display m-0 text-[clamp(40px,5.6vw,72px)] leading-none">
+            Write your ebook with <em className="text-ip-brass">{BRAND}</em>
+          </h2>
+          <p className="m-0 max-w-md text-lg text-ip-ink-2">
+            Planning is free — add your notes, review the blueprint, and see the estimated
+            length before you spend a credit.
+          </p>
+          <Link href="/register" className="ip-cta rounded-2xl bg-ip-ink px-7 py-[18px] font-semibold text-ip-bg">
+            Plan your book free
+          </Link>
+        </div>
+      </section>
+    </MarketingShell>
   );
 }

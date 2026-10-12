@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { useCredits } from "@/lib/credits-context";
-import { Button, ButtonLink } from "./ui";
+import { BrandMark } from "./brand-mark";
 import { ThemeToggle } from "./theme-toggle";
-import { Wordmark } from "./brand-mark";
+import { BRAND } from "@/lib/brand";
 
 const LINKS = [
   { href: "/#features", label: "Features" },
@@ -16,72 +14,75 @@ const LINKS = [
   { href: "/blog", label: "Blog" },
 ];
 
+/**
+ * Header of the public site (landing, blog, guides, legal), in the Ink & Paper
+ * look. Lives inside a `.ink-paper` shell (see MarketingShell). Visitors who are
+ * already signed in get a way back to their dashboard instead of sign-up.
+ */
 export function SiteHeader() {
-  const { user, loading, logout } = useAuth();
-  const credits = useCredits();
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const { user, loading } = useAuth();
+  const signedIn = !loading && !!user;
 
   return (
-    <header
-      className={`sticky top-0 z-30 border-b bg-background/80 backdrop-blur transition-colors ${
-        scrolled ? "border-hairline" : "border-transparent"
-      }`}
-    >
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-7 px-6">
-        <Wordmark href="/" />
+    <header className="sticky top-0 z-30 border-b border-ip-hair bg-ip-glass backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center gap-x-7 gap-y-1.5 px-4 py-2.5 sm:px-6 md:py-3.5">
+        <Link href="/" className="flex items-center gap-2.5">
+          <BrandMark className="h-8 w-8" />
+          <span className="font-display text-[23px] font-medium tracking-[-0.01em]">{BRAND}</span>
+        </Link>
 
-        <nav className="hidden gap-1 md:flex">
+        <nav
+          aria-label="Main"
+          className="order-3 -mx-4 flex w-[calc(100%+2rem)] gap-1 overflow-x-auto px-2.5 [scrollbar-width:none] md:order-none md:mx-0 md:w-auto md:flex-1 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden"
+        >
           {LINKS.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              className="shrink-0 whitespace-nowrap rounded-[10px] px-3 py-2 text-sm text-ip-ink-2 transition-colors hover:bg-ip-surface hover:text-ip-ink"
             >
               {l.label}
             </Link>
           ))}
+          {!signedIn && (
+            <Link
+              href="/login"
+              className="shrink-0 whitespace-nowrap rounded-[10px] px-3 py-2 text-sm font-semibold text-ip-ink min-[441px]:hidden"
+            >
+              Log in
+            </Link>
+          )}
         </nav>
 
-        <div className="flex flex-1 items-center justify-end gap-2.5">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
           <ThemeToggle />
-          {loading ? null : user ? (
-            <>
-              {credits && credits.balance !== null && (
-                <Link
-                  href="/billing"
-                  className="hidden items-center gap-1.5 rounded-full border border-hairline-2 bg-surface px-3 py-1.5 text-sm font-medium text-foreground-2 transition-colors hover:border-muted sm:inline-flex"
-                  title="Credits — click to buy more"
-                >
-                  <span className="text-accent">◆</span>
-                  <span className="tabular-nums">{credits.balance}</span>
-                </Link>
-              )}
-              <ButtonLink href="/dashboard" variant="secondary" className="px-3.5 py-2">
-                Dashboard
-              </ButtonLink>
-              <Button variant="ghost" className="hidden px-3.5 py-2 sm:inline-flex" onClick={() => logout()}>
-                Log out
-              </Button>
-            </>
+          {signedIn ? (
+            <Link
+              href="/dashboard"
+              className="ip-cta whitespace-nowrap rounded-xl bg-ip-ink px-3.5 py-2.5 text-sm font-semibold text-ip-bg sm:px-[18px]"
+            >
+              Dashboard
+            </Link>
           ) : (
             <>
-              <ButtonLink href="/login" variant="ghost" className="hidden px-3.5 py-2 sm:inline-flex">
+              <Link href="/login" className="whitespace-nowrap px-3 py-2.5 text-sm font-medium max-[440px]:hidden">
                 Log in
-              </ButtonLink>
-              <ButtonLink href="/register" variant="primary" className="px-3.5 py-2">
+              </Link>
+              <Link
+                href="/register"
+                className="ip-cta whitespace-nowrap rounded-xl bg-ip-ink px-3.5 py-2.5 text-sm font-semibold text-ip-bg sm:px-[18px]"
+              >
                 Start writing
-              </ButtonLink>
+              </Link>
             </>
           )}
         </div>
       </div>
+      <div
+        aria-hidden="true"
+        className="ip-progress absolute inset-x-0 -bottom-px h-0.5 origin-left bg-ip-brass-l"
+        style={{ transform: "scaleX(0)" }}
+      />
     </header>
   );
 }

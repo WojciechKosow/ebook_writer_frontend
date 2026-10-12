@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { LandingGate } from "@/components/landing/landing-gate";
 import { StructuredData } from "@/components/landing/structured-data";
-import { AmbientLayer } from "@/components/landing/ambient";
-import { LandingHeader } from "@/components/landing/landing-header";
+import { MarketingShell } from "@/components/marketing-shell";
 import { LandingHero } from "@/components/landing/landing-hero";
 import {
   LandingAudience,
@@ -17,7 +16,6 @@ import {
 } from "@/components/landing/landing-sections";
 import { LandingDemo } from "@/components/landing/landing-demo";
 import { Faq } from "@/components/landing/faq";
-import { LandingFooter } from "@/components/landing/landing-footer";
 import { BRAND } from "@/lib/brand";
 import { SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/site";
 
@@ -39,26 +37,20 @@ export default function Home() {
   return (
     <LandingGate>
       <StructuredData />
-      {/* "Ink & Paper": the landing's own palette, scoped so the app keeps its own. */}
-      <div className="ink-paper relative flex min-h-full flex-1 flex-col overflow-x-clip">
-        <AmbientLayer />
-        <LandingHeader />
-        <main className="relative z-[1] flex-1">
-          <LandingHero />
-          <LandingPillars />
-          <LandingMarquee />
-          <LandingCraft />
-          <LandingDemo />
-          <LandingEditor />
-          <LandingSample />
-          <LandingCompare />
-          <LandingAudience />
-          <LandingPricing />
-          <Faq />
-          <LandingClosing />
-        </main>
-        <LandingFooter />
-      </div>
+      <MarketingShell ambient="full">
+        <LandingHero />
+        <LandingPillars />
+        <LandingMarquee />
+        <LandingCraft />
+        <LandingDemo />
+        <LandingEditor />
+        <LandingSample />
+        <LandingCompare />
+        <LandingAudience />
+        <LandingPricing />
+        <Faq />
+        <LandingClosing />
+      </MarketingShell>
     </LandingGate>
   );
 }
