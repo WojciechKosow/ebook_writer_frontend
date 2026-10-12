@@ -18,8 +18,9 @@ function Word({ children, delay, em = false }: { children: React.ReactNode; dela
 
 export function LandingHero() {
   return (
-    <section className="mx-auto grid w-full max-w-[1200px] grid-cols-1 items-center gap-14 px-4 pb-16 pt-14 sm:px-6 md:pt-[88px] lg:grid-cols-2">
-      <div className="flex min-w-0 flex-col gap-7">
+    <section className="mx-auto grid w-full max-w-[1200px] grid-cols-1 items-center gap-14 px-4 pb-16 pt-14 sm:px-6 md:pt-[88px] lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+      {/* The headline is sized to its column (cqi), so it always sets as two clean lines. */}
+      <div className="flex min-w-0 flex-col gap-7 [container-type:inline-size]">
         <a
           href="#faq"
           className="ip-in inline-flex items-center gap-2.5 self-start rounded-full border border-ip-hair bg-ip-surface py-[7px] pl-2 pr-3.5 text-[13px] text-ip-ink-2"
@@ -27,10 +28,13 @@ export function LandingHero() {
           <span className="rounded-full bg-ip-ink px-2.5 py-[3px] font-mono text-[11px] tracking-[0.05em] text-ip-bg">SOON</span>
           A dedicated fiction builder is on the way →
         </a>
-        <h1 className="ip-display text-[clamp(44px,6.4vw,92px)] leading-none tracking-[-0.025em]">
-          <Word delay={0.05}>Your</Word> <Word delay={0.15}>knowledge</Word> <Word delay={0.25}>in.</Word>
-          <br />
-          <Word delay={0.45}>A</Word> <Word delay={0.6} em>finished book</Word> <Word delay={0.8}>out.</Word>
+        <h1 className="ip-display text-[min(88px,12.2cqi)] leading-[1.02] tracking-[-0.025em]">
+          <span className="block whitespace-nowrap">
+            <Word delay={0.05}>Your</Word> <Word delay={0.15}>knowledge</Word> <Word delay={0.25}>in.</Word>
+          </span>
+          <span className="block whitespace-nowrap">
+            <Word delay={0.45}>A</Word> <Word delay={0.6} em>finished book</Word> <Word delay={0.8}>out.</Word>
+          </span>
         </h1>
         <p className="ip-in m-0 max-w-[520px] text-[19px] leading-relaxed text-ip-ink-2" style={{ animationDelay: "1s" }}>
           Upload your notes, documents, or project. Scrivetta maps what you know, asks about the
