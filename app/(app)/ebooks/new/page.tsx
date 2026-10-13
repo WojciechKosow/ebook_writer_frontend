@@ -247,8 +247,8 @@ export default function NewEbookPage() {
 
       <header className="mb-8 mt-3 flex flex-col gap-4 border-b border-hairline pb-6 sm:mb-9 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <div>
-          <h1 className="text-balance font-display text-[38px] leading-none tracking-tight text-foreground sm:text-[50px]">
-            Start a new <em className="text-accent">book</em>
+          <h1 className="text-balance font-display text-[38px] font-light leading-none tracking-[-0.02em] text-foreground sm:text-[50px]">
+            Start a new <em className="text-brass">book</em>
           </h1>
           <p className="mt-2.5 max-w-[52ch] text-[15px] text-muted">
             Start with the basics. Next, tell Scrivetta what you know — your notes, documents or a
@@ -534,7 +534,7 @@ export default function NewEbookPage() {
               type="submit"
               form={FORM_ID}
               disabled={submitting}
-              className="flex h-12 w-full items-center justify-between rounded-xl bg-foreground pl-[18px] pr-2 text-sm font-semibold text-background transition-[background,color,transform] hover:bg-accent hover:text-white active:translate-y-px disabled:cursor-wait disabled:opacity-70"
+              className="flex h-12 w-full items-center justify-between rounded-xl bg-foreground pl-[18px] pr-2 text-sm font-semibold text-background transition-[background,color,transform] hover:bg-accent hover:text-accent-fg active:translate-y-px disabled:cursor-wait disabled:opacity-70"
             >
               {submitting ? "Creating draft…" : "Continue"}
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/15">
@@ -568,7 +568,7 @@ export default function NewEbookPage() {
           type="submit"
           form={FORM_ID}
           disabled={submitting}
-          className="ml-auto inline-flex h-[46px] items-center gap-2 rounded-xl bg-accent px-5 text-[15px] font-semibold text-white disabled:opacity-70"
+          className="ml-auto inline-flex h-[46px] items-center gap-2 rounded-xl bg-foreground px-5 text-[15px] font-semibold text-background disabled:opacity-70"
         >
           {submitting && <Spinner />}
           Continue →

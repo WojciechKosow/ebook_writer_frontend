@@ -249,7 +249,7 @@ export default function EbookDetailPage() {
 
   if (!ebook) {
     return (
-      <div className="flex items-center gap-2 text-sm text-zinc-500">
+      <div className="flex items-center gap-2 text-sm text-muted">
         <Spinner /> Loading…
       </div>
     );
@@ -283,17 +283,17 @@ export default function EbookDetailPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/dashboard" className="text-sm text-zinc-500 hover:underline dark:text-zinc-400">
+      <Link href="/dashboard" className="text-sm text-muted hover:underline">
         ← Back to your ebooks
       </Link>
 
       <div className="mt-3 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="font-display text-[34px] font-light leading-[1.05] tracking-[-0.02em] text-foreground sm:text-[40px]">
             {ebook.title || (draft ? "Your ebook draft" : "Preparing your ebook…")}
           </h1>
           {ebook.subtitle && (
-            <p className="mt-1 text-zinc-500 dark:text-zinc-400">{ebook.subtitle}</p>
+            <p className="mt-1 text-muted">{ebook.subtitle}</p>
           )}
         </div>
         <StatusBadge status={ebook.status} />
@@ -304,7 +304,7 @@ export default function EbookDetailPage() {
         <div className="mt-6 flex flex-col gap-5">
           {token && (
             <section className="rounded-xl border border-hairline bg-surface-2 p-4">
-              <h2 className="text-[15px] font-semibold text-foreground">Tell Scrivetta what you know</h2>
+              <h2 className="font-display text-[22px] font-normal leading-tight text-foreground">Tell Scrivetta what you know</h2>
               <p className="mt-1 text-xs text-muted">
                 Upload your existing materials, notes, project files or other information. Scrivetta
                 will use them to understand your knowledge before building your book.
@@ -325,7 +325,7 @@ export default function EbookDetailPage() {
           )}
 
           <div className="rounded-xl border border-hairline bg-surface-2 p-4">
-            <h2 className="text-sm font-semibold text-foreground-2">Assets (optional)</h2>
+            <h2 className="font-display text-[22px] font-normal leading-tight text-foreground">Assets <span className="font-sans text-sm text-muted">(optional)</span></h2>
             <p className="mt-1 text-xs text-muted">
               Upload your own images — a logo, product shots, diagrams. Scrivetta will use the ones
               that fit (on the cover or in the right chapter) and leave the rest. You can add, change
@@ -337,7 +337,7 @@ export default function EbookDetailPage() {
           </div>
 
           <section className="rounded-xl border border-hairline bg-surface-2 p-4">
-            <h2 className="text-[15px] font-semibold text-foreground">Depth &amp; estimated length</h2>
+            <h2 className="font-display text-[22px] font-normal leading-tight text-foreground">Depth &amp; estimated length</h2>
             <p className="mt-1 text-xs text-muted">
               Choose how deep the book should go. Scrivetta works out the length from your topic,
               materials and depth.
@@ -403,7 +403,7 @@ export default function EbookDetailPage() {
             <ButtonLink href="/billing" variant="secondary">
               Buy credits
             </ButtonLink>
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-faint">
               {insufficient
                 ? `This book needs up to ${required} credits to generate.`
                 : waitingForBlueprint
@@ -423,8 +423,8 @@ export default function EbookDetailPage() {
       {!draft && !failed && !needsDecision(ebook.status) && (
         <div className="mt-6">
           <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="text-zinc-600 dark:text-zinc-300">{stageMessage}</span>
-            <span className="tabular-nums text-zinc-400">{ebook.progress}%</span>
+            <span className="text-foreground-2">{stageMessage}</span>
+            <span className="tabular-nums text-faint">{ebook.progress}%</span>
           </div>
           <ProgressBar value={ebook.progress} />
           {(ebook.plannedPages || startEstimate) && (
@@ -436,7 +436,7 @@ export default function EbookDetailPage() {
             </p>
           )}
           {active && (
-            <p className="mt-2 flex items-center gap-2 text-xs text-zinc-400">
+            <p className="mt-2 flex items-center gap-2 text-xs text-faint">
               <Spinner className="h-3 w-3" /> Updating automatically…
             </p>
           )}
@@ -469,17 +469,17 @@ export default function EbookDetailPage() {
 
       {/* Completed */}
       {completed && (
-        <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
-          <p className="text-sm text-emerald-800 dark:text-emerald-300">Your ebook is ready.</p>
+        <div className="mt-6 rounded-xl border border-[color-mix(in_oklab,var(--good)_35%,transparent)] bg-good-soft p-5">
+          <p className="text-sm text-good">Your ebook is ready.</p>
           {ebook.actualPageCount > 0 && (
-            <p className="mt-2 text-sm font-medium text-emerald-900 dark:text-emerald-200">
+            <p className="mt-2 text-sm font-medium text-good">
               {ebook.actualPageCount} pages
               {startEstimate ? ` (estimated ${startEstimate})` : ""} · {ebook.creditsCharged} credits used
               {balance !== null && ` · ${balance} credits remaining`}
             </p>
           )}
           {(ebook.creditLimited || deferred.length > 0) && (
-            <p className="mt-2 text-xs text-emerald-900/80 dark:text-emerald-200/80">
+            <p className="mt-2 text-xs text-good/90">
               This book ran longer than your credits covered, so it was brought to a complete ending
               early
               {deferred.length > 0
@@ -488,7 +488,7 @@ export default function EbookDetailPage() {
             </p>
           )}
           {ebook.description && (
-            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{ebook.description}</p>
+            <p className="mt-2 text-sm text-muted">{ebook.description}</p>
           )}
           <div className="mt-4 flex flex-wrap gap-3">
             <Button onClick={download} loading={downloading}>
@@ -514,7 +514,7 @@ export default function EbookDetailPage() {
       {/* Chapters */}
       {ebook.chapters.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Chapters</h2>
+          <h2 className="font-display text-[22px] font-normal leading-tight text-foreground">Chapters</h2>
           <ul className="mt-3 flex flex-col gap-1.5">
             {[...inBook(ebook.chapters), ...deferred].map((c) => {
               const done = c.status === "WRITTEN" || c.status === "EDITED";
@@ -525,8 +525,8 @@ export default function EbookDetailPage() {
                   key={c.chapterNumber}
                   className={`flex items-center gap-3 rounded-lg border px-4 py-2.5 text-sm ${
                     isDeferred
-                      ? "border-dashed border-zinc-200 bg-transparent opacity-70 dark:border-zinc-800"
-                      : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+                      ? "border-dashed border-hairline bg-transparent opacity-70"
+                      : "border-hairline bg-surface"
                   }`}
                 >
                   <span
@@ -534,16 +534,16 @@ export default function EbookDetailPage() {
                       chapterFailed
                         ? "bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400"
                         : done
-                          ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
-                          : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
+                          ? "bg-good-soft text-good"
+                          : "bg-surface-2 text-faint"
                     }`}
                   >
                     {done ? "✓" : isDeferred ? "–" : c.chapterNumber}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-zinc-700 dark:text-zinc-300">
+                  <span className="min-w-0 flex-1 truncate text-foreground-2">
                     {c.title || `Chapter ${c.chapterNumber}`}
                   </span>
-                  <span className="shrink-0 text-xs text-zinc-400">
+                  <span className="shrink-0 text-xs text-faint">
                     {CHAPTER_STATUS_LABEL[c.status]}
                   </span>
                 </li>
@@ -587,7 +587,7 @@ function ScopeDecisionCard({
 
   return (
     <section className="mt-6 rounded-xl border border-[color-mix(in_oklab,var(--warn)_40%,transparent)] bg-warn-soft p-5">
-      <h2 className="text-[15px] font-semibold text-foreground">This book is turning out longer than estimated</h2>
+      <h2 className="font-display text-[22px] font-normal leading-tight text-foreground">This book is turning out longer than estimated</h2>
       <p className="mt-2 text-sm text-foreground-2">
         {afterPlan
           ? `While planning, Scrivetta found that covering everything properly needs about ${proposed} pages — more than the ~${agreed} pages estimated when you started.`

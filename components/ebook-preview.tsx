@@ -261,7 +261,7 @@ export function EbookPreview({
       </div>
 
       {dirty && (
-        <div className="flex items-center gap-2 border-b border-amber-300/60 bg-amber-50 px-3 py-1.5 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-200">
+        <div className="flex items-center gap-2 border-b border-[color-mix(in_oklab,var(--warn)_35%,transparent)] bg-warn-soft px-3 py-1.5 text-xs text-warn">
           <span>
             {live
               ? "Showing your unsaved edits — save to keep them and re-render the PDF."
@@ -271,7 +271,7 @@ export function EbookPreview({
             <button
               type="button"
               onClick={onSave}
-              className="ml-auto rounded-md bg-amber-600 px-2 py-0.5 font-semibold text-white hover:bg-amber-700"
+              className="ml-auto rounded-md bg-warn px-2 py-0.5 font-semibold text-surface hover:brightness-95"
             >
               Save
             </button>

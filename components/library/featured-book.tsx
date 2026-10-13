@@ -7,11 +7,11 @@ import { BookCover } from "./book-cover";
 import { IconCheck, IconDownload, IconEdit } from "./icons";
 
 const shell =
-  "mt-8 grid grid-cols-[92px_minmax(0,1fr)] items-center gap-5 rounded-[20px] border border-hairline bg-surface bg-[radial-gradient(90%_140%_at_0%_50%,var(--accent-soft),transparent_55%)] p-5 shadow-soft sm:grid-cols-[130px_minmax(0,1fr)] sm:gap-8 sm:p-7 xl:grid-cols-[150px_minmax(0,1fr)_auto]";
+  "mt-8 grid grid-cols-[92px_minmax(0,1fr)] items-center gap-5 rounded-[20px] border border-hairline bg-surface bg-[radial-gradient(90%_140%_at_0%_50%,var(--brass-soft),transparent_60%)] p-5 shadow-soft sm:grid-cols-[130px_minmax(0,1fr)] sm:gap-8 sm:p-7 xl:grid-cols-[150px_minmax(0,1fr)_auto]";
 const actions = "col-span-full flex flex-wrap gap-2 xl:col-span-1 xl:min-w-[170px] xl:flex-col";
 const btn =
   "inline-flex h-10 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-[11px] border px-4 text-[13.5px] font-semibold transition-colors xl:flex-none";
-const btnPrimary = `${btn} border-foreground bg-foreground text-background hover:border-accent hover:bg-accent hover:text-white`;
+const btnPrimary = `${btn} border-foreground bg-foreground text-background hover:border-accent hover:bg-accent hover:text-accent-fg`;
 const btnSecondary = `${btn} border-hairline-2 bg-surface text-foreground hover:border-faint`;
 const btnGhost = `${btn} border-transparent text-muted hover:text-foreground`;
 

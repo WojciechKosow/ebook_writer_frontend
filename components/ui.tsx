@@ -18,7 +18,7 @@ const buttonBase =
 
 const buttonVariants: Record<string, string> = {
   primary:
-    "bg-accent text-accent-fg shadow-soft hover:brightness-95",
+    "bg-foreground text-background shadow-soft hover:opacity-90",
   secondary:
     "border border-hairline-2 bg-surface text-foreground hover:border-muted",
   ghost: "text-foreground hover:bg-surface-2",

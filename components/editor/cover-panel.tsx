@@ -148,7 +148,7 @@ export function CoverPanel({
             type="button"
             disabled={busy}
             onClick={() => inputRef.current?.click()}
-            className="flex items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-60"
+            className="flex items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-accent-fg transition hover:brightness-95 disabled:opacity-60"
           >
             {cover ? "Replace cover image" : "Upload cover image"}
           </button>
@@ -247,7 +247,7 @@ export function CoverPanel({
                         <span className="flex h-full items-center justify-center text-[10px] text-faint">…</span>
                       )}
                       {isCover && (
-                        <span className="absolute right-0.5 top-0.5 rounded bg-accent px-1 text-[9px] font-semibold text-white">
+                        <span className="absolute right-0.5 top-0.5 rounded bg-accent px-1 text-[9px] font-semibold text-accent-fg">
                           ✓
                         </span>
                       )}
