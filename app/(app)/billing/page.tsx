@@ -109,7 +109,7 @@ export default function BillingPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+      <h1 className="font-display text-[34px] font-light leading-[1.05] tracking-[-0.02em] text-foreground sm:text-[40px]">
         Billing &amp; credits
       </h1>
 
@@ -120,23 +120,23 @@ export default function BillingPage() {
       )}
 
       {/* Balance */}
-      <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Current balance</p>
-        <p className="mt-1 text-4xl font-semibold text-zinc-900 dark:text-zinc-50">
+      <div className="mt-6 rounded-2xl border border-hairline bg-surface p-6">
+        <p className="text-sm text-muted">Current balance</p>
+        <p className="mt-1 text-4xl font-semibold text-foreground">
           {data === null ? "…" : balance}
-          <span className="ml-2 text-base font-normal text-zinc-400">credits</span>
+          <span className="ml-2 text-base font-normal text-faint">credits</span>
         </p>
-        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="mt-2 text-sm text-muted">
           1 credit ≈ 1 ebook page.
         </p>
       </div>
 
       {/* Subscription */}
-      <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Subscription</h2>
+      <div className="mt-6 rounded-2xl border border-hairline bg-surface p-6">
+        <h2 className="font-display text-[22px] font-normal leading-tight text-foreground">Subscription</h2>
         {sub?.active ? (
           <div className="mt-2">
-            <p className="text-sm text-zinc-600 dark:text-zinc-300">
+            <p className="text-sm text-foreground-2">
               Active — {SUBSCRIPTION.credits} credits every {SUBSCRIPTION.period}.
               {sub.cancelAtPeriodEnd && " Cancels at the end of the current period."}
             </p>
@@ -154,13 +154,13 @@ export default function BillingPage() {
                 </Button>
               )}
             </div>
-            <p className="mt-2 text-xs text-zinc-400 dark:text-zinc-500">
+            <p className="mt-2 text-xs text-faint">
               Manage opens Stripe, where you can update your payment method, view invoices, and cancel.
             </p>
           </div>
         ) : (
           <div className="mt-2">
-            <p className="text-sm text-zinc-600 dark:text-zinc-300">
+            <p className="text-sm text-foreground-2">
               {SUBSCRIPTION.priceLabel}/{SUBSCRIPTION.period} — {SUBSCRIPTION.credits} credits every {SUBSCRIPTION.period}.
             </p>
             <div className="mt-4">
@@ -174,17 +174,17 @@ export default function BillingPage() {
 
       {/* Credit packs */}
       <div className="mt-6">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Buy credits</h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">One-time purchase, no subscription.</p>
+        <h2 className="font-display text-[22px] font-normal leading-tight text-foreground">Buy credits</h2>
+        <p className="mt-1 text-sm text-muted">One-time purchase, no subscription.</p>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {packs.map((pack) => (
             <div
               key={pack.id}
-              className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900"
+              className="flex flex-col rounded-2xl border border-hairline bg-surface p-6 text-center"
             >
-              <p className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50">{pack.credits}</p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">credits</p>
-              <p className="mt-3 text-lg font-medium text-zinc-800 dark:text-zinc-200">
+              <p className="text-3xl font-semibold text-foreground">{pack.credits}</p>
+              <p className="text-sm text-muted">credits</p>
+              <p className="mt-3 text-lg font-medium text-foreground">
                 {formatPrice(pack.priceCents)}
               </p>
               <div className="mt-4">
@@ -205,18 +205,18 @@ export default function BillingPage() {
       {/* Recent transactions */}
       {data && data.transactions.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Recent activity</h2>
-          <ul className="mt-3 divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          <h2 className="font-display text-[22px] font-normal leading-tight text-foreground">Recent activity</h2>
+          <ul className="mt-3 divide-y divide-hairline rounded-xl border border-hairline">
             {data.transactions.map((t, i) => (
               <li key={i} className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-zinc-600 dark:text-zinc-300">
+                <span className="text-foreground-2">
                   {t.description || t.type}
                 </span>
                 <span
                   className={`font-medium tabular-nums ${
                     t.amount >= 0
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-zinc-500 dark:text-zinc-400"
+                      ? "text-good"
+                      : "text-muted"
                   }`}
                 >
                   {t.amount >= 0 ? "+" : ""}

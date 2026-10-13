@@ -229,7 +229,7 @@ function AssetCard({
           <span className="flex h-full items-center justify-center text-[10px] text-faint">…</span>
         )}
         {isCover && (
-          <span className="absolute left-1 top-1 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
+          <span className="absolute left-1 top-1 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-accent-fg">
             Cover
           </span>
         )}

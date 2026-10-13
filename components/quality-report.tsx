@@ -20,7 +20,7 @@ const CATEGORY_LABEL: Record<QualityCategory, string> = {
 
 const SEVERITY_CLASSES: Record<QualitySeverity, string> = {
   ERROR: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
-  WARNING: "bg-warn-soft text-amber-800 dark:text-amber-300",
+  WARNING: "bg-warn-soft text-warn",
   INFO: "bg-surface-3 text-muted",
 };
 
@@ -101,7 +101,7 @@ export function QualityReportPanel({ token, ebookId, version }: { token: string;
   return (
     <section className="rounded-xl border border-hairline bg-surface-2 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">Quality check</h2>
+        <h2 className="font-display text-xl font-normal text-foreground">Quality check</h2>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
             report.readyToPublish ? "bg-good-soft text-good" : SEVERITY_CLASSES.ERROR

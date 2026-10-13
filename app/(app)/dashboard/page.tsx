@@ -444,7 +444,7 @@ export default function DashboardPage() {
               setToast(null);
               void download(id);
             }}
-            className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-[12.5px] font-semibold text-white"
+            className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-[12.5px] font-semibold text-accent-fg"
           >
             Download
           </button>
@@ -496,10 +496,10 @@ function Hero({ name, books, balance }: { name: string; books: EbookStatusRespon
       <div className="min-w-0">
         <p className="mb-3 flex items-center gap-2 text-xs text-muted">
           <span className="h-1.5 w-1.5 rounded-full bg-brass" />
-          Your writing studio
+          <span className="font-mono uppercase tracking-[0.12em]">Your writing studio</span>
         </p>
-        <h1 className="text-balance font-display text-[36px] leading-[1.02] tracking-tight text-foreground sm:text-[48px]">
-          {greeting()}, <em className="text-accent">{name}</em>
+        <h1 className="text-balance font-display text-[38px] font-light leading-[1.02] tracking-[-0.02em] text-foreground sm:text-[52px]">
+          {greeting()}, <em className="text-brass">{name}</em>
         </h1>
         <p className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted sm:text-[15px]">
           {facts.map((f, i) => (
@@ -513,7 +513,7 @@ function Hero({ name, books, balance }: { name: string; books: EbookStatusRespon
       <div className="flex flex-col items-stretch gap-2 sm:items-end">
         <Link
           href="/ebooks/new"
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-[11px] bg-accent px-4 text-[13.5px] font-semibold text-white shadow-soft transition hover:brightness-95"
+          className="ip-cta inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-foreground px-[18px] text-sm font-semibold text-background"
         >
           <IconPlus /> New ebook
         </Link>

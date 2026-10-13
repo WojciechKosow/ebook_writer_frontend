@@ -68,17 +68,17 @@ function SuccessInner() {
       {state === "pending" && (
         <div className="flex flex-col items-center gap-3 py-10">
           <Spinner className="h-6 w-6 text-accent" />
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Confirming your payment…</p>
+          <p className="text-sm text-muted">Confirming your payment…</p>
         </div>
       )}
 
       {state === "paid" && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 dark:border-emerald-900/50 dark:bg-emerald-950/30">
-          <p className="text-lg font-semibold text-emerald-800 dark:text-emerald-300">
+        <div className="rounded-2xl border border-[color-mix(in_oklab,var(--good)_35%,transparent)] bg-good-soft p-8">
+          <p className="text-lg font-semibold text-good">
             Payment successful
           </p>
           {granted !== null && granted > 0 && (
-            <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
+            <p className="mt-1 text-sm text-good">
               {granted} credits added to your account.
             </p>
           )}
@@ -92,11 +92,11 @@ function SuccessInner() {
       )}
 
       {state === "timeout" && (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="font-medium text-zinc-800 dark:text-zinc-200">
+        <div className="rounded-2xl border border-hairline bg-surface p-8">
+          <p className="font-medium text-foreground">
             Payment is processing.
           </p>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-muted">
             Your credits will appear shortly once the payment is confirmed.
           </p>
           <div className="mt-6 flex justify-center">
@@ -112,7 +112,7 @@ function SuccessInner() {
 
 export default function BillingSuccessPage() {
   return (
-    <Suspense fallback={<div className="py-10 text-center text-zinc-400">…</div>}>
+    <Suspense fallback={<div className="py-10 text-center text-faint">…</div>}>
       <SuccessInner />
     </Suspense>
   );

@@ -309,7 +309,7 @@ function ImageCard({
       </button>
 
       {isCover && (
-        <span className="pointer-events-none absolute left-1 top-1 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
+        <span className="pointer-events-none absolute left-1 top-1 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-accent-fg">
           Cover
         </span>
       )}

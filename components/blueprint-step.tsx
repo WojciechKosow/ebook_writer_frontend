@@ -320,7 +320,7 @@ export function BlueprintStep({
 function Frame({ children }: { children: React.ReactNode }) {
   return (
     <section className="rounded-xl border border-hairline bg-surface-2 p-4">
-      <h2 className="text-[15px] font-semibold text-foreground">Your book blueprint</h2>
+      <h2 className="font-display text-[22px] font-normal leading-tight text-foreground">Your book blueprint</h2>
       <p className="mb-4 mt-1 text-xs text-muted">
         The plan of your book, built from your knowledge: its structure, what each chapter draws on, and what Scrivetta
         still needs to know.

@@ -179,7 +179,7 @@ export const RichTextEditor = forwardRef<
         <EditorContent editor={editor} />
         {dropActive && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-accent-soft/20">
-            <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white shadow-soft">
+            <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-fg shadow-soft">
               Drop to place image
             </span>
           </div>

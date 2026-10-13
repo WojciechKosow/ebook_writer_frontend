@@ -51,7 +51,7 @@ export function EmptyLibrary({ balance }: { balance: number | null }) {
                 key={i}
                 href="/ebooks/new"
                 style={{ width: w, height: h }}
-                className="flex shrink-0 flex-col justify-between rounded-[2px_5px_5px_2px] bg-accent py-3.5 pl-4 pr-3 text-left text-white shadow-[inset_4px_0_0_rgba(0,0,0,.18),0_18px_30px_-14px_color-mix(in_oklab,var(--accent)_70%,transparent)] transition-transform hover:-translate-y-1.5"
+                className="flex shrink-0 flex-col justify-between rounded-[2px_5px_5px_2px] bg-accent py-3.5 pl-4 pr-3 text-left text-accent-fg shadow-[inset_4px_0_0_rgba(0,0,0,.18),0_18px_30px_-14px_color-mix(in_oklab,var(--accent)_70%,transparent)] transition-transform hover:-translate-y-1.5"
               >
                 <span className="font-display text-[30px] leading-none">+</span>
                 <span>
