@@ -8,6 +8,7 @@ import { useCredits } from "@/lib/credits-context";
 import { BRAND } from "@/lib/brand";
 import { BrandMark } from "./brand-mark";
 import { ThemeToggle } from "./theme-toggle";
+import { AmbientLayer } from "./landing/ambient";
 
 type NavItem = {
   href: string;
@@ -36,6 +37,9 @@ const ACCOUNT: NavItem[] = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  // The library gets a quiet band of drifting pages above its header; other
+  // workspace screens stay plain (the writing room brings its own).
+  const showBand = usePathname() === "/dashboard";
 
   return (
     <div className="flex min-h-screen">
@@ -58,7 +62,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main column */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        {showBand && <AmbientLayer variant="band" />}
         {/* Mobile top bar */}
         <div className="sticky top-0 z-20 flex items-center justify-between border-b border-ip-hair bg-ip-glass px-4 py-2.5 backdrop-blur-md lg:hidden">
           <button
@@ -76,7 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <ThemeToggle />
         </div>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+        <main className="relative z-[1] mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">{children}</main>
       </div>
     </div>
   );

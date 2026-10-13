@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="ink-paper relative flex min-h-screen flex-1 flex-col overflow-x-clip">
-      <AmbientLayer sparse />
+      <AmbientLayer variant="full" />
 
       <header className="relative z-10 mx-auto flex w-full max-w-[1200px] items-center justify-between gap-4 px-4 py-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">

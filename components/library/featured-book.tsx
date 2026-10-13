@@ -43,7 +43,19 @@ export function GeneratingFeature({ book }: { book: EbookStatusResponse }) {
 
   return (
     <section className={shell} aria-label="Writing now">
-      <TiltedCover book={book} />
+      <div className="relative">
+        <TiltedCover book={book} />
+        {/* Finished pages flying into the book while it is written. */}
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0">
+          {[0, 1.2, 2.4].map((delay, i) => (
+            <span
+              key={delay}
+              className="ip-flypage left-[30%]"
+              style={{ top: `${22 + i * 20}%`, animationDelay: `${delay}s` }}
+            />
+          ))}
+        </span>
+      </div>
       <div className="min-w-0">
         <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-accent-ink">
           <span className="live-dot h-[7px] w-[7px] rounded-full bg-accent" />
