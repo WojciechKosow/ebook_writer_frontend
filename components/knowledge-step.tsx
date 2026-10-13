@@ -232,10 +232,15 @@ export function KnowledgeStep({
     return (
       <div className="flex flex-col gap-4">
         <div className="rounded-xl border border-[color-mix(in_oklab,var(--good)_35%,transparent)] bg-good-soft p-5">
-          <p className="text-[15px] font-semibold text-foreground">Scrivetta has learned from your materials.</p>
-          {summary.overallSummary && (
-            <p className="mt-1.5 text-sm leading-relaxed text-foreground-2">{summary.overallSummary}</p>
-          )}
+          <div className="flex items-start gap-5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-semibold text-foreground">Scrivetta has learned from your materials.</p>
+              {summary.overallSummary && (
+                <p className="mt-1.5 text-sm leading-relaxed text-foreground-2">{summary.overallSummary}</p>
+              )}
+            </div>
+            <KnowledgeStack count={overview.sources.length} />
+          </div>
           <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Stat label="Project" value={summary.projectName || "—"} wide />
             <Stat label="Topics found" value={summary.topicsFound} />
@@ -485,6 +490,42 @@ function Stat({ label, value, wide = false }: { label: string; value: string | n
     <div className={`rounded-lg border border-hairline bg-surface px-3 py-2 ${wide ? "col-span-2 sm:col-span-4" : ""}`}>
       <dt className="text-[10px] uppercase tracking-[0.06em] text-muted">{label}</dt>
       <dd className="mt-0.5 truncate text-[15px] font-semibold tabular-nums text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+// Where each source's page comes from before it settles on the stack.
+const FOLD: [number, number, number, number][] = [
+  [-120, -30, -30, -8],
+  [120, -40, 26, 6],
+  [-100, 50, -20, -3],
+  [110, 40, 18, 4],
+  [0, -90, 10, 0],
+];
+
+/**
+ * The author's sources settling into one stack of pages — what Scrivetta now
+ * writes from. It plays once when the knowledge appears, not on a loop.
+ */
+function KnowledgeStack({ count }: { count: number }) {
+  const pages = FOLD.slice(0, Math.max(1, Math.min(count, FOLD.length)));
+  return (
+    <div aria-hidden="true" className="relative hidden h-[150px] w-[150px] shrink-0 sm:block">
+      {pages.map(([fx, fy, fr, r], i) => (
+        <span
+          key={i}
+          className="ip-foldpage"
+          style={
+            {
+              "--fx": `${fx}px`,
+              "--fy": `${fy}px`,
+              "--fr": `${fr}deg`,
+              "--r": `${r}deg`,
+              animationDelay: `${(0.2 + i * 0.18).toFixed(2)}s`,
+            } as React.CSSProperties
+          }
+        />
+      ))}
     </div>
   );
 }

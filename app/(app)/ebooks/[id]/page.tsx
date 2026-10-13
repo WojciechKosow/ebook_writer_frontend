@@ -15,6 +15,8 @@ import { BlueprintStep } from "@/components/blueprint-step";
 import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
 import { DepthPicker } from "@/components/depth-picker";
 import { QualityReportPanel } from "@/components/quality-report";
+import { WritingRoom } from "@/components/writing-room";
+import { AmbientLayer } from "@/components/landing/ambient";
 import {
   CHAPTER_STATUS_LABEL,
   SCOPE_BASIS_LABEL,
@@ -282,7 +284,9 @@ export default function EbookDetailPage() {
         : STAGE_MESSAGE[ebook.status];
 
   return (
-    <div className="mx-auto max-w-2xl">
+    // While the book is written the page opens up into the writing room.
+    <div className={`mx-auto ${active ? "max-w-4xl" : "max-w-2xl"}`}>
+      {active && <AmbientLayer variant="room" />}
       <Link href="/dashboard" className="text-sm text-muted hover:underline">
         ← Back to your ebooks
       </Link>
@@ -442,6 +446,8 @@ export default function EbookDetailPage() {
           )}
         </div>
       )}
+
+      {active && <WritingRoom ebook={ebook} />}
 
       {/* Failure */}
       {failed && (
