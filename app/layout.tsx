@@ -14,6 +14,8 @@ import {
   SITE_TAGLINE,
   SITE_KEYWORDS,
   SITE_VERIFICATION_GOOGLE,
+  SHARE_TITLE,
+  SHARE_DESCRIPTION,
 } from "@/lib/site";
 
 // Clean, slightly characterful grotesque for all UI + body copy.
@@ -61,15 +63,15 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: BRAND,
-    title: `${BRAND} — ${SITE_TAGLINE}`,
-    description: SITE_DESCRIPTION,
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
     locale: "en_US",
     // og image is supplied by app/opengraph-image.tsx (auto-detected).
   },
   twitter: {
     card: "summary_large_image",
-    title: `${BRAND} — ${SITE_TAGLINE}`,
-    description: SITE_DESCRIPTION,
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
     // twitter image falls back to the generated OG image.
   },
   // Renders <meta name="google-site-verification"> only when the token is set,

@@ -46,3 +46,12 @@ export const SITE_KEYWORDS = [
   "AI author tool",
   "self-publishing AI",
 ];
+
+// What people see when a Scrivetta link is pasted into Discord, Slack,
+// iMessage, X… Written for a person skimming a chat, not for a search engine —
+// the keyword-aware title/description above stay on <title> and the meta
+// description, where search ranking actually reads them.
+export const SHARE_TITLE = `${BRAND} — turn what you know into a finished book`;
+export const SHARE_DESCRIPTION =
+  "Upload your notes, approve the chapter plan, and get a beautifully " +
+  "typeset ebook written in your voice. Plan your first book free.";
