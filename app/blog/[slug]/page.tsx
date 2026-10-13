@@ -5,14 +5,61 @@ import { marked } from "marked";
 import { MarketingShell } from "@/components/marketing-shell";
 import { Prose } from "@/components/prose";
 import { BRAND } from "@/lib/brand";
-import { SITE_URL } from "@/lib/site";
-import { BLOG_SLUGS, getPost, formatPostDate, postModified } from "@/lib/blog";
+import { SITE_URL, SHARE_TITLE } from "@/lib/site";
+import {
+  BLOG_SLUGS,
+  DEFAULT_CTA,
+  getPost,
+  formatPostDate,
+  postModified,
+  type BlogCta,
+  type BlogPost,
+} from "@/lib/blog";
 
 // Prerender every known post; unknown slugs 404 instead of rendering on demand.
 export function generateStaticParams() {
   return BLOG_SLUGS.map((slug) => ({ slug }));
 }
 export const dynamicParams = false;
+
+// Where a post's body asks for the mid-article call to action.
+const CTA_MARKER = /^<!--\s*cta\s*-->$/m;
+
+/**
+ * Markdown -> HTML for a post: the body split at the CTA marker, author-note
+ * comments dropped, the FAQ appended as its final section, and every image
+ * lazy-loaded so screenshots never hold up the first paint.
+ */
+async function renderPost(post: BlogPost): Promise<string[]> {
+  const [before, ...rest] = post.body.split(CTA_MARKER);
+  const parts = rest.length ? [before, rest.join("\n")] : [before];
+  if (post.faq?.length) {
+    parts[parts.length - 1] +=
+      "\n\n## Frequently asked questions\n\n" +
+      post.faq.map((f) => `### ${f.q}\n\n${f.a}`).join("\n\n");
+  }
+  return Promise.all(
+    parts.map(async (md) =>
+      (await marked.parse(md.replace(/<!--[\s\S]*?-->/g, ""))).replace(
+        /<img(?![^>]*\sloading=)/g,
+        '<img loading="lazy" decoding="async"',
+      ),
+    ),
+  );
+}
+
+/** The heading with its accent phrase set in italic brass, as on the landing. */
+function CtaHeading({ cta, accentClass }: { cta: BlogCta; accentClass: string }) {
+  const i = cta.accent ? cta.heading.indexOf(cta.accent) : -1;
+  if (i < 0) return <>{cta.heading}</>;
+  return (
+    <>
+      {cta.heading.slice(0, i)}
+      <em className={accentClass}>{cta.accent}</em>
+      {cta.heading.slice(i + cta.accent!.length)}
+    </>
+  );
+}
 
 export async function generateMetadata({
   params,
@@ -22,17 +69,29 @@ export async function generateMetadata({
   if (!post) return {};
   const url = `/blog/${post.slug}`;
   return {
-    title: post.title,
+    title: post.metaTitle ? { absolute: post.metaTitle } : post.title,
     description: post.description,
     keywords: post.keywords,
     alternates: { canonical: url },
+    // A page-level openGraph replaces the root one rather than merging with
+    // it, so the site name and the generated share image are restated here.
     openGraph: {
       type: "article",
-      title: `${post.title} · ${BRAND}`,
+      siteName: BRAND,
+      locale: "en_US",
+      images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: SHARE_TITLE }],
+      title: post.metaTitle ?? `${post.title} · ${BRAND}`,
       description: post.description,
       url,
       publishedTime: post.date,
       modifiedTime: postModified(post),
+    },
+    // Without this, X/Slack-style cards fall back to the site-wide share copy.
+    twitter: {
+      card: "summary_large_image",
+      title: post.metaTitle ?? post.title,
+      description: post.description,
+      images: ["/opengraph-image"],
     },
   };
 }
@@ -44,7 +103,8 @@ export default async function BlogPostPage({
   const post = getPost(slug);
   if (!post) notFound();
 
-  const html = await marked.parse(post.body);
+  const [html, htmlAfterCta] = await renderPost(post);
+  const cta = post.cta ?? DEFAULT_CTA;
   const canonical = `${SITE_URL}/blog/${post.slug}`;
 
   const jsonLd = {
@@ -59,6 +119,9 @@ export default async function BlogPostPage({
         dateModified: postModified(post),
         mainEntityOfPage: canonical,
         url: canonical,
+        image: `${SITE_URL}/opengraph-image`,
+        inLanguage: "en",
+        keywords: post.keywords.join(", "),
         author: { "@id": `${SITE_URL}/#organization` },
         publisher: { "@id": `${SITE_URL}/#organization` },
       },
@@ -70,6 +133,19 @@ export default async function BlogPostPage({
           { "@type": "ListItem", position: 3, name: post.title, item: canonical },
         ],
       },
+      ...(post.faq?.length
+        ? [
+            {
+              "@type": "FAQPage",
+              "@id": `${canonical}#faq`,
+              mainEntity: post.faq.map((f) => ({
+                "@type": "Question",
+                name: f.q,
+                acceptedAnswer: { "@type": "Answer", text: f.a },
+              })),
+            },
+          ]
+        : []),
     ],
   };
 
@@ -112,18 +188,36 @@ export default async function BlogPostPage({
 
         <Prose html={html} />
 
+        {htmlAfterCta !== undefined && (
+          <>
+            <aside
+              aria-label="Try it"
+              className="my-12 rounded-[22px] border border-ip-line bg-surface-2/60 p-6 sm:p-8"
+            >
+              <p className="ip-display m-0 text-[clamp(24px,3.4vw,30px)] leading-tight">
+                <CtaHeading cta={cta} accentClass="text-ip-brass" />
+              </p>
+              <p className="mb-0 mt-2 text-[15px] leading-7 text-ip-ink-2">{cta.text}</p>
+              <Link
+                href={cta.href}
+                className="ip-cta mt-5 inline-flex rounded-[12px] bg-ip-ink px-5 py-3 text-[15px] font-semibold text-ip-bg"
+              >
+                {cta.label}
+              </Link>
+            </aside>
+            <Prose html={htmlAfterCta} />
+          </>
+        )}
+
         {/* Closing CTA */}
         <div className="mt-16 rounded-[28px] bg-ip-ink p-8 text-center text-ip-bg sm:p-12">
           <p className="ip-display m-0 text-[clamp(28px,4vw,40px)]">
-            Turn what you know into a <em className="text-ip-brass-l">finished ebook</em>
+            <CtaHeading cta={cta} accentClass="text-ip-brass-l" />
           </p>
-          <p className="mx-auto mb-0 mt-3 max-w-md opacity-80">
-            {BRAND} maps your notes into a chapter blueprint, then writes, edits, and
-            typesets the book. Planning is free.
-          </p>
+          <p className="mx-auto mb-0 mt-3 max-w-md opacity-80">{cta.text}</p>
           <div className="mt-7 flex justify-center">
-            <Link href="/register" className="ip-cta rounded-[14px] bg-ip-bg px-6 py-4 font-semibold text-ip-ink">
-              Plan your book free
+            <Link href={cta.href} className="ip-cta rounded-[14px] bg-ip-bg px-6 py-4 font-semibold text-ip-ink">
+              {cta.label}
             </Link>
           </div>
         </div>

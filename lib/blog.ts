@@ -22,12 +22,235 @@ export type BlogPost = {
   updated?: string;
   /** Rough read time in minutes, shown on the card and byline. */
   readingMinutes: number;
-  /** Post body as Markdown. */
+  /**
+   * Exact <title> tag, used as-is (no "· Scrivetta" suffix). Set it when the
+   * search title should differ from the on-page <h1> or must stay ≤60 chars.
+   */
+  metaTitle?: string;
+  /**
+   * Post body as Markdown. Two authoring aids, both handled by the page:
+   * a `<!-- cta -->` line places the mid-article call to action there, and any
+   * other HTML comment is an author note — stripped before rendering, never shipped.
+   */
   body: string;
+  /**
+   * Short FAQ rendered at the end of the article and emitted as FAQPage
+   * JSON-LD. Answers are plain text so the schema matches the page verbatim.
+   */
+  faq?: { q: string; a: string }[];
+  /** Overrides the default call to action (mid-article box + closing block). */
+  cta?: BlogCta;
 };
+
+export type BlogCta = {
+  heading: string;
+  /** Word in `heading` to set in the italic brass accent, as on the landing. */
+  accent?: string;
+  text: string;
+  label: string;
+  href: string;
+};
+
+/** The call to action posts use unless they set their own. */
+export const DEFAULT_CTA: BlogCta = {
+  heading: "Turn what you know into a finished ebook",
+  accent: "finished ebook",
+  text: `${BRAND} maps your notes into a chapter blueprint, then writes, edits, and typesets the book. Planning is free.`,
+  label: "Plan your book free",
+  href: "/register",
+};
+
+// UTM-tagged signup link for this article's CTAs, so signups it drives can be
+// told apart in analytics.
+const EBOOK_TIME_SIGNUP =
+  "/register?utm_source=blog&utm_medium=article&utm_campaign=ebook-time";
 
 // Newest first — this is also the display and sitemap order.
 export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: "how-long-does-it-take-to-write-an-ebook",
+    title: "How Long Does It Take to Write an Ebook? (And How to Test the Idea First)",
+    metaTitle: "How Long Does It Take to Write an Ebook? (Too Long)",
+    description:
+      "Weeks of writing for a book that might not sell. Here's the honest time cost, and how to test your ebook idea in one evening with notes you already have.",
+    keywords: [
+      "how long does it take to write an ebook",
+      "write an ebook fast",
+      "test an ebook idea",
+      "turn your notes into an ebook",
+    ],
+    date: "2026-10-13",
+    readingMinutes: 7,
+    cta: {
+      heading: "Test your ebook idea tonight",
+      accent: "tonight",
+      text: "Upload the notes you already have and see the chapter blueprint before you spend a credit. Planning is free.",
+      label: "Test your ebook idea tonight",
+      href: EBOOK_TIME_SIGNUP,
+    },
+    faq: [
+      {
+        q: "How long does it take to write an ebook?",
+        a:
+          "Written the traditional way, a short practical ebook of 60 to 100 pages usually takes several weeks of part-time work: outlining, drafting, editing, and formatting. " +
+          "Four to five weeks is a common estimate, and it often runs longer around a full-time job. " +
+          "If you start from notes you already have and use an AI draft, a first version you can show people fits in an evening. A polished version still needs your own editing time.",
+      },
+      {
+        q: "Can you write an ebook in a day?",
+        a:
+          "You can make a first version in a day if you start from existing material such as notes, documents, or a project. " +
+          "That version is good for testing whether people want the book. A book worth selling usually needs at least one more pass where you add your own examples and check every fact.",
+      },
+      {
+        q: "How do I know if my ebook idea will sell?",
+        a:
+          "Show people something concrete (a title, a one-sentence promise, a table of contents, and a sample chapter) and ask for a real commitment: a pre-order, a payment, or a request for early access. " +
+          "Compliments are not a signal. People asking when they can get it, or paying for it, are.",
+      },
+      {
+        q: "Do I need to upload anything to use Scrivetta?",
+        a:
+          "No. You can draft a book from a short brief alone. The result leans on general knowledge, though, so for a book that sounds like you, upload your notes, documents, or project files and Scrivetta writes from them first.",
+      },
+    ],
+    // Author notes inside the body are HTML comments: the page strips them, so
+    // TODOs and future-link placeholders never reach the rendered article.
+    body: `**The honest answer:** written the traditional way, a short nonfiction ebook takes most people four to five weeks of evenings and weekends. Often more.
+
+Then you publish it. And quite often nobody buys it. Or one person does, and you're fairly sure it was a friend.
+
+That second part is what this article is about. If you're a developer, coach, consultant, or teacher who has been "about to write an ebook" for a year, writing speed isn't really what's stopping you.
+
+## How long does it really take to write an ebook?
+
+Take a typical practical ebook: 60 to 100 pages, somewhere around 15,000 to 25,000 words. Here's roughly where the time goes if you have a day job:
+
+- **Outline:** a few evenings deciding what goes in and in what order.
+- **First draft:** if you write for an hour a night and keep 500 to 800 words of it, the draft alone is about a month of nights.
+- **Editing:** at least one full rewrite, usually two. Another week or two.
+- **Formatting:** fonts, headings, a table of contents, a cover, and a PDF that doesn't look homemade. A weekend, if it goes well.
+
+These are working numbers, not a study, so plug in your own pace. But the shape is the same for almost everyone: four to five weeks is the optimistic version. Add a sick week, a busy month at work, and a few nights where you stare at chapter three, and it becomes two or three months.
+
+## Why most ebooks don't sell
+
+Usually not because they're badly written. The common reasons are more boring:
+
+- **Nobody asked for this exact book.** The author picked the topic they find interesting, not the problem readers would pay to solve.
+- **The promise is vague.** "A guide to Spring Boot" competes with the whole internet. "Build a working shop backend in Spring Boot, from empty repo to deployed API" gives a specific person a reason to buy.
+- **Nobody saw it.** The book launched to an audience of zero, and the author took the silence as an answer.
+
+Notice that none of these get fixed by writing faster, or even by writing better. They get fixed by finding out early.
+
+## The real problem isn't writing speed
+
+Here's what the traditional process actually does: it makes you pay weeks of your life for one piece of information. *Will anyone buy this?*
+
+And it only gives you the answer at the very end, after all the cost is paid. That's why the book keeps getting postponed. When finding out costs five weeks, "I'll do it when I have a quiet month" sounds reasonable. The quiet month doesn't come.
+
+## What waiting actually costs you
+
+It's easy to think that not writing the book costs nothing. It does cost something, just quietly:
+
+- **Your knowledge earns nothing in a folder.** The workshop notes, the docs you wrote for your team, the project you spent a year building, the answers you keep retyping for clients. All of it is already useful to someone, and none of it is for sale.
+- **Someone who knows less is already selling it.** Search your topic on Amazon or Gumroad. You'll likely find a book written by someone with less experience than you. Not because they're better, but because they shipped.
+- **You learn nothing while you wait.** The first version of a book teaches you what readers actually want, and that's what makes the second version good. Every month you postpone, you skip that lesson.
+
+<!-- cta -->
+
+## How to test an ebook idea before you write it
+
+The fix isn't to write faster. It's to make being wrong cheap. If testing an idea costs one evening instead of five weeks, you can afford to be wrong, and you can afford to test the next idea too.
+
+1. **Write the promise in one sentence.** "This book helps [who] to [do what]." If you can't finish that sentence, no amount of writing will save the book.
+2. **Gather what you already have.** Notes, docs, slide decks, a project's README, long answers you've written in Slack or email. You have written more of this book than you think.
+3. **Turn it into a first version in an evening.** Not the final book. Something real enough that a person can look at the table of contents and a sample chapter and decide whether they want it.
+4. **Put it in front of people.** Share it where your readers already are: your newsletter, LinkedIn, a community you're part of, your clients. Offer early access at a low price, or a free copy in exchange for feedback.
+5. **Watch what people do, not what they say.** "Cool idea!" is noise. Someone asking when they can get it, paying for early access, or asking about a specific chapter: that's signal.
+
+If nobody bites, you lost an evening, not five weeks. If people do bite, you know which book to make properly, and you already have readers waiting for it.
+
+## Turn your notes into an ebook with ${BRAND}
+
+I built [${BRAND}](/) because I had exactly this problem: plenty of material, and a book I kept not writing. <!-- TODO(author): add one or two sentences of your own story here: what you knew, why the book never got written. -->
+
+Here is what it does, without the marketing.
+
+**What you enter**
+
+- **The brief:** your topic, who the book is for, what it should help them do, the style, and the language.
+- **Your source material:** upload PDF, DOCX, TXT, or Markdown files, a ZIP of a project folder, or paste notes directly.
+- **The depth:** Quick, Standard, or Comprehensive. There's no page-count box: ${BRAND} estimates the length from your material and the depth you pick, and shows you that estimate before you commit.
+
+**What happens**
+
+- ${BRAND} organises your material and proposes a chapter blueprint, with each chapter tied to the material it draws on.
+- Where your material has gaps, it asks you questions instead of making things up.
+- You rename, reorder, add, or remove chapters, answer the questions, and approve. Only then does it write the book, chapter by chapter, followed by an editing pass across the whole manuscript.
+
+**What you get**
+
+- A typeset 6×9 inch PDF with a cover, a table of contents, and chapter openers.
+- An editor where you can rewrite text, reorder chapters, and change the cover. The PDF updates with your changes.
+
+Planning is free: creating an account, uploading material, and getting the blueprint and length estimate cost nothing. Writing the book uses credits, where 1 credit is 1 finished page. More detail is on the [AI ebook generator page](/ai-ebook-generator).
+
+<!-- TODO(author): verify a typical generation time for a Quick-depth book and, if it's reliably short, say so here ("the draft takes about [X]"). Until then the article only promises an evening for the whole loop, not a generation speed. -->
+
+## Where AI drafts fall short, and how to fix it
+
+Here's the honest part. If you type a topic, click generate, and publish the result, you'll get a book that reads like every other book on the subject. Readers notice, and they don't come back.
+
+An AI draft works when it carries your fingerprints:
+
+- **Your projects** as the worked examples, not made-up ones.
+- **Your mistakes**, and what they cost you.
+- **Your opinions:** where you think the usual advice is wrong, what you'd do differently.
+- **Facts you've checked.** Every number, name, and claim.
+
+That's why the material you upload matters more than the prompt you type. And it's why the first version is a test, not the product. Use it to find out whether people want the book, then put your real effort into the version they asked for. If you plan to sell on Amazon, read [whether you can publish a book written by AI](/blog/can-you-publish-a-book-written-by-ai) first; it covers disclosure and copyright.
+
+## Case study: a Spring Boot ebook from a real shop backend
+
+<!-- TODO(author): replace every [BRACKETED] placeholder below with real data. Never estimate. -->
+
+I tested this on my own material: a shop backend I built in Spring Boot. [SHORT DESCRIPTION: what the shop does, the stack, what's in the repo.]
+
+**What I put in:** [SOURCE MATERIAL: exactly what you uploaded, e.g. the README, docs, selected source files] and this brief:
+
+<figure class="post-figure post-figure--todo">
+  <div class="post-figure__placeholder">[SCREENSHOT: input]</div>
+  <figcaption>The brief and source material I gave ${BRAND}.</figcaption>
+</figure>
+<!-- When the screenshot is ready, replace the placeholder div above with:
+<img src="/blog/how-long-does-it-take-to-write-an-ebook/input.png" alt="Scrivetta's new-ebook form filled in for a Spring Boot shop backend book, with project files uploaded as source material" width="1440" height="900" loading="lazy" decoding="async">
+(save the file to public/blog/how-long-does-it-take-to-write-an-ebook/, set the real width/height, and remove post-figure--todo from the figure) -->
+
+**How long it took:** [TIME IT TOOK] from upload to finished PDF, plus [TIME SPENT EDITING] of my own editing.
+
+**What came out:** a [PAGE COUNT]-page PDF with [NUMBER OF CHAPTERS] chapters.
+
+<figure class="post-figure post-figure--todo">
+  <div class="post-figure__placeholder">[SCREENSHOT: output PDF]</div>
+  <figcaption>Pages from the finished PDF.</figcaption>
+</figure>
+<!-- When the screenshot is ready, replace the placeholder div above with:
+<img src="/blog/how-long-does-it-take-to-write-an-ebook/output-pdf.png" alt="Pages from the generated Spring Boot ebook PDF: cover, table of contents and an opening chapter page" width="1440" height="900" loading="lazy" decoding="async"> -->
+
+**What I changed by hand:** [WHAT YOU EDITED: which examples you added, what you cut, what you rewrote.]
+
+**What happened when I showed it to people:** [RESULT: who saw it, and what they did.]
+
+<!-- TODO(author): once a full case study exists, link it here, e.g. [the full Spring Boot case study](/blog/spring-boot-ebook-case-study). -->
+<!-- TODO(author): future case-study links: a coach's or consultant's ebook from client notes; a teacher's ebook from course material. -->
+
+## The short version
+
+Writing an ebook the traditional way takes weeks, and you only learn whether anyone wants it at the end. Flip the order. Build a rough first version from what you already know, show it to the people it's for, and let their response tell you whether to spend the weeks.
+
+For the full process from idea to published book, read [how to write an ebook with AI](/how-to-write-an-ebook-with-ai), or browse more guides on the [${BRAND} blog](/blog). If you'd rather find out tonight, [test your ebook idea with ${BRAND}](${EBOOK_TIME_SIGNUP}).`,
+  },
   {
     slug: "can-you-publish-a-book-written-by-ai",
     title: "Can You Publish a Book Written by AI? KDP Rules and Copyright in 2026",
