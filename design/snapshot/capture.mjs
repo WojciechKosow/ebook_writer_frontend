@@ -32,6 +32,16 @@ const MOBILE = { width: 390, height: 844 };
 
 // [id, section, title, path, options]
 const SCREENS = [
+  ["dashboard", "Workspace", "Dashboard / library", "/dashboard", { auth: true }],
+  ["dashboard-empty", "Workspace", "Dashboard — empty library", "/dashboard", { auth: true, emptyLibrary: true }],
+  ["new-ebook", "Workspace", "New ebook — brief form", "/ebooks/new", { auth: true }],
+  ["ebook-draft", "Workspace", "Ebook draft — knowledge + blueprint", "/ebooks/b-draft", { auth: true }],
+  ["ebook-writing", "Workspace", "Ebook — generating", "/ebooks/b-writing", { auth: true }],
+  ["ebook-completed", "Workspace", "Ebook — completed", "/ebooks/b-done", { auth: true }],
+  ["ebook-failed", "Workspace", "Ebook — failed / resumable", "/ebooks/b-failed", { auth: true }],
+  ["billing", "Workspace", "Billing & credits", "/billing", { auth: true }],
+  ["editor", "Workspace", "Editor", "/ebooks/b-done/edit", { auth: true, fullPage: false, wait: 3500 }],
+
   ["landing", "Marketing", "Landing page", "/", {}],
   ["landing-cookie", "Marketing", "Landing — cookie banner (first visit)", "/", { consent: false, fullPage: false }],
   ["ai-ebook-generator", "Marketing", "AI ebook generator (SEO page)", "/ai-ebook-generator", {}],
@@ -46,16 +56,6 @@ const SCREENS = [
   ["forgot-password", "Auth", "Forgot password", "/forgot-password", {}],
   ["check-email", "Auth", "Check your email", "/check-email?email=anna%40example.com", {}],
   ["reset-password", "Auth", "Reset password", "/reset-password?tokenId=x&token=y", {}],
-
-  ["dashboard", "App", "Dashboard / library", "/dashboard", { auth: true }],
-  ["dashboard-empty", "App", "Dashboard — empty library", "/dashboard", { auth: true, emptyLibrary: true }],
-  ["new-ebook", "App", "New ebook — brief form", "/ebooks/new", { auth: true }],
-  ["ebook-draft", "App", "Ebook draft — knowledge + blueprint", "/ebooks/b-draft", { auth: true }],
-  ["ebook-writing", "App", "Ebook — generating", "/ebooks/b-writing", { auth: true }],
-  ["ebook-completed", "App", "Ebook — completed", "/ebooks/b-done", { auth: true }],
-  ["ebook-failed", "App", "Ebook — failed / resumable", "/ebooks/b-failed", { auth: true }],
-  ["billing", "App", "Billing & credits", "/billing", { auth: true }],
-  ["editor", "App", "Editor", "/ebooks/b-done/edit", { auth: true, fullPage: false, wait: 3500 }],
 
   ["landing-dark", "Dark mode", "Landing — dark", "/", { dark: true }],
   ["login-dark", "Dark mode", "Log in — dark", "/login", { dark: true }],
@@ -286,6 +286,12 @@ for (const [id, section, title, route, opts] of SCREENS) {
 await browser.close();
 fs.writeFileSync(path.join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2));
 fs.copyFileSync(path.join(HERE, "board.html"), path.join(OUT, "index.html"));
-const boardJs = fs.readFileSync(path.join(OUT, "index.html"), "utf8").replace("/*__MANIFEST__*/[]", JSON.stringify(manifest));
+// Optional design brief (design/snapshot/brief.html) shown in the board's sidebar.
+const briefFile = path.join(HERE, "brief.html");
+const brief = fs.existsSync(briefFile) ? `<div class="brief">${fs.readFileSync(briefFile, "utf8")}</div>` : "";
+const boardJs = fs
+  .readFileSync(path.join(OUT, "index.html"), "utf8")
+  .replace("/*__MANIFEST__*/[]", JSON.stringify(manifest))
+  .replace("<!--__BRIEF__-->", brief);
 fs.writeFileSync(path.join(OUT, "index.html"), boardJs);
 console.log(`\nBoard: ${path.join(OUT, "index.html")}`);

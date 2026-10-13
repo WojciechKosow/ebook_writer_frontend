@@ -29,6 +29,9 @@ aside { background: var(--panel); border-right: 1px solid var(--line); display: 
 aside header { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
 aside h1 { font-size: 14px; margin: 0; font-weight: 600; }
 aside p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.brief { margin-top: 12px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--canvas); font-size: 12px; line-height: 1.5; }
+.brief b { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.brief p { margin: 0 0 6px; color: var(--ink); }
 .layers { overflow: auto; padding: 6px 0 16px; flex: 1; }
 .layers h2 { font: 600 10.5px/1 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 14px 16px 6px; }
 .layers button { display: flex; justify-content: space-between; gap: 8px; width: 100%; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; padding: 5px 16px; cursor: pointer; }
@@ -68,6 +71,7 @@ aside p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
     <header>
       <h1>Scrivetta — screens</h1>
       <p>Static snapshots of every page, captured from the running app with sample data. Click a frame to open it at full size.</p>
+      <!--__BRIEF__-->
     </header>
     <nav class="layers" id="layers" aria-label="Frames"></nav>
   </aside>
