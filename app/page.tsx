@@ -17,7 +17,7 @@ import {
 import { LandingDemo } from "@/components/landing/landing-demo";
 import { Faq } from "@/components/landing/faq";
 import { BRAND } from "@/lib/brand";
-import { SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/site";
+import { SHARE_DESCRIPTION, SHARE_TITLE } from "@/lib/site";
 
 // Title/description come from the root layout defaults; only the URL is set here.
 // openGraph is restated in full because metadata objects merge shallowly.
@@ -26,8 +26,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: BRAND,
-    title: `${BRAND} — ${SITE_TAGLINE}`,
-    description: SITE_DESCRIPTION,
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
     url: "/",
     locale: "en_US",
   },
