@@ -80,11 +80,11 @@ export const BLOG_POSTS: BlogPost[] = [
       "turn your notes into an ebook",
     ],
     date: "2026-10-13",
-    readingMinutes: 7,
+    readingMinutes: 8,
     cta: {
       heading: "Test your ebook idea tonight",
       accent: "tonight",
-      text: "Upload the notes you already have and see the chapter blueprint before you spend a credit. Planning is free.",
+      text: "Upload the notes or project you already have and get a chapter blueprint built from it. The blueprint is free; you only pay if you generate the book.",
       label: "Test your ebook idea tonight",
       href: EBOOK_TIME_SIGNUP,
     },
@@ -94,24 +94,24 @@ export const BLOG_POSTS: BlogPost[] = [
         a:
           "Written the traditional way, a short practical ebook of 60 to 100 pages usually takes several weeks of part-time work: outlining, drafting, editing, and formatting. " +
           "Four to five weeks is a common estimate, and it often runs longer around a full-time job. " +
-          "If you start from notes you already have and use an AI draft, a first version you can show people fits in an evening. A polished version still needs your own editing time.",
-      },
-      {
-        q: "Can you write an ebook in a day?",
-        a:
-          "You can make a first version in a day if you start from existing material such as notes, documents, or a project. " +
-          "That version is good for testing whether people want the book. A book worth selling usually needs at least one more pass where you add your own examples and check every fact.",
+          "Starting from material you already have and an AI draft changes the math: in my own test, Scrivetta generated a 300+ page book from a Spring Boot project in about 30 minutes. Reading and editing it is where your time goes.",
       },
       {
         q: "How do I know if my ebook idea will sell?",
         a:
-          "Show people something concrete (a title, a one-sentence promise, a table of contents, and a sample chapter) and ask for a real commitment: a pre-order, a payment, or a request for early access. " +
+          "Show people something concrete (a title, a one-sentence promise, a table of contents, and ideally a sample chapter) and ask for a real commitment: a pre-order, a payment, or a request for early access. " +
           "Compliments are not a signal. People asking when they can get it, or paying for it, are.",
       },
       {
-        q: "Do I need to upload anything to use Scrivetta?",
+        q: "Can I turn a code project into an ebook?",
         a:
-          "No. You can draft a book from a short brief alone. The result leans on general knowledge, though, so for a book that sounds like you, upload your notes, documents, or project files and Scrivetta writes from them first.",
+          "Yes. Upload the project as a ZIP and Scrivetta reads the code, configuration, build files, and docs, and skips dependency folders, build output, binaries, lockfiles, and likely secret files such as .env and private keys. " +
+          "The chapters are then written around your project's real code and names, not generic examples.",
+      },
+      {
+        q: "What does Scrivetta cost to try?",
+        a:
+          "Building the chapter blueprint from your material is free: creating an account, uploading files, answering the questions, and seeing the length estimate. You pay only when you generate the book itself.",
       },
     ],
     // Author notes inside the body are HTML comments: the page strips them, so
@@ -129,9 +129,9 @@ Take a typical practical ebook: 60 to 100 pages, somewhere around 15,000 to 25,0
 - **Outline:** a few evenings deciding what goes in and in what order.
 - **First draft:** if you write for an hour a night and keep 500 to 800 words of it, the draft alone is about a month of nights.
 - **Editing:** at least one full rewrite, usually two. Another week or two.
-- **Formatting:** fonts, headings, a table of contents, a cover, and a PDF that doesn't look homemade. A weekend, if it goes well.
+- **Formatting:** a table of contents, a cover, and a PDF that doesn't look homemade. A weekend, if it goes well.
 
-These are working numbers, not a study, so plug in your own pace. But the shape is the same for almost everyone: four to five weeks is the optimistic version. Add a sick week, a busy month at work, and a few nights where you stare at chapter three, and it becomes two or three months.
+These are working numbers, not a study, so plug in your own pace. But the shape is the same for almost everyone: four to five weeks is the optimistic version. Add a busy month at work and a few nights staring at chapter three, and it becomes two or three months.
 
 ## Why most ebooks don't sell
 
@@ -141,7 +141,7 @@ Usually not because they're badly written. The common reasons are more boring:
 - **The promise is vague.** "A guide to Spring Boot" competes with the whole internet. "Build a working shop backend in Spring Boot, from empty repo to deployed API" gives a specific person a reason to buy.
 - **Nobody saw it.** The book launched to an audience of zero, and the author took the silence as an answer.
 
-Notice that none of these get fixed by writing faster, or even by writing better. They get fixed by finding out early.
+None of these get fixed by writing faster, or even by writing better. They get fixed by finding out early.
 
 ## The real problem isn't writing speed
 
@@ -161,13 +161,14 @@ It's easy to think that not writing the book costs nothing. It does cost somethi
 
 ## How to test an ebook idea before you write it
 
-The fix isn't to write faster. It's to make being wrong cheap. If testing an idea costs one evening instead of five weeks, you can afford to be wrong, and you can afford to test the next idea too.
+The fix isn't to write faster. It's to make being wrong cheap. If testing an idea costs one evening instead of five weeks, you can afford to be wrong.
 
 1. **Write the promise in one sentence.** "This book helps [who] to [do what]." If you can't finish that sentence, no amount of writing will save the book.
-2. **Gather what you already have.** Notes, docs, slide decks, a project's README, long answers you've written in Slack or email. You have written more of this book than you think.
-3. **Turn it into a first version in an evening.** Not the final book. Something real enough that a person can look at the table of contents and a sample chapter and decide whether they want it.
-4. **Put it in front of people.** Share it where your readers already are: your newsletter, LinkedIn, a community you're part of, your clients. Offer early access at a low price, or a free copy in exchange for feedback.
-5. **Watch what people do, not what they say.** "Cool idea!" is noise. Someone asking when they can get it, paying for early access, or asking about a specific chapter: that's signal.
+2. **Gather what you already have.** Notes, docs, slide decks, a project repository, long answers you've written in Slack or email. You have written more of this book than you think.
+3. **Get a table of contents built from that material.** This is the cheapest test there is. A list of chapter titles tells a reader exactly what they'd get, and it takes you minutes to share.
+4. **Turn it into a first version.** Not the final book. Something real enough that a person can read a sample chapter and decide whether they want the rest.
+5. **Put it in front of people.** Share it where your readers already are: your newsletter, LinkedIn, a community you're part of, your clients. Offer early access at a low price, or a free copy in exchange for feedback.
+6. **Watch what people do, not what they say.** "Cool idea!" is noise. Someone asking when they can get it, paying for early access, or asking about a specific chapter: that's signal.
 
 If nobody bites, you lost an evening, not five weeks. If people do bite, you know which book to make properly, and you already have readers waiting for it.
 
@@ -175,28 +176,33 @@ If nobody bites, you lost an evening, not five weeks. If people do bite, you kno
 
 I built [${BRAND}](/) because I had exactly this problem: plenty of material, and a book I kept not writing. <!-- TODO(author): add one or two sentences of your own story here: what you knew, why the book never got written. -->
 
-Here is what it does, without the marketing.
+**What you give it**
 
-**What you enter**
+- **A short brief:** your topic, who the book is for, what it should help them do, the style, and the language.
+- **Your material:** PDF, DOCX, TXT, or Markdown files, pasted notes, or a whole project as a ZIP. With a code project, ${BRAND} reads the code, config, build files, and docs, and skips dependency folders, build output, binaries, lockfiles, and likely secret files such as \`.env\` and private keys.
+- **A depth:** Quick, Standard, or Comprehensive. There's no page-count box. ${BRAND} estimates the length from your material and the depth, and shows you that estimate before anything is written.
 
-- **The brief:** your topic, who the book is for, what it should help them do, the style, and the language.
-- **Your source material:** upload PDF, DOCX, TXT, or Markdown files, a ZIP of a project folder, or paste notes directly.
-- **The depth:** Quick, Standard, or Comprehensive. There's no page-count box: ${BRAND} estimates the length from your material and the depth you pick, and shows you that estimate before you commit.
+**What happens before a word is written**
 
-**What happens**
+- It pulls out what your material actually contains: topics, processes, examples, your decisions and mistakes, and the order you did things in.
+- It proposes a chapter blueprint, with each chapter tied to the material it draws on. You rename, reorder, add, or remove chapters.
+- Where your material has gaps, it asks you a few questions. Skip one and that part stays general; it isn't filled with made-up details.
 
-- ${BRAND} organises your material and proposes a chapter blueprint, with each chapter tied to the material it draws on.
-- Where your material has gaps, it asks you questions instead of making things up.
-- You rename, reorder, add, or remove chapters, answer the questions, and approve. Only then does it write the book, chapter by chapter, followed by an editing pass across the whole manuscript.
+This whole step is free. That makes the blueprint a test in itself: a table of contents built from your own work, ready to show people before you pay for anything.
+
+**What happens when you generate**
+
+- The book is written chapter by chapter, using your project's real code and names. Each chapter knows what earlier chapters covered, so it refers back instead of explaining the same thing twice.
+- An editing pass then reads each chapter against the whole book, looking for repetition, contradictions, and filler.
+- If the book turns out noticeably longer than the length you agreed to, generation pauses and asks you whether to continue, keep it shorter, or cancel.
 
 **What you get**
 
-- A typeset 6×9 inch PDF with a cover, a table of contents, and chapter openers.
-- An editor where you can rewrite text, reorder chapters, and change the cover. The PDF updates with your changes.
+- A typeset 6×9 inch PDF with a cover, a table of contents, and embedded fonts. Code is set in monospace, and lines too long for the page are carried over visibly instead of breaking silently.
+- A quality report listing anything that needs a look, by chapter and page.
+- An editor where you can rewrite text, add, remove, or reorder chapters, place images, and change the cover. The PDF is rebuilt with your changes.
 
-Planning is free: creating an account, uploading material, and getting the blueprint and length estimate cost nothing. Writing the book uses credits, where 1 credit is 1 finished page. More detail is on the [AI ebook generator page](/ai-ebook-generator).
-
-<!-- TODO(author): verify a typical generation time for a Quick-depth book and, if it's reliably short, say so here ("the draft takes about [X]"). Until then the article only promises an evening for the whole loop, not a generation speed. -->
+More detail is on the [AI ebook generator page](/ai-ebook-generator).
 
 ## Where AI drafts fall short, and how to fix it
 
@@ -211,25 +217,27 @@ An AI draft works when it carries your fingerprints:
 
 That's why the material you upload matters more than the prompt you type. And it's why the first version is a test, not the product. Use it to find out whether people want the book, then put your real effort into the version they asked for. If you plan to sell on Amazon, read [whether you can publish a book written by AI](/blog/can-you-publish-a-book-written-by-ai) first; it covers disclosure and copyright.
 
-## Case study: a Spring Boot ebook from a real shop backend
+## Case study: a 300-page Spring Boot ebook from a real shop backend
 
 <!-- TODO(author): replace every [BRACKETED] placeholder below with real data. Never estimate. -->
 
 I tested this on my own material: a shop backend I built in Spring Boot. [SHORT DESCRIPTION: what the shop does, the stack, what's in the repo.]
 
-**What I put in:** [SOURCE MATERIAL: exactly what you uploaded, e.g. the README, docs, selected source files] and this brief:
+**What I put in:** the project as a ZIP, [OTHER MATERIAL: notes or docs, if any], and this brief:
 
 <figure class="post-figure post-figure--todo">
   <div class="post-figure__placeholder">[SCREENSHOT: input]</div>
   <figcaption>The brief and source material I gave ${BRAND}.</figcaption>
 </figure>
 <!-- When the screenshot is ready, replace the placeholder div above with:
-<img src="/blog/how-long-does-it-take-to-write-an-ebook/input.png" alt="Scrivetta's new-ebook form filled in for a Spring Boot shop backend book, with project files uploaded as source material" width="1440" height="900" loading="lazy" decoding="async">
+<img src="/blog/how-long-does-it-take-to-write-an-ebook/input.png" alt="Scrivetta's new-ebook form filled in for a Spring Boot shop backend book, with the project ZIP uploaded as source material" width="1440" height="900" loading="lazy" decoding="async">
 (save the file to public/blog/how-long-does-it-take-to-write-an-ebook/, set the real width/height, and remove post-figure--todo from the figure) -->
 
-**How long it took:** [TIME IT TOOK] from upload to finished PDF, plus [TIME SPENT EDITING] of my own editing.
+**How long it took:** about 30 minutes of generation, for a book of more than 300 pages. Then [TIME SPENT EDITING] of my own reading and editing.
 
-**What came out:** a [PAGE COUNT]-page PDF with [NUMBER OF CHAPTERS] chapters.
+That's a big book on purpose: a whole backend is a lot of material. A test version doesn't need to be anywhere near that size.
+
+**What came out:** a [EXACT PAGE COUNT]-page PDF with [NUMBER OF CHAPTERS] chapters.
 
 <figure class="post-figure post-figure--todo">
   <div class="post-figure__placeholder">[SCREENSHOT: output PDF]</div>
@@ -247,7 +255,7 @@ I tested this on my own material: a shop backend I built in Spring Boot. [SHORT 
 
 ## The short version
 
-Writing an ebook the traditional way takes weeks, and you only learn whether anyone wants it at the end. Flip the order. Build a rough first version from what you already know, show it to the people it's for, and let their response tell you whether to spend the weeks.
+Writing an ebook the traditional way takes weeks, and you only learn whether anyone wants it at the end. Flip the order. Build a table of contents and a rough first version from what you already know, show it to the people it's for, and let their response tell you whether to spend the weeks.
 
 For the full process from idea to published book, read [how to write an ebook with AI](/how-to-write-an-ebook-with-ai), or browse more guides on the [${BRAND} blog](/blog). If you'd rather find out tonight, [test your ebook idea with ${BRAND}](${EBOOK_TIME_SIGNUP}).`,
   },
