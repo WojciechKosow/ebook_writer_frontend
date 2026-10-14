@@ -5,6 +5,7 @@ import type {
   CheckoutResponse,
   CreditBalanceResponse,
   CreditPack,
+  DownloadInfo,
   EbookContentResponse,
   EbookContentUpdateInput,
   EbookImage,
@@ -18,7 +19,11 @@ import type {
   KnowledgeOverview,
   KnowledgeSource,
   OrderStatus,
+  PublicStore,
   QualityReport,
+  StoreCheckoutResponse,
+  StoreDashboard,
+  StoreOrderStatusResponse,
   SubscriptionResponse,
   User,
 } from "./types";
@@ -562,5 +567,70 @@ export const subscriptionApi = {
 export const paymentApi = {
   order(token: string, orderId: string) {
     return request<OrderStatus>(`/api/payments/orders/${orderId}`, { token });
+  },
+};
+
+// ---- Creator store: the author's own store (authenticated) ------------------
+
+export const storeApi = {
+  /** Null when the author has no store yet (204). */
+  get(token: string) {
+    return request<StoreDashboard | null>("/api/store", { token });
+  },
+  create(token: string, input: { slug: string; name: string; description?: string }) {
+    return request<StoreDashboard>("/api/store", { method: "POST", body: input, token });
+  },
+  update(token: string, input: { name: string; description?: string }) {
+    return request<StoreDashboard>("/api/store", { method: "PUT", body: input, token });
+  },
+  publish(token: string) {
+    return request<StoreDashboard>("/api/store/publish", { method: "POST", token });
+  },
+  unpublish(token: string) {
+    return request<StoreDashboard>("/api/store/unpublish", { method: "POST", token });
+  },
+  addProduct(token: string, input: { ebookId: string; priceCents: number; title?: string; description?: string }) {
+    return request<StoreDashboard>("/api/store/products", { method: "POST", body: input, token });
+  },
+  updateProduct(
+    token: string,
+    productId: string,
+    input: { title?: string; description?: string; priceCents?: number; active?: boolean },
+  ) {
+    return request<StoreDashboard>(`/api/store/products/${productId}`, { method: "PATCH", body: input, token });
+  },
+  /** A fresh Stripe-hosted onboarding link ("Connect Stripe" / "Continue in Stripe"). */
+  connectStripe(token: string, country?: string) {
+    return request<{ url: string }>("/api/store/stripe/connect", {
+      method: "POST",
+      body: country ? { country } : {},
+      token,
+    });
+  },
+  /** Re-fetch the Stripe account server-side (after returning from Stripe). */
+  syncStripe(token: string) {
+    return request<StoreDashboard>("/api/store/stripe/sync", { method: "POST", token });
+  },
+};
+
+// ---- Creator store: buyer side (public, no account) --------------------------
+
+export const publicStoreApi = {
+  store(slug: string) {
+    return request<PublicStore>(`/api/public/stores/${encodeURIComponent(slug)}`);
+  },
+  /** Only the product id is sent — price and seller come from the backend. */
+  checkout(productId: string) {
+    return request<StoreCheckoutResponse>("/api/public/checkout", { method: "POST", body: { productId } });
+  },
+  order(orderId: string) {
+    return request<StoreOrderStatusResponse>(`/api/public/orders/${encodeURIComponent(orderId)}`);
+  },
+  download(token: string) {
+    return request<DownloadInfo>(`/api/public/downloads/${encodeURIComponent(token)}`);
+  },
+  /** Plain link for a native browser download (counts one download). */
+  downloadFileUrl(token: string) {
+    return `${API_URL}/api/public/downloads/${encodeURIComponent(token)}/file`;
   },
 };
