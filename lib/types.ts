@@ -529,3 +529,79 @@ export interface QualityReport {
   lengths: { chapter: number; title: string; plannedPages: number; actualPages: number; deviation: number }[];
   repeatedPhrases: { phrase: string; occurrences: number; chapters: number[] }[];
 }
+
+// ---- Creator stores (Stripe Connect) ---------------------------------------
+
+/** The author's Stripe account as last fetched from Stripe by the backend. */
+export type StripeConnectState = "NOT_CONNECTED" | "ACTION_REQUIRED" | "READY";
+
+export interface StripeStatus {
+  state: StripeConnectState;
+  chargesEnabled: boolean;
+  detailsSubmitted: boolean;
+  currentlyDue: string[];
+  syncedAt: string | null;
+}
+
+export interface StoreProduct {
+  id: string;
+  ebookId: string;
+  title: string;
+  description: string | null;
+  /** Price in cents (USD). */
+  priceCents: number;
+  currency: string;
+  active: boolean;
+}
+
+export interface StoreDashboard {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  published: boolean;
+  /** Whether the author has Scrivetta PRO — required to publish and sell. */
+  pro: boolean;
+  stripe: StripeStatus;
+  products: StoreProduct[];
+}
+
+export interface PublicStoreProduct {
+  id: string;
+  title: string;
+  description: string | null;
+  priceCents: number;
+  currency: string;
+}
+
+export interface PublicStore {
+  slug: string;
+  name: string;
+  description: string | null;
+  /** False with an honest reason when the store can't take payments right now. */
+  purchasable: boolean;
+  unavailableReason: string | null;
+  products: PublicStoreProduct[];
+}
+
+export type StoreOrderStatus = "PENDING" | "PAID" | "EXPIRED" | "REFUNDED";
+
+export interface StoreOrderStatusResponse {
+  orderId: string;
+  status: StoreOrderStatus;
+  productTitle: string | null;
+  storeSlug: string | null;
+  storeName: string | null;
+}
+
+export interface StoreCheckoutResponse {
+  orderId: string;
+  checkoutUrl: string;
+}
+
+export interface DownloadInfo {
+  productTitle: string;
+  storeName: string | null;
+  downloadsRemaining: number;
+  expiresAt: string;
+}

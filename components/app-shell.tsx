@@ -24,6 +24,12 @@ const WORKSPACE: NavItem[] = [
     icon: IconBooks,
     isActive: (p) => p === "/dashboard" || (p.startsWith("/ebooks/") && p !== "/ebooks/new"),
   },
+  {
+    href: "/store",
+    label: "Your store",
+    icon: IconStore,
+    isActive: (p) => p === "/store",
+  },
 ];
 
 const ACCOUNT: NavItem[] = [
@@ -233,6 +239,15 @@ function IconCard({ className = "" }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="2" y="5" width="20" height="14" rx="2" />
       <path d="M2 10h20" />
+    </svg>
+  );
+}
+function IconStore({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 9l1.5-5h15L21 9" />
+      <path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9z" />
+      <path d="M5 13v7h14v-7" />
     </svg>
   );
 }
