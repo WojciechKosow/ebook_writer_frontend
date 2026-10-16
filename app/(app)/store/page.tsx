@@ -4,10 +4,11 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { ApiError, ebookApi, storeApi } from "@/lib/api";
+import { ApiError, apiAsset, ebookApi, storeApi } from "@/lib/api";
+import { StoreCover } from "@/components/store/store-cover";
 import { formatPrice } from "@/lib/pricing";
 import type { EbookStatusResponse, StoreDashboard, StoreProduct } from "@/lib/types";
-import { Alert, Button, Field, Spinner, TextAreaField, controlBase } from "@/components/ui";
+import { Alert, Button, ButtonLink, Field, Spinner, TextAreaField, controlBase } from "@/components/ui";
 
 const card = "mt-6 rounded-2xl border border-hairline bg-surface p-6";
 const h2 = "font-display text-[22px] font-normal leading-tight text-foreground";
@@ -113,9 +114,11 @@ function StoreInner() {
         <CreateStore token={token!} onCreated={setStore} />
       ) : (
         <>
-          <StoreSettings token={token!} store={store} onChange={setStore} />
-          <StripeCard token={token!} store={store} />
+          <PublishBar token={token!} store={store} onChange={setStore} />
+          <Checklist store={store} />
+          <ProfileForm token={token!} store={store} onChange={setStore} />
           <Products token={token!} store={store} ebooks={ebooks} onChange={setStore} />
+          <StripeCard token={token!} store={store} />
         </>
       )}
     </div>
@@ -166,62 +169,62 @@ function CreateStore({ token, onCreated }: { token: string; onCreated: (s: Store
   );
 }
 
-// ---- Settings + publish ------------------------------------------------------
+// ---- Publish + share ---------------------------------------------------------
 
-function StoreSettings({ token, store, onChange }: {
+function PublishBar({ token, store, onChange }: {
   token: string; store: StoreDashboard; onChange: (s: StoreDashboard) => void;
 }) {
-  const [name, setName] = useState(store.name);
-  const [description, setDescription] = useState(store.description ?? "");
-  const [busy, setBusy] = useState<"save" | "publish" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  async function save() {
-    setBusy("save");
-    setError(null);
-    try {
-      onChange(await storeApi.update(token, { name: name.trim(), description }));
-    } catch (e) {
-      setError(message(e, "Could not save."));
-    } finally {
-      setBusy(null);
-    }
-  }
+  const path = `/store/${store.slug}`;
+  const shown = `scrivetta.com${path}`;
 
   async function togglePublish() {
-    setBusy("publish");
+    setBusy(true);
     setError(null);
     try {
       onChange(store.published ? await storeApi.unpublish(token) : await storeApi.publish(token));
     } catch (e) {
       setError(message(e, "Could not change the store's visibility."));
     } finally {
-      setBusy(null);
+      setBusy(false);
+    }
+  }
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${path}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Could not copy — select the address and copy it by hand.");
     }
   }
 
   return (
     <div className={card}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className={h2}>Store</h2>
-          <p className="mt-1 text-sm text-muted">
-            {store.published ? (
-              <>
-                Live at{" "}
-                <Link href={`/store/${store.slug}`} className="font-medium text-accent hover:underline">
-                  /store/{store.slug}
-                </Link>
-              </>
-            ) : (
-              <>Not published — only you can see this.</>
-            )}
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${store.published
+            ? "border-[color-mix(in_oklab,var(--good)_35%,transparent)] bg-good-soft text-good"
+            : "border-hairline-2 text-muted"}`}>
+            {store.published ? "Live" : "Not published"}
+          </span>
+          <span className="truncate text-sm text-foreground-2">{shown}</span>
         </div>
-        <Button variant={store.published ? "secondary" : "primary"} loading={busy === "publish"}
-          disabled={!store.published && !store.pro} onClick={togglePublish}>
-          {store.published ? "Unpublish" : "Publish store"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {store.published && (
+            <>
+              <Button variant="secondary" onClick={copy}>{copied ? "Copied" : "Copy link for your bio"}</Button>
+              <ButtonLink href={path} variant="secondary">View store</ButtonLink>
+            </>
+          )}
+          <Button variant={store.published ? "ghost" : "primary"} loading={busy}
+            disabled={!store.published && !store.pro} onClick={togglePublish}>
+            {store.published ? "Unpublish" : "Publish store"}
+          </Button>
+        </div>
       </div>
       {!store.pro && (
         <div className="mt-4">
@@ -231,17 +234,187 @@ function StoreSettings({ token, store, onChange }: {
           </Alert>
         </div>
       )}
-      <div className="mt-5 flex flex-col gap-4">
-        <Field label="Store name" name="storeName" value={name} maxLength={80}
-          onChange={(e) => setName(e.target.value)} />
-        <TextAreaField label="About" name="storeDescription" value={description} maxLength={2000}
-          hint="A few words buyers see at the top of your store." onChange={(e) => setDescription(e.target.value)} />
-        {error && <Alert>{error}</Alert>}
-        <div>
-          <Button variant="secondary" loading={busy === "save"} disabled={!name.trim()} onClick={save}>
-            Save
-          </Button>
+      {error && <div className="mt-4"><Alert>{error}</Alert></div>}
+    </div>
+  );
+}
+
+// ---- Ready-to-sell checklist ---------------------------------------------------
+
+function Checklist({ store }: { store: StoreDashboard }) {
+  const listed = store.products.filter((p) => p.active).length;
+  const items: { done: boolean; label: string; href: string }[] = [
+    { done: !!store.logoUrl && !!store.headline, label: "Store logo and headline", href: "#brand" },
+    { done: !!store.description && !!store.photoUrl, label: "About you, with a photo", href: "#about-you" },
+    { done: listed > 0, label: listed > 0 ? `${listed} ebook${listed === 1 ? "" : "s"} for sale` : "At least one ebook for sale", href: "#ebooks-sec" },
+    { done: store.stripe.state === "READY", label: "Payments ready in Stripe", href: "#payments" },
+    { done: store.published, label: "Store published", href: "#" },
+  ];
+  const done = items.filter((i) => i.done).length;
+  if (done === items.length) return null;
+  return (
+    <div className={card}>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className={h2}>Ready to sell?</h2>
+        <span className="text-sm font-semibold text-muted">{done} of {items.length}</span>
+      </div>
+      <ul className="mt-4 flex flex-col gap-2.5 text-sm">
+        {items.map((i) => (
+          <li key={i.label} className="flex items-center gap-3">
+            <span aria-hidden className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${i.done ? "bg-good-soft text-good" : "border border-hairline-2 text-faint"}`}>
+              {i.done ? "✓\uFE0E" : ""}
+            </span>
+            <span className={i.done ? "text-muted" : "text-foreground"}>{i.label}</span>
+            {!i.done && i.href !== "#" && <a href={i.href} className="font-semibold text-accent hover:underline">Fix</a>}
+            <span className="sr-only">{i.done ? "done" : "to do"}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ---- Profile: brand + about you -------------------------------------------------
+
+function ProfileForm({ token, store, onChange }: {
+  token: string; store: StoreDashboard; onChange: (s: StoreDashboard) => void;
+}) {
+  const [form, setForm] = useState({
+    name: store.name,
+    headline: store.headline ?? "",
+    authorName: store.authorName ?? "",
+    description: store.description ?? "",
+    contactEmail: store.contactEmail ?? "",
+    instagramUrl: store.instagramUrl ?? "",
+    tiktokUrl: store.tiktokUrl ?? "",
+    websiteUrl: store.websiteUrl ?? "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [k]: e.target.value });
+    setSaved(false);
+  };
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    setFieldErrors({});
+    try {
+      onChange(await storeApi.update(token, { ...form, name: form.name.trim() }));
+      setSaved(true);
+    } catch (e) {
+      if (e instanceof ApiError && e.fieldErrors) setFieldErrors(e.fieldErrors);
+      setError(message(e, "Could not save."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <div id="brand" className={`${card} scroll-mt-6`}>
+        <h2 className={h2}>Brand</h2>
+        <div className="mt-4 flex flex-col gap-4">
+          <ImagePicker token={token} kind="logo" url={store.logoUrl} round onChange={onChange}
+            label="Logo" hint="PNG, JPG or WebP · square works best · up to 3 MB" />
+          <Field label="Store name" name="storeName" value={form.name} maxLength={80} onChange={set("name")}
+            error={fieldErrors.name} />
+          <div className="flex flex-col gap-1.5">
+            <Field label="Headline" name="headline" value={form.headline} maxLength={160} onChange={set("headline")}
+              placeholder="Bake bread you're proud of — in your own kitchen." error={fieldErrors.headline} />
+            <p className="text-xs text-faint">The first thing people see. Say what readers get, not what you sell.</p>
+          </div>
         </div>
+      </div>
+
+      <div id="about-you" className={`${card} scroll-mt-6`}>
+        <h2 className={h2}>About you</h2>
+        <div className="mt-4 flex flex-col gap-4">
+          <ImagePicker token={token} kind="photo" url={store.photoUrl} onChange={onChange}
+            label="Your photo" hint="A friendly photo of you or your work · up to 3 MB" />
+          <Field label="Your name (as readers see it)" name="authorName" value={form.authorName} maxLength={80}
+            onChange={set("authorName")} placeholder="Jane Morrow" error={fieldErrors.authorName} />
+          <TextAreaField label="About you" name="storeDescription" value={form.description} maxLength={2000}
+            hint="2–3 sentences in your own words: who you are and what readers get." onChange={set("description")} />
+          <Field label="Contact email for buyers" name="contactEmail" type="email" value={form.contactEmail}
+            maxLength={254} onChange={set("contactEmail")} error={fieldErrors.contactEmail} />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Instagram" name="instagramUrl" value={form.instagramUrl} placeholder="https://instagram.com/…"
+              onChange={set("instagramUrl")} error={fieldErrors.instagramUrl} />
+            <Field label="TikTok" name="tiktokUrl" value={form.tiktokUrl} placeholder="https://tiktok.com/@…"
+              onChange={set("tiktokUrl")} error={fieldErrors.tiktokUrl} />
+            <Field label="Website" name="websiteUrl" value={form.websiteUrl} placeholder="https://…"
+              onChange={set("websiteUrl")} error={fieldErrors.websiteUrl} />
+          </div>
+          {error && <Alert>{error}</Alert>}
+          <div className="flex items-center gap-3">
+            <Button loading={busy} disabled={!form.name.trim()} onClick={save}>Save profile</Button>
+            {saved && <span className="text-sm text-good">Saved — buyers see it right away.</span>}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ImagePicker({ token, kind, url, round = false, label, hint, onChange }: {
+  token: string; kind: "logo" | "photo"; url: string | null; round?: boolean; label: string; hint: string;
+  onChange: (s: StoreDashboard) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const src = apiAsset(url);
+
+  async function upload(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      onChange(await storeApi.uploadImage(token, kind, file));
+    } catch (e) {
+      setError(message(e, "Could not upload the image."));
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  }
+
+  async function remove() {
+    setBusy(true);
+    setError(null);
+    try {
+      onChange(await storeApi.removeImage(token, kind));
+    } catch (e) {
+      setError(message(e, "Could not remove the image."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-4">
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" className={`h-16 w-16 object-cover ${round ? "rounded-full" : "rounded-xl"}`} />
+      ) : (
+        <span aria-hidden className={`flex h-16 w-16 items-center justify-center border border-dashed border-hairline-2 text-xs text-faint ${round ? "rounded-full" : "rounded-xl"}`}>
+          None
+        </span>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="text-sm font-medium text-foreground-2">{label}</span>
+        <span className="text-xs text-faint">{hint}</span>
+        {error && <span className="text-xs text-red-600 dark:text-red-400">{error}</span>}
+      </div>
+      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
+        aria-label={`Upload ${label.toLowerCase()}`} onChange={(e) => upload(e.target.files?.[0])} />
+      <div className="flex gap-2">
+        <Button variant="secondary" loading={busy} onClick={() => input.current?.click()}>{src ? "Replace" : "Upload"}</Button>
+        {src && <Button variant="ghost" disabled={busy} onClick={remove}>Remove</Button>}
       </div>
     </div>
   );
@@ -268,7 +441,7 @@ function StripeCard({ token, store }: { token: string; store: StoreDashboard }) 
   }
 
   return (
-    <div className={card}>
+    <div id="payments" className={`${card} scroll-mt-6`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className={h2}>Payments</h2>
         <StatusPill state={state} />
@@ -364,14 +537,21 @@ function Products({ token, store, ebooks, onChange }: {
   }
 
   return (
-    <div className={card}>
-      <h2 className={h2}>Ebooks for sale</h2>
-      <p className="mt-1 text-sm text-muted">Prices are in USD. Buyers get a download link by email.</p>
+    <div id="ebooks-sec" className={`${card} scroll-mt-6`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className={h2}>Ebooks</h2>
+        <span className="text-xs text-faint">The first one is featured · prices in USD</span>
+      </div>
+      <p className="mt-1 text-sm text-muted">
+        Each ebook gets its own page with its cover, chapter list and your description. Buyers get a download link by
+        email.
+      </p>
 
       {store.products.length > 0 && (
         <ul className="mt-4 divide-y divide-hairline">
-          {store.products.map((p) => (
-            <ProductRow key={p.id} token={token} product={p} onChange={onChange} />
+          {store.products.map((p, i) => (
+            <ProductRow key={p.id} token={token} product={p} slug={store.slug} published={store.published}
+              first={i === 0} last={i === store.products.length - 1} onChange={onChange} />
           ))}
         </ul>
       )}
@@ -409,18 +589,22 @@ function Products({ token, store, ebooks, onChange }: {
   );
 }
 
-function ProductRow({ token, product, onChange }: {
-  token: string; product: StoreProduct; onChange: (s: StoreDashboard) => void;
+function ProductRow({ token, product, slug, published, first, last, onChange }: {
+  token: string; product: StoreProduct; slug: string; published: boolean; first: boolean; last: boolean;
+  onChange: (s: StoreDashboard) => void;
 }) {
   const [price, setPrice] = useState((product.priceCents / 100).toFixed(2));
+  const [open, setOpen] = useState(false);
+  const [description, setDescription] = useState(product.description ?? "");
+  const [highlights, setHighlights] = useState(product.highlights ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function update(input: { priceCents?: number; active?: boolean }) {
+  async function run(fn: () => Promise<StoreDashboard>) {
     setBusy(true);
     setError(null);
     try {
-      onChange(await storeApi.updateProduct(token, product.id, input));
+      onChange(await fn());
     } catch (e) {
       setError(message(e, "Could not update."));
     } finally {
@@ -430,26 +614,62 @@ function ProductRow({ token, product, onChange }: {
 
   const cents = toCents(price);
   return (
-    <li className="flex flex-wrap items-center gap-3 py-3">
-      <div className="min-w-[180px] flex-1">
-        <p className={`text-sm font-medium ${product.active ? "text-foreground" : "text-faint line-through"}`}>
-          {product.title}
-        </p>
-        <p className="text-xs text-faint">
-          {formatPrice(product.priceCents)}
-          {!product.active && " · hidden"}
-        </p>
-        {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
+    <li className="py-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-0.5">
+          <button type="button" aria-label={`Move ${product.title} up`} disabled={busy || first}
+            onClick={() => run(() => storeApi.moveProduct(token, product.id, "up"))}
+            className="rounded px-1.5 text-faint hover:text-foreground disabled:opacity-30">▲&#xFE0E;</button>
+          <button type="button" aria-label={`Move ${product.title} down`} disabled={busy || last}
+            onClick={() => run(() => storeApi.moveProduct(token, product.id, "down"))}
+            className="rounded px-1.5 text-faint hover:text-foreground disabled:opacity-30">▼&#xFE0E;</button>
+        </div>
+        <div className="w-11 shrink-0"><StoreCover coverUrl={product.coverUrl} title={product.title} className="shadow-none" /></div>
+        <div className="min-w-[160px] flex-1">
+          <p className={`text-sm font-medium ${product.active ? "text-foreground" : "text-faint line-through"}`}>
+            {product.title}
+          </p>
+          <p className="text-xs text-faint">
+            {[first && product.active ? "Featured" : null, product.pageCount > 0 ? `${product.pageCount} pages` : null,
+              formatPrice(product.priceCents), product.active ? null : "hidden"].filter(Boolean).join(" · ")}
+          </p>
+          {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
+        </div>
+        <input aria-label="Price in USD" className={`${controlBase} w-24`} inputMode="decimal" value={price}
+          onChange={(e) => setPrice(e.target.value)} />
+        <Button variant="secondary" disabled={busy || cents === null || cents === product.priceCents}
+          onClick={() => cents !== null && run(() => storeApi.updateProduct(token, product.id, { priceCents: cents }))}>
+          Save price
+        </Button>
+        <Button variant="ghost" disabled={busy} onClick={() => setOpen(!open)} aria-expanded={open}>
+          {open ? "Close" : "Edit page"}
+        </Button>
+        <Button variant="ghost" disabled={busy}
+          onClick={() => run(() => storeApi.updateProduct(token, product.id, { active: !product.active }))}>
+          {product.active ? "Hide" : "Show"}
+        </Button>
       </div>
-      <input aria-label="Price in USD" className={`${controlBase} w-24`} inputMode="decimal" value={price}
-        onChange={(e) => setPrice(e.target.value)} />
-      <Button variant="secondary" disabled={busy || cents === null || cents === product.priceCents}
-        onClick={() => cents !== null && update({ priceCents: cents })}>
-        Save price
-      </Button>
-      <Button variant="ghost" disabled={busy} onClick={() => update({ active: !product.active })}>
-        {product.active ? "Hide" : "Show"}
-      </Button>
+      {open && (
+        <div className="mt-4 flex flex-col gap-4 rounded-xl border border-hairline bg-surface-2 p-4">
+          <TextAreaField label="Description" name={`desc-${product.id}`} value={description} maxLength={2000}
+            hint="Shown under the title. Pre-filled from your book." onChange={(e) => setDescription(e.target.value)} />
+          <TextAreaField label="What readers will be able to do" name={`hl-${product.id}`} value={highlights}
+            maxLength={1500} hint="One point per line. Shown as a list on the ebook page."
+            placeholder={"Start and keep a healthy starter\nShape a loaf that opens up in a home oven"}
+            onChange={(e) => setHighlights(e.target.value)} />
+          <div className="flex flex-wrap items-center gap-3">
+            <Button loading={busy}
+              onClick={() => run(() => storeApi.updateProduct(token, product.id, { description, highlights }))}>
+              Save page
+            </Button>
+            {published && product.active && (
+              <Link href={`/store/${slug}/${product.id}`} className="text-sm font-semibold text-accent hover:underline">
+                View page
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </li>
   );
 }
