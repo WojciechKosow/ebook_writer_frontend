@@ -19,6 +19,7 @@ import type {
   KnowledgeOverview,
   KnowledgeSource,
   OrderStatus,
+  PublicProduct,
   PublicStore,
   QualityReport,
   StoreCheckoutResponse,
@@ -580,8 +581,34 @@ export const storeApi = {
   create(token: string, input: { slug: string; name: string; description?: string }) {
     return request<StoreDashboard>("/api/store", { method: "POST", body: input, token });
   },
-  update(token: string, input: { name: string; description?: string }) {
+  update(
+    token: string,
+    input: {
+      name: string;
+      description?: string;
+      headline?: string;
+      authorName?: string;
+      contactEmail?: string;
+      instagramUrl?: string;
+      tiktokUrl?: string;
+      websiteUrl?: string;
+    },
+  ) {
     return request<StoreDashboard>("/api/store", { method: "PUT", body: input, token });
+  },
+  /** Upload the store logo or the author photo (PNG, JPG or WebP, up to 3 MB). */
+  uploadImage(token: string, kind: "logo" | "photo", file: File) {
+    return uploadMultipart<StoreDashboard>(token, `/api/store/images/${kind}`, file);
+  },
+  removeImage(token: string, kind: "logo" | "photo") {
+    return request<StoreDashboard>(`/api/store/images/${kind}`, { method: "DELETE", token });
+  },
+  moveProduct(token: string, productId: string, direction: "up" | "down") {
+    return request<StoreDashboard>(`/api/store/products/${productId}/move`, {
+      method: "POST",
+      body: { direction },
+      token,
+    });
   },
   publish(token: string) {
     return request<StoreDashboard>("/api/store/publish", { method: "POST", token });
@@ -595,7 +622,7 @@ export const storeApi = {
   updateProduct(
     token: string,
     productId: string,
-    input: { title?: string; description?: string; priceCents?: number; active?: boolean },
+    input: { title?: string; description?: string; highlights?: string; priceCents?: number; active?: boolean },
   ) {
     return request<StoreDashboard>(`/api/store/products/${productId}`, { method: "PATCH", body: input, token });
   },
@@ -619,6 +646,11 @@ export const publicStoreApi = {
   store(slug: string) {
     return request<PublicStore>(`/api/public/stores/${encodeURIComponent(slug)}`);
   },
+  product(slug: string, productId: string) {
+    return request<PublicProduct>(
+      `/api/public/stores/${encodeURIComponent(slug)}/products/${encodeURIComponent(productId)}`,
+    );
+  },
   /** Only the product id is sent — price and seller come from the backend. */
   checkout(productId: string) {
     return request<StoreCheckoutResponse>("/api/public/checkout", { method: "POST", body: { productId } });
@@ -634,3 +666,8 @@ export const publicStoreApi = {
     return `${API_URL}/api/public/downloads/${encodeURIComponent(token)}/file`;
   },
 };
+
+/** Absolute URL of an API-served asset path (covers, store logo and photo). */
+export function apiAsset(path: string | null | undefined): string | null {
+  return path ? `${API_URL}${path}` : null;
+}

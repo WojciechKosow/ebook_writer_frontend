@@ -4,7 +4,8 @@ import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { publicStoreApi } from "@/lib/api";
 import type { StoreOrderStatusResponse } from "@/lib/types";
-import { MarketingShell } from "@/components/marketing-shell";
+import { StoreShell } from "@/components/store/store-shell";
+import { useStoreProfile } from "@/components/store/use-store-profile";
 import { Alert, ButtonLink, Spinner } from "@/components/ui";
 
 const MAX_ATTEMPTS = 30; // ~60 s
@@ -90,7 +91,8 @@ function SuccessInner() {
           <p className="text-lg font-semibold text-good">Payment confirmed</p>
           <p className="mt-1 text-sm text-good">
             {order?.productTitle ? <>Thanks for buying <strong>{order.productTitle}</strong>. </> : null}
-            We&apos;ve emailed you a download link — it works for 30 days and up to 5 downloads.
+            We&apos;ve emailed you a download link — it works for 30 days and up to 5 downloads. Check your spam
+            folder if it isn&apos;t there in a few minutes.
           </p>
           <div className="mt-6">{back}</div>
         </div>
@@ -115,13 +117,14 @@ function SuccessInner() {
 }
 
 export default function StoreSuccessPage() {
+  const profile = useStoreProfile(useParams<{ slug: string }>().slug);
   return (
-    <MarketingShell ambient="none">
+    <StoreShell profile={profile}>
       <div className="mx-auto max-w-md px-4 py-16">
         <Suspense fallback={<div className="py-10 text-center text-faint">…</div>}>
           <SuccessInner />
         </Suspense>
       </div>
-    </MarketingShell>
+    </StoreShell>
   );
 }

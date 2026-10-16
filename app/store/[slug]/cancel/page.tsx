@@ -1,13 +1,15 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { MarketingShell } from "@/components/marketing-shell";
+import { StoreShell } from "@/components/store/store-shell";
+import { useStoreProfile } from "@/components/store/use-store-profile";
 import { ButtonLink } from "@/components/ui";
 
 export default function StoreCancelPage() {
   const { slug } = useParams<{ slug: string }>();
+  const profile = useStoreProfile(slug);
   return (
-    <MarketingShell ambient="none">
+    <StoreShell profile={profile}>
       <div className="mx-auto max-w-md px-4 py-16 text-center">
         <div className="rounded-2xl border border-hairline bg-surface p-8">
           <p className="font-medium text-foreground">Checkout cancelled</p>
@@ -19,6 +21,6 @@ export default function StoreCancelPage() {
           </div>
         </div>
       </div>
-    </MarketingShell>
+    </StoreShell>
   );
 }

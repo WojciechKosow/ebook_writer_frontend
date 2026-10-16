@@ -548,17 +548,37 @@ export interface StoreProduct {
   ebookId: string;
   title: string;
   description: string | null;
+  /** "What you'll be able to do", one point per line. */
+  highlights: string | null;
   /** Price in cents (USD). */
   priceCents: number;
   currency: string;
   active: boolean;
+  sortOrder: number;
+  /** Pages of the finished PDF (0 if unknown). */
+  pageCount: number;
+  /** Relative API path of the cover (the PDF's first page). */
+  coverUrl: string;
 }
 
-export interface StoreDashboard {
-  id: string;
-  slug: string;
+/** The author's public profile fields, shared by the dashboard and the store. */
+export interface StoreProfileFields {
   name: string;
   description: string | null;
+  headline: string | null;
+  authorName: string | null;
+  contactEmail: string | null;
+  instagramUrl: string | null;
+  tiktokUrl: string | null;
+  websiteUrl: string | null;
+  /** Relative API paths, null when not uploaded. */
+  logoUrl: string | null;
+  photoUrl: string | null;
+}
+
+export interface StoreDashboard extends StoreProfileFields {
+  id: string;
+  slug: string;
   published: boolean;
   /** Whether the author has Scrivetta PRO — required to publish and sell. */
   pro: boolean;
@@ -566,22 +586,46 @@ export interface StoreDashboard {
   products: StoreProduct[];
 }
 
-export interface PublicStoreProduct {
-  id: string;
-  title: string;
-  description: string | null;
-  priceCents: number;
-  currency: string;
-}
-
-export interface PublicStore {
+/** The seller as buyers see them on every store page. */
+export interface StoreProfile extends StoreProfileFields {
   slug: string;
-  name: string;
-  description: string | null;
   /** False with an honest reason when the store can't take payments right now. */
   purchasable: boolean;
   unavailableReason: string | null;
+}
+
+export interface PublicStoreProduct {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  priceCents: number;
+  currency: string;
+  pageCount: number;
+  language: string | null;
+  coverUrl: string;
+}
+
+export interface PublicStore {
+  store: StoreProfile;
   products: PublicStoreProduct[];
+}
+
+export interface PublicProduct {
+  store: StoreProfile;
+  id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  highlights: string[];
+  priceCents: number;
+  currency: string;
+  pageCount: number;
+  language: string | null;
+  updatedAt: string | null;
+  coverUrl: string;
+  chapters: { number: number; title: string }[];
+  more: PublicStoreProduct[];
 }
 
 export type StoreOrderStatus = "PENDING" | "PAID" | "EXPIRED" | "REFUNDED";
@@ -602,6 +646,14 @@ export interface StoreCheckoutResponse {
 export interface DownloadInfo {
   productTitle: string;
   storeName: string | null;
+  storeSlug: string | null;
+  authorName: string | null;
+  contactEmail: string | null;
+  logoUrl: string | null;
+  coverUrl: string;
+  fileSizeBytes: number;
   downloadsRemaining: number;
   expiresAt: string;
+  /** Other ebooks still on sale in the store. */
+  more: PublicStoreProduct[];
 }
