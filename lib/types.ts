@@ -533,7 +533,8 @@ export interface QualityReport {
 // ---- Creator stores (Stripe Connect) ---------------------------------------
 
 /** The author's Stripe account as last fetched from Stripe by the backend. */
-export type StripeConnectState = "NOT_CONNECTED" | "ACTION_REQUIRED" | "READY";
+/** PENDING_VERIFICATION: everything submitted, Stripe hasn't activated card payments yet. */
+export type StripeConnectState = "NOT_CONNECTED" | "ACTION_REQUIRED" | "PENDING_VERIFICATION" | "READY";
 
 export interface StripeStatus {
   state: StripeConnectState;

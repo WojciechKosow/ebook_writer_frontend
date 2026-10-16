@@ -118,7 +118,7 @@ function StoreInner() {
           <Checklist store={store} />
           <ProfileForm token={token!} store={store} onChange={setStore} />
           <Products token={token!} store={store} ebooks={ebooks} onChange={setStore} />
-          <StripeCard token={token!} store={store} />
+          <StripeCard token={token!} store={store} onChange={setStore} />
         </>
       )}
     </div>
@@ -422,11 +422,45 @@ function ImagePicker({ token, kind, url, round = false, label, hint, onChange }:
 
 // ---- Stripe status -----------------------------------------------------------
 
-function StripeCard({ token, store }: { token: string; store: StoreDashboard }) {
+// Right after onboarding Stripe usually needs a moment to verify the account;
+// while it does, re-check a few times so the card flips to ready on its own.
+const VERIFY_POLL_MS = 5000;
+const VERIFY_POLL_TRIES = 12;
+
+function StripeCard({ token, store, onChange }: {
+  token: string; store: StoreDashboard; onChange: (s: StoreDashboard) => void;
+}) {
   const [country, setCountry] = useState("US");
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { state, currentlyDue } = store.stripe;
+  const polls = useRef(0);
+
+  useEffect(() => {
+    if (state !== "PENDING_VERIFICATION" || polls.current >= VERIFY_POLL_TRIES) return;
+    const id = setTimeout(async () => {
+      polls.current += 1;
+      try {
+        onChange(await storeApi.syncStripe(token));
+      } catch {
+        polls.current = VERIFY_POLL_TRIES; // stop quietly; "Check again" still works
+      }
+    }, VERIFY_POLL_MS);
+    return () => clearTimeout(id);
+  }, [state, store, token, onChange]);
+
+  async function checkStatus() {
+    setChecking(true);
+    setError(null);
+    try {
+      onChange(await storeApi.syncStripe(token));
+    } catch (e) {
+      setError(message(e, "Could not check your Stripe account."));
+    } finally {
+      setChecking(false);
+    }
+  }
 
   async function openStripe() {
     setBusy(true);
@@ -479,6 +513,19 @@ function StripeCard({ token, store }: { token: string; store: StoreDashboard }) 
         </>
       )}
 
+      {state === "PENDING_VERIFICATION" && (
+        <>
+          <p className="mt-2 text-sm text-muted">
+            You&apos;ve submitted everything Stripe asked for. Stripe is verifying your account — this usually takes a
+            moment, sometimes longer. You&apos;ll be able to sell as soon as it&apos;s done.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button loading={checking} onClick={checkStatus}>Check again</Button>
+            <Button variant="ghost" loading={busy} onClick={openStripe}>Review in Stripe</Button>
+          </div>
+        </>
+      )}
+
       {state === "READY" && (
         <p className="mt-2 text-sm text-muted">
           Your Stripe account can accept payments. Manage refunds and payouts in your{" "}
@@ -500,6 +547,7 @@ function StatusPill({ state }: { state: StoreDashboard["stripe"]["state"] }) {
   const map = {
     NOT_CONNECTED: ["Not connected", "border-hairline-2 text-muted"],
     ACTION_REQUIRED: ["Action required", "border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300"],
+    PENDING_VERIFICATION: ["Verifying", "border-hairline-2 text-muted"],
     READY: ["Ready to sell", "border-[color-mix(in_oklab,var(--good)_35%,transparent)] bg-good-soft text-good"],
   } as const;
   const [label, cls] = map[state];
