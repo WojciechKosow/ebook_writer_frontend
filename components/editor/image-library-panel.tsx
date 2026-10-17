@@ -5,6 +5,7 @@ import type { AssetsState } from "@/lib/use-assets";
 import type { EbookImage } from "@/lib/types";
 import { ApiError } from "@/lib/api";
 import { ASSET_DND_TYPE } from "@/components/rich-text-editor";
+import { LibraryPicker, useLibraryNotice } from "@/components/asset-library";
 
 const ACCEPT = "image/png,image/jpeg,image/webp,image/gif,image/svg+xml";
 const ALLOWED = new Set([
@@ -56,6 +57,8 @@ export function ImageLibraryPanel({
   const [uploads, setUploads] = useState<UploadRow[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const { notice, afterUpload } = useLibraryNotice();
 
   const handleFiles = useCallback(
     (files: FileList | File[]) => {
@@ -77,6 +80,7 @@ export function ImageLibraryPanel({
           .then(() => {
             setUploads((u) => u.map((it) => (it.key === key ? { ...it, pct: 100 } : it)));
             setTimeout(() => setUploads((u) => u.filter((it) => it.key !== key)), 1200);
+            afterUpload();
           })
           .catch((err) => {
             const msg = err instanceof ApiError ? err.message : "Upload failed";
@@ -84,7 +88,7 @@ export function ImageLibraryPanel({
           });
       }
     },
-    [state],
+    [state, afterUpload],
   );
 
   const onDrop = useCallback(
@@ -160,6 +164,24 @@ export function ImageLibraryPanel({
           />
         </div>
       </div>
+
+      <div className="px-3 pt-1.5">
+        <button
+          type="button"
+          onClick={() => setLibraryOpen(true)}
+          className="w-full rounded-lg px-2 py-1.5 text-xs font-semibold text-accent hover:bg-accent-soft"
+        >
+          Add from your library
+        </button>
+      </div>
+      {libraryOpen && (
+        <LibraryPicker
+          title="Add from your library"
+          onPick={(asset) => state.addFromLibrary(asset.id)}
+          onClose={() => setLibraryOpen(false)}
+        />
+      )}
+      {notice}
 
       {/* In-flight uploads */}
       {uploads.length > 0 && (

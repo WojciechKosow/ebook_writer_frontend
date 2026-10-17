@@ -174,6 +174,28 @@ export interface EbookImage {
   createdAt: string | null;
 }
 
+/** An image in the user's asset library, mirroring the backend LibraryAssetDTO. */
+export interface LibraryAsset {
+  id: string;
+  contentType: string;
+  originalFilename: string | null;
+  sizeBytes: number;
+  width: number;
+  height: number;
+  createdAt: string | null;
+  /** When the asset is deleted (without Pro); null = kept. */
+  expiresAt: string | null;
+  /** Relative API path that streams the bytes (needs the Authorization header). */
+  rawUrl: string;
+}
+
+/** The user's asset library. `kept` is true with Pro; otherwise assets expire after `retentionHours`. */
+export interface AssetLibrary {
+  kept: boolean;
+  retentionHours: number;
+  assets: LibraryAsset[];
+}
+
 export interface EbookImageUpdateInput {
   role?: AssetRole;
   displayWidthPercent?: number;

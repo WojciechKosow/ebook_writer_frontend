@@ -6,8 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError, apiAsset, ebookApi, storeApi } from "@/lib/api";
 import { StoreCover } from "@/components/store/store-cover";
+import { LibraryPicker, useLibraryNotice } from "@/components/asset-library";
 import { formatPrice } from "@/lib/pricing";
-import type { EbookStatusResponse, StoreDashboard, StoreProduct } from "@/lib/types";
+import type { EbookStatusResponse, LibraryAsset, StoreDashboard, StoreProduct } from "@/lib/types";
 import { Alert, Button, ButtonLink, Field, Spinner, TextAreaField, controlBase } from "@/components/ui";
 import { parseDesign } from "@/lib/store-design/core";
 import { STYLES } from "@/lib/store-design/schemas";
@@ -382,12 +383,23 @@ function ProfileForm({ token, store, onChange }: {
   );
 }
 
+// The store takes raster images up to 3 MB (never SVG, which can carry script).
+const STORE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+function storeAccepts(asset: LibraryAsset): string | null {
+  if (!STORE_IMAGE_TYPES.has(asset.contentType)) return "PNG, JPG or WebP only";
+  if (asset.sizeBytes > 3 * 1024 * 1024) return "Larger than 3 MB";
+  return null;
+}
+
 function ImagePicker({ token, kind, url, round = false, label, hint, onChange }: {
   token: string; kind: "logo" | "photo"; url: string | null; round?: boolean; label: string; hint: string;
   onChange: (s: StoreDashboard) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const { notice, afterUpload } = useLibraryNotice();
   const input = useRef<HTMLInputElement>(null);
   const src = apiAsset(url);
 
@@ -397,6 +409,7 @@ function ImagePicker({ token, kind, url, round = false, label, hint, onChange }:
     setError(null);
     try {
       onChange(await storeApi.uploadImage(token, kind, file));
+      afterUpload();
     } catch (e) {
       setError(message(e, "Could not upload the image."));
     } finally {
@@ -436,8 +449,18 @@ function ImagePicker({ token, kind, url, round = false, label, hint, onChange }:
         aria-label={`Upload ${label.toLowerCase()}`} onChange={(e) => upload(e.target.files?.[0])} />
       <div className="flex gap-2">
         <Button variant="secondary" loading={busy} onClick={() => input.current?.click()}>{src ? "Replace" : "Upload"}</Button>
+        <Button variant="ghost" disabled={busy} onClick={() => setLibraryOpen(true)}>From library</Button>
         {src && <Button variant="ghost" disabled={busy} onClick={remove}>Remove</Button>}
       </div>
+      {libraryOpen && (
+        <LibraryPicker
+          title={`Pick your ${label.toLowerCase()}`}
+          accepts={storeAccepts}
+          onPick={async (asset) => onChange(await storeApi.useLibraryImage(token, kind, asset.id))}
+          onClose={() => setLibraryOpen(false)}
+        />
+      )}
+      {notice}
     </div>
   );
 }
