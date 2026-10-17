@@ -610,7 +610,7 @@ export const storeApi = {
       token,
     });
   },
-  /** Save the store page design (a JSON document); null resets to the classic look. */
+  /** Save the store page design (a JSON document); null resets to the default (Scrivetta) style. */
   updateTheme(token: string, settings: string | null) {
     return request<StoreDashboard>("/api/store/theme", { method: "PUT", body: { settings }, token });
   },

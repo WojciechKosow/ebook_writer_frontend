@@ -11,9 +11,12 @@ import { formatPrice } from "@/lib/pricing";
  * design keeps up with new ebooks and profile edits.
  */
 
-export type StyleId = "classic" | "literary" | "code" | "minimal" | "modern" | "bold";
+export type StyleId = "literary" | "code" | "minimal" | "modern" | "bold";
 
-export const STYLE_IDS: StyleId[] = ["classic", "literary", "code", "minimal", "modern", "bold"];
+export const STYLE_IDS: StyleId[] = ["literary", "code", "minimal", "modern", "bold"];
+
+/** Stores that never picked a style (or picked the retired "classic") get this one. */
+export const DEFAULT_STYLE: StyleId = "literary";
 
 /** One row of a repeatable list ("items" fields): sub-field key → text. */
 export type Item = Record<string, string>;
@@ -36,14 +39,15 @@ export interface DesignDoc {
   themes: Partial<Record<StyleId, StyleSettings>>;
 }
 
-export const EMPTY_DESIGN: DesignDoc = { v: 1, active: "classic", themes: {} };
+export const EMPTY_DESIGN: DesignDoc = { v: 1, active: DEFAULT_STYLE, themes: {} };
 
 export function parseDesign(json: string | null | undefined): DesignDoc {
   if (!json) return EMPTY_DESIGN;
   try {
     const d = JSON.parse(json);
-    if (d && typeof d === "object" && STYLE_IDS.includes(d.active)) {
-      return { v: 1, active: d.active, themes: d.themes && typeof d.themes === "object" ? d.themes : {} };
+    if (d && typeof d === "object") {
+      const themes = d.themes && typeof d.themes === "object" ? d.themes : {};
+      return { v: 1, active: STYLE_IDS.includes(d.active) ? d.active : DEFAULT_STYLE, themes };
     }
   } catch {
     // fall through
@@ -101,6 +105,8 @@ export interface SectionSchema {
   label: string;
   /** Can the author hide this section? (Hero and ebooks can't be hidden.) */
   optional?: boolean;
+  /** Hidden until the author turns it on — for sections that need their own words (a page spread, a quote). */
+  offByDefault?: boolean;
   fields: Field[];
 }
 
@@ -140,7 +146,8 @@ export function resolveStyle(schema: StyleSchema, settings: StyleSettings | unde
       const v = edits[f.key];
       values[f.key] = isValueFor(f, v) ? (v as FieldValue) : f.def(ctx);
     }
-    sections[sec.id] = { enabled: !sec.optional || edits.enabled !== false, values };
+    const enabled = typeof edits.enabled === "boolean" ? edits.enabled : !sec.offByDefault;
+    sections[sec.id] = { enabled: !sec.optional || enabled, values };
   }
   return {
     id: schema.id,

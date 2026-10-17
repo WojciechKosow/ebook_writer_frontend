@@ -585,7 +585,7 @@ export interface StoreDashboard extends StoreProfileFields {
   pro: boolean;
   stripe: StripeStatus;
   products: StoreProduct[];
-  /** The store page design (JSON, see lib/store-design), null for the classic look. */
+  /** The store page design (JSON, see lib/store-design), null for the default (Scrivetta) style. */
   themeSettings: string | null;
   /** Chapters of the first ebook, for designs that show its contents. */
   featuredChapters: { number: number; title: string }[];
@@ -614,7 +614,7 @@ export interface PublicStoreProduct {
 export interface PublicStore {
   store: StoreProfile;
   products: PublicStoreProduct[];
-  /** The store page design (JSON, see lib/store-design), null for the classic look. */
+  /** The store page design (JSON, see lib/store-design), null for the default (Scrivetta) style. */
   themeSettings: string | null;
   /** Chapters of the first (featured) ebook. */
   featuredChapters: { number: number; title: string }[];

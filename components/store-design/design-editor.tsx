@@ -83,14 +83,9 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
       return { ...s, sections };
     });
   const setField = (sec: string, key: string, value: FieldValue) => setSection(sec, (e) => ({ ...e, [key]: value }));
-  const toggle = (sec: string, on: boolean) =>
-    setSection(sec, (e) => {
-      const { enabled: _ignored, ...rest } = e;
-      void _ignored;
-      return on ? rest : { ...rest, enabled: false };
-    });
+  const toggle = (sec: string, on: boolean) => setSection(sec, (e) => ({ ...e, enabled: on }));
   const resetSection = (sec: string) =>
-    setSection(sec, (e) => (e.enabled === false ? { enabled: false } : {}));
+    setSection(sec, (e) => (typeof e.enabled === "boolean" ? { enabled: e.enabled } : {}));
   const pickStyle = (next: StyleId) => {
     setJustSaved(false);
     setOpen(null);
@@ -179,14 +174,6 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
             </div>
           </Panel>
 
-          {id === "classic" ? (
-            <Panel title="Classic">
-              <p className="text-sm leading-relaxed text-muted">
-                Classic takes its texts from your profile (name, headline, about you) and follows each reader&apos;s light or dark setting.
-                Edit them on <Link href="/store" className="font-medium text-accent hover:underline">Your store</Link>, or pick another style to write every section yourself.
-              </p>
-            </Panel>
-          ) : (
             <>
               <Panel title="Colors & effects">
                 <div className="flex flex-col gap-4">
@@ -239,7 +226,6 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
                 </div>
               </Panel>
             </>
-          )}
 
           <Panel title="Custom CSS" hint="Optional, for fine-tuning. The page root is .store-page; sections are [data-section=&quot;hero&quot;], [data-section=&quot;books&quot;] and so on. url(), @import and backslashes aren't allowed.">
             <textarea
