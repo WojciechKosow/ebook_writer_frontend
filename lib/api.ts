@@ -610,6 +610,10 @@ export const storeApi = {
       token,
     });
   },
+  /** Save the store page design (a JSON document); null resets to the classic look. */
+  updateTheme(token: string, settings: string | null) {
+    return request<StoreDashboard>("/api/store/theme", { method: "PUT", body: { settings }, token });
+  },
   publish(token: string) {
     return request<StoreDashboard>("/api/store/publish", { method: "POST", token });
   },

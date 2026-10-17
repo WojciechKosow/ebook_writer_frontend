@@ -9,6 +9,8 @@ import { StoreCover } from "@/components/store/store-cover";
 import { formatPrice } from "@/lib/pricing";
 import type { EbookStatusResponse, StoreDashboard, StoreProduct } from "@/lib/types";
 import { Alert, Button, ButtonLink, Field, Spinner, TextAreaField, controlBase } from "@/components/ui";
+import { parseDesign } from "@/lib/store-design/core";
+import { STYLES } from "@/lib/store-design/schemas";
 
 const card = "mt-6 rounded-2xl border border-hairline bg-surface p-6";
 const h2 = "font-display text-[22px] font-normal leading-tight text-foreground";
@@ -115,6 +117,7 @@ function StoreInner() {
       ) : (
         <>
           <PublishBar token={token!} store={store} onChange={setStore} />
+          <DesignCard store={store} />
           <Checklist store={store} />
           <ProfileForm token={token!} store={store} onChange={setStore} />
           <Products token={token!} store={store} ebooks={ebooks} onChange={setStore} />
@@ -235,6 +238,25 @@ function PublishBar({ token, store, onChange }: {
         </div>
       )}
       {error && <div className="mt-4"><Alert>{error}</Alert></div>}
+    </div>
+  );
+}
+
+// ---- Store design --------------------------------------------------------------
+
+function DesignCard({ store }: { store: StoreDashboard }) {
+  const style = STYLES[parseDesign(store.themeSettings).active];
+  return (
+    <div className={card}>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className={h2}>Design</h2>
+          <p className="mt-1 text-sm text-muted">
+            Style: <span className="font-semibold text-foreground">{style.name}</span> — {style.tagline}
+          </p>
+        </div>
+        <ButtonLink href="/store/design">Customize design</ButtonLink>
+      </div>
     </div>
   );
 }
