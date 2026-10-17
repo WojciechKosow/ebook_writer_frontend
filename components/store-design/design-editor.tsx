@@ -129,14 +129,24 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
     setFuture((f) => f.slice(1));
   }, [future, draft]);
 
+  // Ctrl/⌘+Z undo, +Shift redo (outside text fields, which keep their own undo),
+  // Ctrl/⌘+S publish, Esc back to the section list.
+  const publishRef = useRef<() => void>(() => {});
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
-      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
-      e.preventDefault();
-      if (e.shiftKey) redo();
-      else undo();
+      const typing = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        publishRef.current();
+      } else if (mod && e.key.toLowerCase() === "z" && !typing) {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+      } else if (e.key === "Escape" && !typing) {
+        setSection(null);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -193,6 +203,12 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
     }
   }
 
+  useEffect(() => {
+    publishRef.current = () => {
+      if (dirty && !publishing) void publish();
+    };
+  });
+
   const leave = (e: React.MouseEvent) => {
     if (dirty && !window.confirm("You have unpublished changes. Leave without publishing them?")) e.preventDefault();
   };
@@ -208,7 +224,7 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
   return (
     <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
       {/* Top bar */}
-      <header className="flex min-h-[60px] shrink-0 flex-wrap items-center gap-3 border-b border-hairline bg-surface px-3 py-2 sm:pl-3 sm:pr-4">
+      <header className="flex min-h-[60px] shrink-0 flex-wrap items-center gap-3 border-b border-hairline bg-surface px-3 py-2 sm:pl-3 sm:pr-4 lg:h-[60px] lg:flex-nowrap lg:py-0">
         <div className="flex min-w-0 flex-[1_1_260px] items-center gap-2.5">
           <Link href="/store" onClick={leave} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] pl-1.5 pr-2.5 text-sm text-foreground-2 hover:bg-surface-2">
             <Chevron dir="left" />
@@ -235,15 +251,15 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
         </div>
 
         <div className="flex flex-[1_1_260px] items-center justify-end gap-1.5">
-          <IconButton label="Undo" disabled={!past.length} onClick={undo}><IconUndo /></IconButton>
-          <IconButton label="Redo" disabled={!future.length} onClick={redo}><IconRedo /></IconButton>
+          <IconButton label="Undo" hint="Ctrl+Z" disabled={!past.length} onClick={undo}><IconUndo /></IconButton>
+          <IconButton label="Redo" hint="Ctrl+Shift+Z" disabled={!future.length} onClick={redo}><IconRedo /></IconButton>
           {dashboard.published && (
             <a href={`/store/${dashboard.slug}`} target="_blank" rel="noopener noreferrer"
               className="ml-1 inline-flex h-[38px] items-center gap-1.5 rounded-[11px] border border-hairline-2 px-3.5 text-sm font-medium text-foreground hover:bg-surface-2">
               View live <IconExternal />
             </a>
           )}
-          <button type="button" onClick={publish} disabled={!dirty || publishing}
+          <button type="button" onClick={publish} disabled={!dirty || publishing} title="Publish (Ctrl+S)"
             className="h-[38px] rounded-[11px] bg-foreground px-[18px] text-sm font-semibold text-background transition hover:brightness-110 disabled:cursor-default disabled:opacity-40">
             {publishing ? "Publishing…" : "Publish"}
           </button>
@@ -265,7 +281,7 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 pb-6 pt-2 lg:min-h-0">
+          <div className="flex-1 overflow-y-auto px-4 pb-6 pt-2 [scrollbar-color:var(--hairline-2)_transparent] [scrollbar-width:thin] lg:min-h-0">
             {tab === "look" && (
               <>
                 <PanelSection title="Theme" aside="Your text stays when you switch">
@@ -367,7 +383,7 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
             )}
 
             {tab === "content" && !current && (
-              <>
+              <div className="animate-[sd-in_.18s_ease-out]">
                 <div className="mx-0.5 my-3.5 flex items-center gap-2.5 rounded-xl bg-accent-soft px-3.5 py-3 text-[13px] leading-snug text-accent-ink">
                   <IconPointer />
                   <span>Tip: click any part of the preview to jump straight to it.</span>
@@ -402,11 +418,11 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
                 <p className="mx-0.5 mt-4 text-[12.5px] leading-relaxed text-muted">
                   Ebooks, prices and chapters come from <Link href="/store" onClick={leave} className="text-foreground underline">Your store</Link>. Change them there and the page updates on its own.
                 </p>
-              </>
+              </div>
             )}
 
             {tab === "content" && current && (
-              <div className="pt-2.5">
+              <div key={current.id} className="animate-[sd-in_.18s_ease-out] pt-2.5">
                 <button type="button" onClick={() => setSection(null)}
                   className="inline-flex h-8 items-center gap-1 rounded-[9px] pl-1 pr-2.5 text-[13px] font-medium text-foreground-2 hover:bg-surface-2">
                   <Chevron dir="left" />
@@ -426,10 +442,20 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
                   </div>
                 )}
                 <div className="flex flex-col gap-[18px] px-0.5">
-                  {current.fields.map((f) => (
-                    <FieldEditor key={`${id}-${current.id}-${f.key}`} field={f} value={resolved.sections[current.id]?.values[f.key]}
-                      onChange={(v) => setField(current.id, f.key, v)} />
-                  ))}
+                  {groupFields(current.fields).map((g, gi) => {
+                    const fields = g.fields.map((f) => (
+                      <FieldEditor key={`${id}-${current.id}-${f.key}`} field={f} label={g.title ? sublabel(f.label) : f.label}
+                        value={resolved.sections[current.id]?.values[f.key]} onChange={(v) => setField(current.id, f.key, v)} />
+                    ));
+                    return g.title ? (
+                      <fieldset key={gi} className="flex flex-col gap-3.5 rounded-xl border border-hairline p-3.5">
+                        <legend className="px-1 text-[11.5px] font-semibold uppercase tracking-[0.08em] text-muted">{g.title}</legend>
+                        {fields}
+                      </fieldset>
+                    ) : (
+                      fields
+                    );
+                  })}
                 </div>
                 {NOTES[current.id] && (
                   <p className="mx-0.5 mt-5 rounded-xl bg-surface-2 px-3.5 py-3 text-[13px] leading-relaxed text-foreground-2">
@@ -554,22 +580,47 @@ function Switch({ label, on, onChange, text }: { label: string; on: boolean; onC
   );
 }
 
-function IconButton({ label, onClick, disabled, pressed, children }: {
-  label: string; onClick: () => void; disabled?: boolean; pressed?: boolean; children: React.ReactNode;
+function IconButton({ label, hint, onClick, disabled, pressed, children }: {
+  label: string; hint?: string; onClick: () => void; disabled?: boolean; pressed?: boolean; children: React.ReactNode;
 }) {
   return (
-    <button type="button" aria-label={label} title={label} aria-pressed={pressed} disabled={disabled} onClick={onClick}
+    <button type="button" aria-label={label} title={hint ? `${label} (${hint})` : label} aria-pressed={pressed} disabled={disabled} onClick={onClick}
       className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-foreground-2 hover:bg-surface-2 disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent">
       {children}
     </button>
   );
 }
 
-function FieldEditor({ field, value, onChange }: { field: Field; value: FieldValue | undefined; onChange: (v: FieldValue) => void }) {
+/**
+ * Fields named "Group — part" next to each other become one titled group
+ * ("Floating card 1" → title, text), so long sections read as a few blocks.
+ */
+function groupFields(fields: Field[]): { title: string | null; fields: Field[] }[] {
+  const out: { title: string | null; fields: Field[] }[] = [];
+  for (const f of fields) {
+    const m = f.label.match(/^(.+?) — (.+)$/);
+    const title = m ? m[1] : null;
+    const last = out[out.length - 1];
+    if (last && title && last.title === title) last.fields.push(f);
+    else out.push({ title, fields: [f] });
+  }
+  // A "group" of one is just a field.
+  return out.flatMap((g) => (g.title && g.fields.length === 1 ? [{ title: null, fields: g.fields }] : [g]));
+}
+
+function sublabel(label: string) {
+  const part = label.split(" — ").slice(1).join(" — ");
+  return part ? part[0].toUpperCase() + part.slice(1) : label;
+}
+
+function FieldEditor({ field, label: labelText, value, onChange }: {
+  field: Field; label?: string; value: FieldValue | undefined; onChange: (v: FieldValue) => void;
+}) {
   const id = useId();
+  const label = labelText ?? field.label;
   const head = (count?: string) => (
     <div className="flex items-baseline justify-between gap-2.5">
-      <label htmlFor={id} className="text-[13px] font-medium text-foreground-2">{field.label}</label>
+      <label htmlFor={id} className="text-[13px] font-medium text-foreground-2">{label}</label>
       {count && <span className="font-mono text-[11px] text-faint">{count}</span>}
     </div>
   );
@@ -582,7 +633,7 @@ function FieldEditor({ field, value, onChange }: { field: Field; value: FieldVal
     return (
       <div className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between gap-2.5">
-          <span className="text-[13px] font-medium text-foreground-2">{field.label}</span>
+          <span className="text-[13px] font-medium text-foreground-2">{label}</span>
           <span className="font-mono text-[11px] text-faint">{rows.length} / {max}</span>
         </div>
         {hint}
@@ -631,7 +682,7 @@ function FieldEditor({ field, value, onChange }: { field: Field; value: FieldVal
   const code = field.type === "code";
   return (
     <div className="flex flex-col gap-[7px]">
-      {head(code ? `${text.split("\n").length} lines` : `${text.length}`)}
+      {head(code ? `${text.split("\n").length} lines` : undefined)}
       {field.type === "text" ? (
         <input id={id} type="text" value={text} onChange={(e) => onChange(e.target.value)} className={`${fieldCls} h-[42px] py-0`} />
       ) : (
