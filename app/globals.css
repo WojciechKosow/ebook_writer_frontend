@@ -643,3 +643,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--ip-accent); }
   .ip-line { animation: none !important; width: var(--w); }
   .ip-glyph { display: none; }
 }
+
+/* Store design editor: panels slide in when switching sections. */
+@keyframes sd-in {
+  from { opacity: 0; transform: translateX(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[sd-in"] { animation: none !important; }
+}

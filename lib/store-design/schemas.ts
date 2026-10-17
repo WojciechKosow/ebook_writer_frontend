@@ -13,7 +13,17 @@ const HL = "Wrap words in *asterisks* to highlight them. A new line starts a new
 
 const headline = (c: Ctx) => c.store.headline || c.store.name;
 const intro = (c: Ctx) => firstParagraph(c.store.description);
-const startCta = (c: Ctx) => (c.featured ? `Start with ${c.featured.title} — ${c.price(c.featured)}` : "See the ebooks");
+/**
+ * A button that names the featured ebook — or, when its title is too long for
+ * a button, says what it does ("Get the book — $19").
+ */
+const buy = (c: Ctx, verb: "Get" | "Start with", sep = "—", fallback = "See the books") => {
+  if (!c.featured) return fallback;
+  const short = c.featured.title.length <= 26;
+  const what = short ? `${verb} ${c.featured.title}` : verb === "Get" ? "Get the book" : "Start reading";
+  return `${what} ${sep} ${c.price(c.featured)}`;
+};
+const startCta = (c: Ctx) => buy(c, "Start with", "—", "See the ebooks");
 
 function firstParagraph(s: string | null): string {
   if (!s) return "";
@@ -207,7 +217,7 @@ const literary: StyleSchema = {
       optional: true,
       fields: [
         f.text("title", "Title", () => "Tonight, read something *slowly*.", HL),
-        f.text("primary", "Main button", (c) => (c.featured ? `Get ${c.featured.title} — ${c.price(c.featured)}` : "See the books")),
+        f.text("primary", "Main button", (c) => buy(c, "Get")),
         f.text("secondary", "Second button", () => "All books"),
         f.text("fine", "Small print", () => "PDF by email · Secure checkout by Stripe · Sold directly by the author"),
       ],
@@ -262,7 +272,7 @@ const code: StyleSchema = {
         f.text("badge", "Badge text", (c) => c.featured?.title ?? ""),
         f.area("headline", "Headline", headline, HL),
         f.area("intro", "Intro", intro),
-        f.text("primary", "Main button", (c) => (c.featured ? `Get ${c.featured.title} — ${c.price(c.featured)}` : "See the books")),
+        f.text("primary", "Main button", (c) => buy(c, "Get")),
         f.text("secondary", "Second button", () => "See the table of contents"),
       ],
     },
@@ -349,7 +359,7 @@ const code: StyleSchema = {
       optional: true,
       fields: [
         f.text("title", "Title", (c) => (c.featured ? `Your first real project is ${c.chapters.length || "a few"} chapters away.` : "Start building today.")),
-        f.text("primary", "Main button", (c) => (c.featured ? `Get ${c.featured.title} — ${c.price(c.featured)}` : "See the books")),
+        f.text("primary", "Main button", (c) => buy(c, "Get")),
         f.text("secondary", "Second button", () => "All books"),
         f.text("fine", "Small print", () => "PDF by email · Secure checkout by Stripe · Sold directly by the author"),
       ],
@@ -457,7 +467,7 @@ const minimal: StyleSchema = {
       fields: [
         f.area("title", "Title", () => "Start with\none book.", HL),
         f.text("fine", "Small print", (c) => `PDF by email · Secure checkout by Stripe · Sold directly by ${c.first}`),
-        f.text("button", "Button", (c) => (c.featured ? `${c.featured.title} — ${c.price(c.featured)}` : "See the ebooks")),
+        f.text("button", "Button", (c) => buy(c, "Get", "—", "See the ebooks")),
       ],
     },
   ],
@@ -489,7 +499,7 @@ const modern: StyleSchema = {
         f.area("headline", "Headline", headline, HL),
         f.list("words", "Rotating words after the headline", () => [], "Optional. 2–4 words that rotate at the end of the headline."),
         f.area("intro", "Intro", intro),
-        f.text("primary", "Main button", (c) => (c.featured ? `Start with ${c.featured.title} · ${c.price(c.featured)}` : "See the books")),
+        f.text("primary", "Main button", (c) => buy(c, "Start with", "·")),
         f.text("secondary", "Second button", () => "Look inside"),
         f.list("trust", "Reassurances", () => ["Instant PDF", "Stripe checkout", "No subscription"]),
         f.text("chipTitle", "Floating card — title", (c) => (c.featured?.pageCount ? `${c.featured.pageCount} pages` : "Ready to read")),
@@ -591,7 +601,7 @@ const modern: StyleSchema = {
       optional: true,
       fields: [
         f.area("title", "Title", () => "Your first chapter takes *20 minutes.*", HL),
-        f.text("primary", "Main button", (c) => (c.featured ? `Get ${c.featured.title} · ${c.price(c.featured)}` : "See the books")),
+        f.text("primary", "Main button", (c) => buy(c, "Get", "·")),
         f.text("secondary", "Second button", () => "All books"),
       ],
     },
@@ -615,7 +625,7 @@ const bold: StyleSchema = {
         f.text("badge", "Badge", () => ""),
         f.area("headline", "Headline", headline, "Wrap words in *asterisks* to put them in a highlighted box. A new line starts a new line."),
         f.area("intro", "Intro", intro),
-        f.text("primary", "Main button", (c) => (c.featured ? `Get ${c.featured.title} · ${c.price(c.featured)}` : "See the guides")),
+        f.text("primary", "Main button", (c) => buy(c, "Get", "·", "See the guides")),
         f.text("secondary", "Second button", () => "See all guides"),
         f.text("sticker", "Round sticker", () => "START\nHERE"),
       ],

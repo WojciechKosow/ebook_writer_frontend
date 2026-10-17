@@ -63,7 +63,8 @@ export function DevicePreview({ message, device, url, onPick }: {
 
   const phone = device === "phone";
   const outerW = phone ? Math.min(PHONE_W, space.w || PHONE_W) : space.w;
-  const vw = phone ? PHONE_W : DESKTOP_W;
+  // Desktop renders at 1280px or wider (filling the frame), never narrower.
+  const vw = phone ? PHONE_W : Math.max(DESKTOP_W, Math.round(outerW));
   const scale = outerW ? Math.min(1, outerW / vw) : 0.5;
   const innerH = Math.max(200, space.h - BAR);
 
@@ -89,7 +90,13 @@ export function DevicePreview({ message, device, url, onPick }: {
             title={`Store preview — ${device}`}
             style={{ width: vw, height: innerH / scale, transform: `scale(${scale})`, transformOrigin: "0 0", border: 0, display: "block" }}
           />
-          {!ready && <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">Loading preview…</div>}
+          {!ready && (
+            <div aria-label="Loading preview" className="absolute inset-0 flex flex-col gap-4 bg-background p-8">
+              {[["40%", 14], ["70%", 44], ["55%", 44], ["35%", 14], ["100%", 220]].map(([w, h], i) => (
+                <div key={i} className="animate-pulse rounded-lg bg-surface-2" style={{ width: w, height: h }} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

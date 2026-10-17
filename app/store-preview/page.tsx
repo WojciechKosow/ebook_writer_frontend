@@ -99,7 +99,7 @@ export default function StorePreviewPage() {
   return (
     <>
       {/* The editor's own page already handles cookie consent. */}
-      <style>{`body > [role="dialog"]{display:none !important}${msg?.pick ? "[data-section]{cursor:pointer}" : ""}`}</style>
+      <style>{`body > [role="dialog"]{display:none !important}html{scrollbar-width:none}html::-webkit-scrollbar{display:none}${msg?.pick ? "[data-section]{cursor:pointer}" : ""}`}</style>
       {msg && <StoreDesignView doc={msg.doc} data={msg.data} styleId={msg.styleId} />}
       {msg?.pick && [selected, hover && hover.id !== selected?.id ? hover : null].map((b, i) =>
         b ? <Outline key={i} box={b} label={labels[b.id] ?? b.id} strong={i === 0} /> : null,
