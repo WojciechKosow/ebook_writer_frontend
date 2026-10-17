@@ -90,23 +90,11 @@ const contentsSection = (eyebrow: string, title: (c: Ctx) => string): SectionSch
   ],
 });
 
-// ---- Classic -------------------------------------------------------------------
-
-const classic: StyleSchema = {
-  id: "classic",
-  name: "Classic",
-  tagline: "The Scrivetta look you have now — clean, dark or light with the reader's setting.",
-  swatch: { bg: "#12100d", fg: "#efe9dd", accent: "#b3a8f7", font: "var(--font-newsreader), Georgia, serif", sample: "Aa" },
-  accents: ["#b3a8f7"],
-  decor: null,
-  sections: [],
-};
-
-// ---- Literary (concept 1) ----------------------------------------------------------
+// ---- Scrivetta / literary (concept 1, the default) ----------------------------------------------------------
 
 const literary: StyleSchema = {
   id: "literary",
-  name: "Literary",
+  name: "Scrivetta",
   tagline: "Warm paper, a serif display and drifting pages. For fiction, poetry and essays.",
   swatch: { bg: "#F4F0E8", fg: "#1D1B17", accent: "#8B5E24", font: "var(--font-newsreader), Georgia, serif", sample: "Aa" },
   accents: ["#8B5E24", "#3A3270", "#7A2E2E", "#2F5A45"],
@@ -128,10 +116,10 @@ const literary: StyleSchema = {
         f.area("headline", "Headline", headline, HL),
         f.area("intro", "Intro", intro),
         f.text("primary", "Main button", (c) => `${startCta(c)} →`),
-        f.text("secondary", "Second button", () => "Read a page first"),
+        f.text("secondary", "Second button", () => "See all books"),
         f.list("trust", "Reassurances", () => ["Instant PDF by email", "Secure checkout by Stripe", "Straight from the author"]),
-        f.text("excerptTitle", "Page behind the book — title", () => "A page from the book"),
-        f.area("excerpt", "Page behind the book — text", () => "Paste a short passage here —\na few lines that sound\nexactly like your book."),
+        f.text("excerptTitle", "Page behind the book — title", () => ""),
+        f.area("excerpt", "Page behind the book — text", () => "", "A few lines from the book on a page behind the cover. Leave empty to hide it."),
         f.text("card1Title", "Floating card 1 — title", (c) => (c.featured?.pageCount ? `${c.featured.pageCount} pages` : "Ready to read")),
         f.text("card1Text", "Floating card 1 — text", (c) => c.featured?.subtitle || "Typeset PDF"),
         f.text("card2Title", "Floating card 2 — title", () => "Ready to read"),
@@ -154,6 +142,7 @@ const literary: StyleSchema = {
       id: "read",
       label: "Read a page (spread)",
       optional: true,
+      offByDefault: true,
       fields: [
         f.text("eyebrow", "Small label", () => "READ A PAGE"),
         f.text("title", "Title", () => "Before you buy, *open it*.", HL),
@@ -172,6 +161,7 @@ const literary: StyleSchema = {
       id: "inside",
       label: "What's inside (cards)",
       optional: true,
+      offByDefault: true,
       fields: [
         f.text("eyebrow", "Small label", () => "WHAT'S INSIDE"),
         f.text("title", "Title", () => "Small books, made with *care*.", HL),
@@ -406,6 +396,7 @@ const minimal: StyleSchema = {
       id: "spread",
       label: "A look inside (spread)",
       optional: true,
+      offByDefault: true,
       fields: [
         f.text("eyebrow", "Small label", () => "(A look inside)"),
         f.text("title", "Title", () => "Pages you’ll actually use."),
@@ -426,6 +417,7 @@ const minimal: StyleSchema = {
       id: "changes",
       label: "What changes (4 columns)",
       optional: true,
+      offByDefault: true,
       fields: [
         f.text("eyebrow", "Small label", () => "(What changes)"),
         f.items("items", "Columns", [{ key: "title", label: "Title" }, { key: "text", label: "Text", multiline: true }], () => [
@@ -656,7 +648,7 @@ const bold: StyleSchema = {
   ],
 };
 
-export const STYLES: Record<StyleId, StyleSchema> = { classic, literary, code, minimal, modern, bold };
+export const STYLES: Record<StyleId, StyleSchema> = { literary, code, minimal, modern, bold };
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 28) || "chapter";

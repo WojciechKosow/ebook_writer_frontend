@@ -5,7 +5,6 @@ import { makeCtx, resolveStyle, type DesignContext, type DesignDoc, type StyleId
 import { STYLES } from "@/lib/store-design/schemas";
 import { STYLE_FONTS } from "@/lib/store-design/fonts";
 import type { StyleProps } from "./kit";
-import { ClassicStyle } from "./styles/classic";
 import { LiteraryStyle } from "./styles/literary";
 import { CodeStyle } from "./styles/code";
 import { MinimalStyle } from "./styles/minimal";
@@ -13,7 +12,6 @@ import { ModernStyle } from "./styles/modern";
 import { BoldStyle } from "./styles/bold";
 
 const COMPONENTS: Record<StyleId, (p: StyleProps) => React.ReactNode> = {
-  classic: ClassicStyle,
   literary: LiteraryStyle,
   code: CodeStyle,
   minimal: MinimalStyle,

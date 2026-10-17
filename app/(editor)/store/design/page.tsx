@@ -22,10 +22,10 @@ export default function StoreDesignPage() {
       .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load your store."));
   }, [token]);
 
-  if (error) return <Alert>{error}</Alert>;
+  if (error) return <div className="mx-auto w-full max-w-md p-6"><Alert>{error}</Alert></div>;
   if (store === undefined) {
     return (
-      <div className="flex justify-center py-16 text-ink-soft">
+      <div className="flex flex-1 items-center justify-center text-ink-soft">
         <Spinner />
       </div>
     );

@@ -101,7 +101,7 @@ export function CodeStyle({ t, ctx, href }: StyleProps) {
         </div>
 
         {ed.enabled && (
-          <div style={{ position: "relative", margin: "84px auto 0", maxWidth: 1120, textAlign: "left" }}>
+          <div data-section="editor" style={{ position: "relative", margin: "84px auto 0", maxWidth: 1120, textAlign: "left" }}>
             <div aria-hidden style={{ position: "absolute", inset: "-1px -1px auto -1px", height: 1, background: "linear-gradient(90deg, transparent, var(--mid), transparent)", zIndex: 2 }} />
             <div className={s.win}>
               <div className={s.titlebar}>

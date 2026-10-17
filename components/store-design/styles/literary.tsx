@@ -73,10 +73,10 @@ export function LiteraryStyle({ t, ctx, href }: StyleProps) {
           </div>
           {featured && (
             <div className={`${s.heroArt} ${s.hideM}`} aria-hidden>
-              <div className={s.sheet}>
+              {txt(hero, "excerpt") && <div className={s.sheet}>
                 <div className={s.serif} style={{ fontSize: 22, fontStyle: "italic" }}>{txt(hero, "excerptTitle")}</div>
                 <div className={s.serif} style={{ marginTop: 18, fontSize: 14.5, lineHeight: 1.8, color: "var(--body)", whiteSpace: "pre-line" }}>{txt(hero, "excerpt")}</div>
-              </div>
+              </div>}
               <div className={s.heroBook}>
                 <div className={s.edge} />
                 <Cover product={featured} className={s.cover} fallbackClassName={s.coverFallback} />

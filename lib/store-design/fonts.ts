@@ -13,7 +13,6 @@ const archivo = Archivo({ variable: "--sd-archivo", subsets: ["latin"] });
 
 /** Font variables a style needs on its root element. */
 export const STYLE_FONTS: Record<StyleId, string> = {
-  classic: "",
   literary: plexMono.variable,
   code: geist.variable,
   minimal: `${hanken.variable} ${dmMono.variable}`,
