@@ -200,4 +200,12 @@ export interface PreviewMessage {
   styleId: StyleId;
   /** Scroll this section (data-section) into view. */
   focus?: string | null;
+  /** Click-to-edit: sections are outlined on hover and a click reports them back. */
+  pick?: { labels: Record<string, string>; selected: string | null } | null;
+}
+
+/** Sent by the preview frame when the author clicks a section. */
+export interface PreviewPick {
+  type: "sd-preview-pick";
+  section: string;
 }

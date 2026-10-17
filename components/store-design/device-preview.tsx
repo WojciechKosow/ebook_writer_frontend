@@ -5,22 +5,32 @@ import type { PreviewMessage } from "@/lib/store-design/core";
 
 export type Device = "desktop" | "phone";
 
-const SIZES: Record<Device, { w: number; h: number }> = {
-  desktop: { w: 1280, h: 800 },
-  phone: { w: 390, h: 844 },
-};
+const DESKTOP_W = 1280;
+const PHONE_W = 390;
+const BAR = 34;
 
 /**
- * The live preview: the real store page rendered in a frame at true phone or
- * desktop width (so its breakpoints apply), scaled down to fit. The design is
- * posted into the frame on every change.
+ * The live preview: the real store page in a frame at true phone or desktop
+ * width (so its breakpoints apply), under a small browser bar. Desktop is
+ * scaled down to fit. The design is posted into the frame on every change and
+ * clicks on sections come back through `onPick`.
  */
-export function DevicePreview({ message, device }: { message: Omit<PreviewMessage, "type">; device: Device }) {
+export function DevicePreview({ message, device, url, onPick }: {
+  message: Omit<PreviewMessage, "type">;
+  device: Device;
+  url: string;
+  onPick?: (section: string) => void;
+}) {
   const box = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
   const [ready, setReady] = useState(false);
   const [space, setSpace] = useState({ w: 0, h: 0 });
   const latest = useRef(message);
+  const pickRef = useRef(onPick);
+
+  useLayoutEffect(() => {
+    pickRef.current = onPick;
+  });
 
   useLayoutEffect(() => {
     const el = box.current;
@@ -36,6 +46,8 @@ export function DevicePreview({ message, device }: { message: Omit<PreviewMessag
       if (e.data?.type === "sd-preview-ready") {
         setReady(true);
         post(frame.current, { ...latest.current, focus: null });
+      } else if (e.data?.type === "sd-preview-pick" && typeof e.data.section === "string") {
+        pickRef.current?.(e.data.section);
       }
     };
     window.addEventListener("message", onMessage);
@@ -45,39 +57,41 @@ export function DevicePreview({ message, device }: { message: Omit<PreviewMessag
   useEffect(() => {
     latest.current = message;
     if (!ready) return;
-    const id = setTimeout(() => post(frame.current, message), 80);
+    const id = setTimeout(() => post(frame.current, message), 60);
     return () => clearTimeout(id);
   }, [message, ready]);
 
-  const size = SIZES[device];
-  // Desktop fills the width; the phone fits the height (with its bezel).
-  const bezel = device === "phone" ? 14 : 0;
-  const scale = space.w
-    ? device === "desktop"
-      ? Math.min(1, space.w / size.w)
-      : Math.min(1, (space.h - 2 * bezel - 8) / size.h, (space.w - 2 * bezel) / size.w)
-    : 0.4;
-  const frameH = device === "desktop" ? Math.max(size.h, space.h / scale) : size.h;
+  const phone = device === "phone";
+  const outerW = phone ? Math.min(PHONE_W, space.w || PHONE_W) : space.w;
+  const vw = phone ? PHONE_W : DESKTOP_W;
+  const scale = outerW ? Math.min(1, outerW / vw) : 0.5;
+  const innerH = Math.max(200, space.h - BAR);
 
   return (
-    <div ref={box} className="relative h-full w-full overflow-hidden">
+    <div ref={box} className="flex h-full w-full min-w-0 justify-center overflow-clip">
       <div
-        className={device === "phone" ? "absolute left-1/2 top-1 -translate-x-1/2 rounded-[46px] bg-[#111] shadow-float" : "absolute left-0 top-0"}
-        style={{ padding: bezel, width: size.w * scale + 2 * bezel, height: frameH * scale + 2 * bezel }}
+        className="flex h-full min-w-0 flex-col overflow-clip border border-hairline-2 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
+        style={{ width: outerW || "100%", borderRadius: phone ? 28 : 12 }}
       >
-        <div
-          className={device === "phone" ? "overflow-hidden rounded-[34px]" : "overflow-hidden rounded-xl border border-hairline"}
-          style={{ width: size.w * scale, height: frameH * scale }}
-        >
+        <div className="flex shrink-0 items-center gap-1.5 border-b border-hairline bg-surface-2 px-3" style={{ height: BAR }}>
+          <span className="h-[9px] w-[9px] rounded-full bg-hairline-2" />
+          <span className="h-[9px] w-[9px] rounded-full bg-hairline-2" />
+          <span className="h-[9px] w-[9px] rounded-full bg-hairline-2" />
+          <span className="flex flex-1 justify-center">
+            <span className="max-w-full truncate rounded-md bg-background px-3 py-1 font-mono text-[11.5px] text-muted">{url}</span>
+          </span>
+          <span className="w-[39px]" />
+        </div>
+        <div className="relative min-h-0 flex-1 overflow-clip bg-background">
           <iframe
             ref={frame}
             src="/store-preview"
             title={`Store preview — ${device}`}
-            style={{ width: size.w, height: frameH, transform: `scale(${scale})`, transformOrigin: "0 0", border: 0, display: "block" }}
+            style={{ width: vw, height: innerH / scale, transform: `scale(${scale})`, transformOrigin: "0 0", border: 0, display: "block" }}
           />
+          {!ready && <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">Loading preview…</div>}
         </div>
       </div>
-      {!ready && <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">Loading preview…</div>}
     </div>
   );
 }
