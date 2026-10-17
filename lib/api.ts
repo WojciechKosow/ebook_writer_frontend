@@ -1,4 +1,5 @@
 import type {
+  AssetLibrary,
   AuthResponse,
   BlueprintOverview,
   BlueprintUpdateInput,
@@ -384,6 +385,25 @@ function uploadMultipart<T>(
   });
 }
 
+// ---- Asset library ---------------------------------------------------------
+
+/** Every image the user has uploaded, reusable in any book or the store. */
+export const libraryApi = {
+  list(token: string) {
+    return request<AssetLibrary>("/api/library", { token });
+  },
+  async fetchBlob(token: string, assetId: string): Promise<Blob> {
+    const res = await fetch(`${API_URL}/api/library/${assetId}/raw`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new ApiError(`Failed to load image (${res.status})`, res.status);
+    return res.blob();
+  },
+  remove(token: string, assetId: string) {
+    return request<void>(`/api/library/${assetId}`, { method: "DELETE", token });
+  },
+};
+
 // ---- Asset (image) endpoints -----------------------------------------------
 
 export const imageApi = {
@@ -445,6 +465,14 @@ export const imageApi = {
   remove(token: string, ebookId: string, imageId: string) {
     return request<void>(`/api/ebooks/${ebookId}/images/${imageId}`, {
       method: "DELETE",
+      token,
+    });
+  },
+
+  /** Add an image from the user's asset library (the book gets its own copy). */
+  addFromLibrary(token: string, ebookId: string, libraryAssetId: string) {
+    return request<EbookImage>(`/api/ebooks/${ebookId}/images/from-library/${libraryAssetId}`, {
+      method: "POST",
       token,
     });
   },
@@ -599,6 +627,13 @@ export const storeApi = {
   /** Upload the store logo or the author photo (PNG, JPG or WebP, up to 3 MB). */
   uploadImage(token: string, kind: "logo" | "photo", file: File) {
     return uploadMultipart<StoreDashboard>(token, `/api/store/images/${kind}`, file);
+  },
+  /** Use an image from the asset library as the store logo or author photo. */
+  useLibraryImage(token: string, kind: "logo" | "photo", libraryAssetId: string) {
+    return request<StoreDashboard>(`/api/store/images/${kind}/from-library/${libraryAssetId}`, {
+      method: "POST",
+      token,
+    });
   },
   removeImage(token: string, kind: "logo" | "photo") {
     return request<StoreDashboard>(`/api/store/images/${kind}`, { method: "DELETE", token });
