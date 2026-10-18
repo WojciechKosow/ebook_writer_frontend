@@ -86,9 +86,10 @@ export function makeCtx(c: DesignContext): Ctx {
 
 // ---- Editable fields ---------------------------------------------------------
 
-export type Field =
-  | { key: string; label: string; type: "text" | "textarea" | "code"; hint?: string; def: (c: Ctx) => string }
-  | { key: string; label: string; type: "list"; hint?: string; def: (c: Ctx) => string[] }
+/** An editable field; `C` is what its default is computed from (the store, or a product page). */
+export type Field<C = Ctx> =
+  | { key: string; label: string; type: "text" | "textarea" | "code"; hint?: string; def: (c: C) => string }
+  | { key: string; label: string; type: "list"; hint?: string; def: (c: C) => string[] }
   | {
       key: string;
       label: string;
@@ -97,17 +98,17 @@ export type Field =
       /** Sub-fields of one row; the first is used as the row's title in the editor. */
       fields: { key: string; label: string; multiline?: boolean }[];
       max?: number;
-      def: (c: Ctx) => Item[];
+      def: (c: C) => Item[];
     };
 
-export interface SectionSchema {
+export interface SectionSchema<C = Ctx> {
   id: string;
   label: string;
   /** Can the author hide this section? (Hero and ebooks can't be hidden.) */
   optional?: boolean;
   /** Hidden until the author turns it on — for sections that need their own words (a page spread, a quote). */
   offByDefault?: boolean;
-  fields: Field[];
+  fields: Field<C>[];
 }
 
 export interface StyleSchema {
@@ -136,19 +137,29 @@ export interface ResolvedStyle {
   sections: Record<string, ResolvedSection>;
 }
 
-export function resolveStyle(schema: StyleSchema, settings: StyleSettings | undefined, ctx: Ctx): ResolvedStyle {
-  const s = settings ?? {};
+/** Each section's values (the author's edits, else the defaults) and whether it is shown. */
+export function resolveSections<C>(
+  schemas: SectionSchema<C>[],
+  edits: Record<string, SectionEdits> | undefined,
+  ctx: C,
+): Record<string, ResolvedSection> {
   const sections: Record<string, ResolvedSection> = {};
-  for (const sec of schema.sections) {
-    const edits = s.sections?.[sec.id] ?? {};
+  for (const sec of schemas) {
+    const e = edits?.[sec.id] ?? {};
     const values: Record<string, FieldValue> = {};
     for (const f of sec.fields) {
-      const v = edits[f.key];
+      const v = e[f.key];
       values[f.key] = isValueFor(f, v) ? (v as FieldValue) : f.def(ctx);
     }
-    const enabled = typeof edits.enabled === "boolean" ? edits.enabled : !sec.offByDefault;
+    const enabled = typeof e.enabled === "boolean" ? e.enabled : !sec.offByDefault;
     sections[sec.id] = { enabled: !sec.optional || enabled, values };
   }
+  return sections;
+}
+
+export function resolveStyle(schema: StyleSchema, settings: StyleSettings | undefined, ctx: Ctx): ResolvedStyle {
+  const s = settings ?? {};
+  const sections = resolveSections(schema.sections, s.sections, ctx);
   return {
     id: schema.id,
     accent: isColor(s.accent) ? s.accent! : schema.accents[0],
@@ -158,7 +169,7 @@ export function resolveStyle(schema: StyleSchema, settings: StyleSettings | unde
   };
 }
 
-function isValueFor(f: Field, v: unknown): boolean {
+function isValueFor<C>(f: Field<C>, v: unknown): boolean {
   if (f.type === "list") return Array.isArray(v) && v.every((x) => typeof x === "string");
   if (f.type === "items") return Array.isArray(v) && v.every((x) => x && typeof x === "object" && !Array.isArray(x));
   return typeof v === "string";
@@ -202,6 +213,8 @@ export interface PreviewMessage {
   focus?: string | null;
   /** Click-to-edit: sections are outlined on hover and a click reports them back. */
   pick?: { labels: Record<string, string>; selected: string | null } | null;
+  /** Set by the product page editor: show this product page (in the store's style) instead of the store. */
+  page?: import("./product-page").ProductPreview | null;
 }
 
 /** Sent by the preview frame when the author clicks a section. */

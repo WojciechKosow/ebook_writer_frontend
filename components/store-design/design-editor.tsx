@@ -527,9 +527,9 @@ function carryOver(doc: DesignDoc, from: StyleId, to: StyleId): DesignDoc {
 const LEAD_KEYS = ["headline", "title", "quote", "text", "intro", "window", "items", "flowTitle", "partsTitle"];
 const SKIP_KEYS = new Set(["eyebrow", "badgeTag", "badge", "label", "kicker"]);
 
-function leadOf(sec: SectionSchema, values: Record<string, FieldValue>): string {
+export function leadOf<C>(sec: SectionSchema<C>, values: Record<string, FieldValue>): string {
   const order = [
-    ...LEAD_KEYS.map((k) => sec.fields.find((f) => f.key === k)).filter((f): f is Field => !!f),
+    ...LEAD_KEYS.map((k) => sec.fields.find((f) => f.key === k)).filter((f): f is Field<C> => !!f),
     ...sec.fields.filter((f) => !LEAD_KEYS.includes(f.key) && !SKIP_KEYS.has(f.key)),
   ];
   for (const f of order) {
@@ -551,10 +551,10 @@ function leadOf(sec: SectionSchema, values: Record<string, FieldValue>): string 
 
 // ---- small UI pieces ----------------------------------------------------------
 
-const fieldCls =
+export const fieldCls =
   "box-border w-full rounded-[10px] border border-hairline-2 bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-faint transition-colors focus:border-foreground/50 focus:outline-none";
 
-function PanelSection({ title, aside, children }: { title?: string; aside?: string; children: React.ReactNode }) {
+export function PanelSection({ title, aside, children }: { title?: string; aside?: string; children: React.ReactNode }) {
   return (
     <section className="border-b border-hairline px-0.5 py-[22px] first:pt-[18px]">
       {title && (
@@ -568,7 +568,7 @@ function PanelSection({ title, aside, children }: { title?: string; aside?: stri
   );
 }
 
-function Switch({ label, on, onChange, text }: { label: string; on: boolean; onChange: (on: boolean) => void; text?: string }) {
+export function Switch({ label, on, onChange, text }: { label: string; on: boolean; onChange: (on: boolean) => void; text?: string }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)}
       className="inline-flex shrink-0 items-center gap-2.5 text-[13px] font-medium text-foreground-2">
@@ -580,7 +580,7 @@ function Switch({ label, on, onChange, text }: { label: string; on: boolean; onC
   );
 }
 
-function IconButton({ label, hint, onClick, disabled, pressed, children }: {
+export function IconButton({ label, hint, onClick, disabled, pressed, children }: {
   label: string; hint?: string; onClick: () => void; disabled?: boolean; pressed?: boolean; children: React.ReactNode;
 }) {
   return (
@@ -595,8 +595,8 @@ function IconButton({ label, hint, onClick, disabled, pressed, children }: {
  * Fields named "Group — part" next to each other become one titled group
  * ("Floating card 1" → title, text), so long sections read as a few blocks.
  */
-function groupFields(fields: Field[]): { title: string | null; fields: Field[] }[] {
-  const out: { title: string | null; fields: Field[] }[] = [];
+export function groupFields<C>(fields: Field<C>[]): { title: string | null; fields: Field<C>[] }[] {
+  const out: { title: string | null; fields: Field<C>[] }[] = [];
   for (const f of fields) {
     const m = f.label.match(/^(.+?) — (.+)$/);
     const title = m ? m[1] : null;
@@ -608,13 +608,13 @@ function groupFields(fields: Field[]): { title: string | null; fields: Field[] }
   return out.flatMap((g) => (g.title && g.fields.length === 1 ? [{ title: null, fields: g.fields }] : [g]));
 }
 
-function sublabel(label: string) {
+export function sublabel(label: string) {
   const part = label.split(" — ").slice(1).join(" — ");
   return part ? part[0].toUpperCase() + part.slice(1) : label;
 }
 
-function FieldEditor({ field, label: labelText, value, onChange }: {
-  field: Field; label?: string; value: FieldValue | undefined; onChange: (v: FieldValue) => void;
+export function FieldEditor<C>({ field, label: labelText, value, onChange }: {
+  field: Field<C>; label?: string; value: FieldValue | undefined; onChange: (v: FieldValue) => void;
 }) {
   const id = useId();
   const label = labelText ?? field.label;
@@ -704,13 +704,13 @@ function swap<T>(a: T[], i: number, j: number): T[] {
 // ---- icons (stroke, 24px grid) ----------------------------------------------------
 
 const ic = { fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
-const Chevron = ({ dir }: { dir: "left" | "right" }) => <svg width="15" height="15" viewBox="0 0 24 24" {...ic}><path d={dir === "left" ? "M15 18l-6-6 6-6" : "M9 6l6 6-6 6"} /></svg>;
-const IconDesktop = () => <svg width="15" height="15" viewBox="0 0 24 24" {...ic}><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg>;
-const IconPhone = () => <svg width="15" height="15" viewBox="0 0 24 24" {...ic}><rect x="7" y="3" width="10" height="18" rx="2" /><path d="M11 18h2" /></svg>;
-const IconUndo = () => <svg width="17" height="17" viewBox="0 0 24 24" {...ic}><path d="M9 14L4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></svg>;
-const IconRedo = () => <svg width="17" height="17" viewBox="0 0 24 24" {...ic}><path d="M15 14l5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" /></svg>;
-const IconExternal = () => <svg width="14" height="14" viewBox="0 0 24 24" {...ic}><path d="M14 4h6v6" /><path d="M20 4l-9 9" /><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" /></svg>;
-const IconPointer = () => <svg width="15" height="15" viewBox="0 0 24 24" {...ic} style={{ flexShrink: 0 }}><path d="M5 3l14 7-6 2-2 6z" /></svg>;
-const IconEye = () => <svg width="17" height="17" viewBox="0 0 24 24" {...ic}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>;
-const IconEyeOff = () => <svg width="17" height="17" viewBox="0 0 24 24" {...ic}><path d="M3 3l18 18" /><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6A17.4 17.4 0 0 0 2 12s3.5 7 10 7a10 10 0 0 0 5.4-1.6" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></svg>;
-const IconReset = () => <svg width="14" height="14" viewBox="0 0 24 24" {...ic}><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>;
+export const Chevron = ({ dir }: { dir: "left" | "right" }) => <svg width="15" height="15" viewBox="0 0 24 24" {...ic}><path d={dir === "left" ? "M15 18l-6-6 6-6" : "M9 6l6 6-6 6"} /></svg>;
+export const IconDesktop = () => <svg width="15" height="15" viewBox="0 0 24 24" {...ic}><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg>;
+export const IconPhone = () => <svg width="15" height="15" viewBox="0 0 24 24" {...ic}><rect x="7" y="3" width="10" height="18" rx="2" /><path d="M11 18h2" /></svg>;
+export const IconUndo = () => <svg width="17" height="17" viewBox="0 0 24 24" {...ic}><path d="M9 14L4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></svg>;
+export const IconRedo = () => <svg width="17" height="17" viewBox="0 0 24 24" {...ic}><path d="M15 14l5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" /></svg>;
+export const IconExternal = () => <svg width="14" height="14" viewBox="0 0 24 24" {...ic}><path d="M14 4h6v6" /><path d="M20 4l-9 9" /><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" /></svg>;
+export const IconPointer = () => <svg width="15" height="15" viewBox="0 0 24 24" {...ic} style={{ flexShrink: 0 }}><path d="M5 3l14 7-6 2-2 6z" /></svg>;
+export const IconEye = () => <svg width="17" height="17" viewBox="0 0 24 24" {...ic}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>;
+export const IconEyeOff = () => <svg width="17" height="17" viewBox="0 0 24 24" {...ic}><path d="M3 3l18 18" /><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6A17.4 17.4 0 0 0 2 12s3.5 7 10 7a10 10 0 0 0 5.4-1.6" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></svg>;
+export const IconReset = () => <svg width="14" height="14" viewBox="0 0 24 24" {...ic}><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>;

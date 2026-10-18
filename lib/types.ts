@@ -601,6 +601,19 @@ export interface StoreProduct {
   files: ProductFile[];
   /** Whether buyers would get anything (the ebook's PDF or at least one file). */
   deliverable: boolean;
+  /** The product page design (JSON, see lib/store-design/product-page), null for defaults. */
+  pageSettings: string | null;
+  /** The ebook's chapters (empty for a standalone product); `hasText` = can be a free preview. */
+  chapters: { number: number; title: string; hasText: boolean }[];
+  subtitle: string | null;
+  language: string | null;
+}
+
+/** A chapter buyers can read for free; `html` is sanitised by the backend (no scripts, no images). */
+export interface SampleChapter {
+  number: number;
+  title: string;
+  html: string;
 }
 
 /** The author's public profile fields, shared by the dashboard and the store. */
@@ -678,6 +691,12 @@ export interface PublicProduct {
   /** What buyers get, e.g. ["PDF", "EPUB"]. */
   formats: ProductFileFormat[];
   more: PublicStoreProduct[];
+  /** The store's design (JSON) — the product page uses the same style. */
+  themeSettings: string | null;
+  /** The product page design (JSON), null for defaults. */
+  pageSettings: string | null;
+  /** Chapters buyers can read for free. */
+  sampleChapters: { number: number; title: string }[];
 }
 
 export type StoreOrderStatus = "PENDING" | "PAID" | "EXPIRED" | "REFUNDED";
@@ -688,6 +707,10 @@ export interface StoreOrderStatusResponse {
   productTitle: string | null;
   storeSlug: string | null;
   storeName: string | null;
+  /** The product's page design (JSON) — for the author's thank-you. */
+  pageSettings: string | null;
+  productId: string;
+  coverUrl: string | null;
 }
 
 export interface StoreCheckoutResponse {
@@ -711,6 +734,10 @@ export interface DownloadInfo {
   expiresAt: string;
   /** Other ebooks still on sale in the store. */
   more: PublicStoreProduct[];
+  /** The seller's profile (null if the store is gone), the store design and the product page design. */
+  store: StoreProfile | null;
+  themeSettings: string | null;
+  pageSettings: string | null;
 }
 
 /** One paid purchase in My Purchases. */
