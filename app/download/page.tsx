@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ApiError, publicStoreApi } from "@/lib/api";
 import { formatPrice } from "@/lib/pricing";
+import { formatSize } from "@/lib/files";
 import type { DownloadInfo } from "@/lib/types";
 import { MarketingShell } from "@/components/marketing-shell";
 import { StoreLogo } from "@/components/store/store-shell";
@@ -18,11 +19,6 @@ const subscribeHash = (onChange: () => void) => {
   return () => window.removeEventListener("hashchange", onChange);
 };
 const readHash = () => decodeURIComponent(window.location.hash.slice(1));
-
-function formatSize(bytes: number) {
-  if (bytes <= 0) return null;
-  return bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
-}
 
 /**
  * The page a buyer's email links to, in the seller's store frame. Viewing it does
@@ -73,7 +69,6 @@ export default function DownloadPage() {
   }
 
   const who = info.authorName || info.storeName || "the author";
-  const size = formatSize(info.fileSizeBytes);
   const storeHref = info.storeSlug ? `/store/${info.storeSlug}` : null;
 
   return (
@@ -98,22 +93,43 @@ export default function DownloadPage() {
             <StoreCover coverUrl={info.coverUrl} title={info.productTitle} />
           </div>
           <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-3">
-            <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-accent">Your ebook is ready</p>
+            <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-accent">Your download is ready</p>
             <h1 className="font-display text-[34px] font-light leading-tight text-foreground">{info.productTitle}</h1>
             <p className="text-[15px] leading-relaxed text-foreground-2">Thank you for buying directly from {who}.</p>
-            <div>
-              <a
-                href={publicStoreApi.downloadFileUrl(token)}
-                onClick={() => setTimeout(load, 3000)}
-                rel="noreferrer"
-                className="mt-2 inline-flex min-h-[48px] items-center justify-center rounded-xl bg-foreground px-5 text-sm font-semibold text-background shadow-soft hover:opacity-90"
-              >
-                Download PDF{size ? ` · ${size}` : ""}
-              </a>
-            </div>
+            {info.files.length === 0 ? (
+              <Alert variant="info">
+                The files aren&apos;t available right now. Please contact {who}.
+              </Alert>
+            ) : (
+              <ul className="mt-2 flex flex-col gap-2">
+                {info.files.map((f, i) => (
+                  <li key={f.id} className="flex flex-wrap items-center gap-3">
+                    <a
+                      href={publicStoreApi.downloadFileUrl(token, f.id)}
+                      onClick={() => setTimeout(load, 3000)}
+                      rel="noreferrer"
+                      className={`inline-flex min-h-[48px] items-center justify-center rounded-xl px-5 text-sm font-semibold shadow-soft hover:opacity-90 ${
+                        i === 0 ? "bg-foreground text-background" : "border border-hairline-2 bg-surface text-foreground"
+                      }`}
+                    >
+                      Download {f.format}
+                    </a>
+                    <span className="min-w-0 text-sm text-muted">
+                      <span className="break-words text-foreground-2">{f.filename}</span>
+                      {formatSize(f.sizeBytes) ? ` · ${formatSize(f.sizeBytes)}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <p className="text-xs text-faint">
               {info.downloadsRemaining} download{info.downloadsRemaining === 1 ? "" : "s"} left · link valid until{" "}
               {new Date(info.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            </p>
+            <p className="text-sm text-muted">
+              Want to keep it for good?{" "}
+              <Link href="/register" className="font-medium text-accent hover:underline">Create a free Scrivetta account</Link>{" "}
+              with the email you bought with — your purchase appears in My Purchases, with unlimited downloads.
             </p>
             <p className="text-sm text-muted">
               Tip: on a phone, tap Download and choose “Save to Files” or open it in Books so it&apos;s always with you.

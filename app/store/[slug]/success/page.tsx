@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { publicStoreApi } from "@/lib/api";
 import type { StoreOrderStatusResponse } from "@/lib/types";
@@ -91,8 +92,9 @@ function SuccessInner() {
           <p className="text-lg font-semibold text-good">Payment confirmed</p>
           <p className="mt-1 text-sm text-good">
             {order?.productTitle ? <>Thanks for buying <strong>{order.productTitle}</strong>. </> : null}
-            We&apos;ve emailed you a download link — it works for 30 days and up to 5 downloads. Check your spam
-            folder if it isn&apos;t there in a few minutes.
+            We&apos;ve emailed you a download link — it works for 30 days and up to 5 downloads per file. Check your
+            spam folder if it isn&apos;t there in a few minutes. Have a Scrivetta account with that email? Your
+            purchase is also in <Link href="/purchases" className="font-semibold underline">My purchases</Link>.
           </p>
           <div className="mt-6">{back}</div>
         </div>

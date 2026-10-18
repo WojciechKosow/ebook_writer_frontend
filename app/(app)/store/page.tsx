@@ -8,7 +8,8 @@ import { ApiError, apiAsset, ebookApi, storeApi } from "@/lib/api";
 import { StoreCover } from "@/components/store/store-cover";
 import { LibraryPicker, useLibraryNotice } from "@/components/asset-library";
 import { formatPrice } from "@/lib/pricing";
-import type { EbookStatusResponse, LibraryAsset, StoreDashboard, StoreProduct } from "@/lib/types";
+import { PRODUCT_FILE_ACCEPT, formatSize } from "@/lib/files";
+import type { EbookStatusResponse, LibraryAsset, ProductFile, StoreDashboard, StoreProduct } from "@/lib/types";
 import { Alert, Button, ButtonLink, Field, Spinner, TextAreaField, controlBase } from "@/components/ui";
 import { parseDesign } from "@/lib/store-design/core";
 import { STYLES } from "@/lib/store-design/schemas";
@@ -269,7 +270,7 @@ function Checklist({ store }: { store: StoreDashboard }) {
   const items: { done: boolean; label: string; href: string }[] = [
     { done: !!store.logoUrl && !!store.headline, label: "Store logo and headline", href: "#brand" },
     { done: !!store.description && !!store.photoUrl, label: "About you, with a photo", href: "#about-you" },
-    { done: listed > 0, label: listed > 0 ? `${listed} ebook${listed === 1 ? "" : "s"} for sale` : "At least one ebook for sale", href: "#ebooks-sec" },
+    { done: listed > 0, label: listed > 0 ? `${listed} product${listed === 1 ? "" : "s"} for sale` : "At least one product for sale", href: "#ebooks-sec" },
     { done: store.stripe.state === "READY", label: "Payments ready in Stripe", href: "#payments" },
     { done: store.published, label: "Store published", href: "#" },
   ];
@@ -608,8 +609,28 @@ function Products({ token, store, ebooks, onChange }: {
   const available = ebooks.filter((e) => e.status === "COMPLETED" && e.downloadReady && !listed.has(e.id));
   const [ebookId, setEbookId] = useState("");
   const [price, setPrice] = useState("9.99");
+  const [ownTitle, setOwnTitle] = useState("");
+  const [ownPrice, setOwnPrice] = useState("9.99");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function addOwn() {
+    const cents = toCents(ownPrice);
+    if (!ownTitle.trim() || cents === null) {
+      setError("Give the product a title and a price like 9.99.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      onChange(await storeApi.addProduct(token, { title: ownTitle.trim(), priceCents: cents }));
+      setOwnTitle("");
+    } catch (e) {
+      setError(message(e, "Could not add the product."));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function add() {
     const cents = toCents(price);
@@ -632,12 +653,13 @@ function Products({ token, store, ebooks, onChange }: {
   return (
     <div id="ebooks-sec" className={`${card} scroll-mt-6`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className={h2}>Ebooks</h2>
+        <h2 className={h2}>Products</h2>
         <span className="text-xs text-faint">The first one is featured · prices in USD</span>
       </div>
       <p className="mt-1 text-sm text-muted">
-        Each ebook gets its own page with its cover, chapter list and your description. Buyers get a download link by
-        email.
+        Each product gets its own page with its cover and your description. Sell your Scrivetta ebooks, and add your
+        own PDF, EPUB or ZIP files to any product. Buyers get a download link by email, and the purchase stays in
+        their My Purchases if they have a Scrivetta account.
       </p>
 
       {store.products.length > 0 && (
@@ -672,6 +694,25 @@ function Products({ token, store, ebooks, onChange }: {
             <Button loading={busy} onClick={add}>Add to store</Button>
           </>
         )}
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-5">
+        <p className="text-sm font-medium text-foreground-2">Sell your own files</p>
+        <p className="mt-0.5 text-xs text-faint">
+          A product without a Scrivetta ebook — upload PDF, EPUB or ZIP files to it. It stays hidden until it has a file.
+        </p>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <label className="flex min-w-[220px] flex-1 flex-col gap-1.5 text-sm font-medium text-foreground-2">
+            Title
+            <input className={controlBase} value={ownTitle} maxLength={200} placeholder="Budget templates bundle"
+              onChange={(e) => setOwnTitle(e.target.value)} />
+          </label>
+          <label className="flex w-32 flex-col gap-1.5 text-sm font-medium text-foreground-2">
+            Price ($)
+            <input className={controlBase} inputMode="decimal" value={ownPrice} onChange={(e) => setOwnPrice(e.target.value)} />
+          </label>
+          <Button variant="secondary" loading={busy} onClick={addOwn}>Create product</Button>
+        </div>
       </div>
       {error && (
         <div className="mt-4">
@@ -724,8 +765,14 @@ function ProductRow({ token, product, slug, published, first, last, onChange }: 
           </p>
           <p className="text-xs text-faint">
             {[first && product.active ? "Featured" : null, product.pageCount > 0 ? `${product.pageCount} pages` : null,
+              product.files.length > 0 ? `${product.files.length} file${product.files.length === 1 ? "" : "s"}` : null,
               formatPrice(product.priceCents), product.active ? null : "hidden"].filter(Boolean).join(" · ")}
           </p>
+          {!product.deliverable && (
+            <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+              Add a file so buyers get something — then show it.
+            </p>
+          )}
           {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
         </div>
         <input aria-label="Price in USD" className={`${controlBase} w-24`} inputMode="decimal" value={price}
@@ -735,15 +782,17 @@ function ProductRow({ token, product, slug, published, first, last, onChange }: 
           Save price
         </Button>
         <Button variant="ghost" disabled={busy} onClick={() => setOpen(!open)} aria-expanded={open}>
-          {open ? "Close" : "Edit page"}
+          {open ? "Close" : "Edit page & files"}
         </Button>
-        <Button variant="ghost" disabled={busy}
+        <Button variant="ghost" disabled={busy || (!product.active && !product.deliverable)}
           onClick={() => run(() => storeApi.updateProduct(token, product.id, { active: !product.active }))}>
           {product.active ? "Hide" : "Show"}
         </Button>
       </div>
       {open && (
         <div className="mt-4 flex flex-col gap-4 rounded-xl border border-hairline bg-surface-2 p-4">
+          <ProductFiles token={token} product={product} onChange={onChange} />
+          <ProductCoverPicker token={token} product={product} onChange={onChange} />
           <TextAreaField label="Description" name={`desc-${product.id}`} value={description} maxLength={2000}
             hint="Shown under the title. Pre-filled from your book." onChange={(e) => setDescription(e.target.value)} />
           <TextAreaField label="What readers will be able to do" name={`hl-${product.id}`} value={highlights}
@@ -764,6 +813,163 @@ function ProductRow({ token, product, slug, published, first, last, onChange }: 
         </div>
       )}
     </li>
+  );
+}
+
+// ---- Product files + cover ------------------------------------------------------
+
+function ProductFiles({ token, product, onChange }: {
+  token: string; product: StoreProduct; onChange: (s: StoreDashboard) => void;
+}) {
+  const [progress, setProgress] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+
+  async function run(fn: (onProgress: (p: number) => void) => Promise<StoreDashboard>) {
+    setBusy(true);
+    setError(null);
+    setProgress(0);
+    try {
+      onChange(await fn(setProgress));
+    } catch (e) {
+      setError(message(e, "Could not update the files."));
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="text-sm font-medium text-foreground-2">Downloadable files</span>
+        <span className="text-xs text-faint">PDF, EPUB or ZIP · stored exactly as uploaded · private</span>
+      </div>
+      <ul className="flex flex-col divide-y divide-hairline rounded-xl border border-hairline bg-surface">
+        {product.ebookId && (
+          <li className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm">
+            <span className="rounded-md bg-surface-2 px-2 py-0.5 font-mono text-[11px] font-semibold text-foreground-2">PDF</span>
+            <span className="min-w-0 flex-1 text-foreground">Your Scrivetta ebook <span className="text-faint">· always the latest render</span></span>
+          </li>
+        )}
+        {product.files.map((f) => (
+          <FileItem key={f.id} token={token} product={product} file={f} disabled={busy} run={run} />
+        ))}
+        {!product.ebookId && product.files.length === 0 && (
+          <li className="px-3 py-3 text-sm text-faint">No files yet.</li>
+        )}
+      </ul>
+      <input ref={input} type="file" accept={PRODUCT_FILE_ACCEPT} className="hidden" aria-label="Add a file"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (input.current) input.current.value = "";
+          if (file) run((p) => storeApi.uploadProductFile(token, product.id, file, p));
+        }} />
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="secondary" loading={busy} onClick={() => input.current?.click()}>Add file</Button>
+        {progress !== null && <span className="text-xs text-muted">Uploading… {progress}%</span>}
+      </div>
+      {error && <Alert>{error}</Alert>}
+      <p className="text-xs text-faint">
+        Replacing a file gives every buyer the new version — past purchases keep working.
+      </p>
+    </div>
+  );
+}
+
+function FileItem({ token, product, file, disabled, run }: {
+  token: string; product: StoreProduct; file: ProductFile; disabled: boolean;
+  run: (fn: (onProgress: (p: number) => void) => Promise<StoreDashboard>) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const size = formatSize(file.sizeBytes);
+  return (
+    <li className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm">
+      <span className="rounded-md bg-surface-2 px-2 py-0.5 font-mono text-[11px] font-semibold text-foreground-2">{file.format}</span>
+      <span className="min-w-0 flex-1">
+        <span className="break-words text-foreground">{file.filename}</span>
+        <span className="text-faint">{[size, file.version > 1 ? `version ${file.version}` : null].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>
+      </span>
+      <input ref={input} type="file" accept={PRODUCT_FILE_ACCEPT} className="hidden" aria-label={`Replace ${file.filename}`}
+        onChange={(e) => {
+          const next = e.target.files?.[0];
+          if (input.current) input.current.value = "";
+          if (next) run((p) => storeApi.replaceProductFile(token, product.id, file.id, next, p));
+        }} />
+      <Button variant="ghost" disabled={disabled} onClick={() => input.current?.click()}>Replace</Button>
+      <Button variant="ghost" disabled={disabled}
+        onClick={() => {
+          if (window.confirm(`Remove ${file.filename}? Buyers won't get it any more.`)) {
+            run(() => storeApi.removeProductFile(token, product.id, file.id));
+          }
+        }}>
+        Remove
+      </Button>
+    </li>
+  );
+}
+
+function ProductCoverPicker({ token, product, onChange }: {
+  token: string; product: StoreProduct; onChange: (s: StoreDashboard) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const { notice, afterUpload } = useLibraryNotice();
+  const input = useRef<HTMLInputElement>(null);
+
+  async function run(fn: () => Promise<StoreDashboard>, uploaded = false) {
+    setBusy(true);
+    setError(null);
+    try {
+      onChange(await fn());
+      if (uploaded) afterUpload();
+    } catch (e) {
+      setError(message(e, "Could not update the cover."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-4">
+      <div className="w-12 shrink-0"><StoreCover coverUrl={product.coverUrl} title={product.title} className="shadow-none" /></div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="text-sm font-medium text-foreground-2">Cover</span>
+        <span className="text-xs text-faint">
+          {product.customCover ? "Your own cover." : product.ebookId ? "The first page of your ebook." : "No cover yet."}{" "}
+          PNG, JPG or WebP · up to 3 MB · not part of the download
+        </span>
+        {error && <span className="text-xs text-red-600 dark:text-red-400">{error}</span>}
+      </div>
+      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" aria-label="Upload cover"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (input.current) input.current.value = "";
+          if (file) run(() => storeApi.uploadProductCover(token, product.id, file), true);
+        }} />
+      <div className="flex gap-2">
+        <Button variant="secondary" loading={busy} onClick={() => input.current?.click()}>
+          {product.customCover ? "Replace" : "Upload"}
+        </Button>
+        <Button variant="ghost" disabled={busy} onClick={() => setLibraryOpen(true)}>From library</Button>
+        {product.customCover && (
+          <Button variant="ghost" disabled={busy} onClick={() => run(() => storeApi.removeProductCover(token, product.id))}>
+            Remove
+          </Button>
+        )}
+      </div>
+      {libraryOpen && (
+        <LibraryPicker
+          title="Pick a cover"
+          accepts={storeAccepts}
+          onPick={async (asset) => onChange(await storeApi.useLibraryProductCover(token, product.id, asset.id))}
+          onClose={() => setLibraryOpen(false)}
+        />
+      )}
+      {notice}
+    </div>
   );
 }
 

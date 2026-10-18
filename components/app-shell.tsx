@@ -34,6 +34,12 @@ const WORKSPACE: NavItem[] = [
 
 const ACCOUNT: NavItem[] = [
   {
+    href: "/purchases",
+    label: "My purchases",
+    icon: IconBag,
+    isActive: (p) => p.startsWith("/purchases"),
+  },
+  {
     href: "/billing",
     label: "Billing & credits",
     icon: IconCard,
@@ -248,6 +254,14 @@ function IconStore({ className = "" }: { className?: string }) {
       <path d="M3 9l1.5-5h15L21 9" />
       <path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9z" />
       <path d="M5 13v7h14v-7" />
+    </svg>
+  );
+}
+function IconBag({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M6 7h12l1 14H5L6 7z" />
+      <path d="M9 7V5a3 3 0 0 1 6 0v2" />
     </svg>
   );
 }

@@ -6,7 +6,7 @@ export function StoreFaq({ profile }: { profile: StoreProfile }) {
   const items = [
     {
       q: "How do I get my ebook?",
-      a: "Right after payment you get an email with a download link. It works for 30 days and up to 5 downloads — save the PDF to your phone or computer.",
+      a: "Right after payment you get an email with a download link. It works for 30 days and up to 5 downloads per file — save the files to your phone or computer. With a free Scrivetta account under the same email, the purchase also stays in My Purchases for unlimited downloads.",
     },
     {
       q: "Do I need an account?",
@@ -36,7 +36,7 @@ export function StoreFaq({ profile }: { profile: StoreProfile }) {
 
 /** The three reassurances under the hero and on every ebook page. */
 export const TRUST_POINTS = (who: string) => [
-  { icon: "download", text: "Instant PDF by email" },
+  { icon: "download", text: "Instant download by email" },
   { icon: "lock", text: "Secure checkout with Stripe" },
   { icon: "person", text: `You buy directly from ${who}` },
 ];
