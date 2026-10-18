@@ -22,6 +22,7 @@ import type {
   OrderStatus,
   PublicProduct,
   PublicStore,
+  Purchase,
   QualityReport,
   StoreCheckoutResponse,
   StoreDashboard,
@@ -655,7 +656,8 @@ export const storeApi = {
   unpublish(token: string) {
     return request<StoreDashboard>("/api/store/unpublish", { method: "POST", token });
   },
-  addProduct(token: string, input: { ebookId: string; priceCents: number; title?: string; description?: string }) {
+  /** Without `ebookId`: a standalone product (title required) that starts hidden until it has a file. */
+  addProduct(token: string, input: { ebookId?: string; priceCents: number; title?: string; description?: string }) {
     return request<StoreDashboard>("/api/store/products", { method: "POST", body: input, token });
   },
   updateProduct(
@@ -664,6 +666,39 @@ export const storeApi = {
     input: { title?: string; description?: string; highlights?: string; priceCents?: number; active?: boolean },
   ) {
     return request<StoreDashboard>(`/api/store/products/${productId}`, { method: "PATCH", body: input, token });
+  },
+  /** Add a downloadable file (PDF, EPUB or ZIP) to a product. */
+  uploadProductFile(token: string, productId: string, file: File, onProgress?: (percent: number) => void) {
+    return uploadMultipart<StoreDashboard>(token, `/api/store/products/${productId}/files`, file, {}, onProgress);
+  },
+  /** Replace a file with a new version — buyers get the new one, purchases keep working. */
+  replaceProductFile(token: string, productId: string, fileId: string, file: File, onProgress?: (percent: number) => void) {
+    return uploadMultipart<StoreDashboard>(
+      token,
+      `/api/store/products/${productId}/files/${encodeURIComponent(fileId)}/replace`,
+      file,
+      {},
+      onProgress,
+    );
+  },
+  removeProductFile(token: string, productId: string, fileId: string) {
+    return request<StoreDashboard>(`/api/store/products/${productId}/files/${encodeURIComponent(fileId)}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+  /** The product's own cover (PNG, JPG or WebP, up to 3 MB) — separate from its files. */
+  uploadProductCover(token: string, productId: string, file: File) {
+    return uploadMultipart<StoreDashboard>(token, `/api/store/products/${productId}/cover`, file);
+  },
+  useLibraryProductCover(token: string, productId: string, libraryAssetId: string) {
+    return request<StoreDashboard>(`/api/store/products/${productId}/cover/from-library/${libraryAssetId}`, {
+      method: "POST",
+      token,
+    });
+  },
+  removeProductCover(token: string, productId: string) {
+    return request<StoreDashboard>(`/api/store/products/${productId}/cover`, { method: "DELETE", token });
   },
   /** A fresh Stripe-hosted onboarding link ("Connect Stripe" / "Continue in Stripe"). */
   connectStripe(token: string, country?: string) {
@@ -690,9 +725,12 @@ export const publicStoreApi = {
       `/api/public/stores/${encodeURIComponent(slug)}/products/${encodeURIComponent(productId)}`,
     );
   },
-  /** Only the product id is sent — price and seller come from the backend. */
-  checkout(productId: string) {
-    return request<StoreCheckoutResponse>("/api/public/checkout", { method: "POST", body: { productId } });
+  /**
+   * Only the product id is sent — price and seller come from the backend. A
+   * signed-in buyer passes their token so the purchase lands in My Purchases.
+   */
+  checkout(productId: string, token?: string | null) {
+    return request<StoreCheckoutResponse>("/api/public/checkout", { method: "POST", body: { productId }, token });
   },
   order(orderId: string) {
     return request<StoreOrderStatusResponse>(`/api/public/orders/${encodeURIComponent(orderId)}`);
@@ -700,9 +738,33 @@ export const publicStoreApi = {
   download(token: string) {
     return request<DownloadInfo>(`/api/public/downloads/${encodeURIComponent(token)}`);
   },
-  /** Plain link for a native browser download (counts one download). */
-  downloadFileUrl(token: string) {
-    return `${API_URL}/api/public/downloads/${encodeURIComponent(token)}/file`;
+  /** Plain link for a native browser download of one file (counts one download). */
+  downloadFileUrl(token: string, fileId: string) {
+    return `${API_URL}/api/public/downloads/${encodeURIComponent(token)}/files/${encodeURIComponent(fileId)}`;
+  },
+};
+
+// ---- My Purchases (authenticated buyer) ---------------------------------------
+
+export const purchasesApi = {
+  list(token: string) {
+    return request<Purchase[]>("/api/purchases", { token });
+  },
+  /**
+   * Download one file of a purchase: asks for a short-lived signed link and lets
+   * the browser download it natively (see ebookApi.download for why).
+   */
+  async download(token: string, orderId: string, fileId: string): Promise<void> {
+    const { url } = await request<{ url: string }>(
+      `/api/purchases/${encodeURIComponent(orderId)}/files/${encodeURIComponent(fileId)}/download-link`,
+      { method: "POST", token },
+    );
+    const a = document.createElement("a");
+    a.href = `${API_URL}${url}`;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   },
 };
 

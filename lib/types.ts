@@ -566,9 +566,22 @@ export interface StripeStatus {
   syncedAt: string | null;
 }
 
+export type ProductFileFormat = "PDF" | "EPUB" | "ZIP";
+
+/** A downloadable file of a store product. `id` is opaque ("ebook-pdf" = the ebook's own PDF). */
+export interface ProductFile {
+  id: string;
+  filename: string;
+  format: ProductFileFormat;
+  sizeBytes: number;
+  version: number;
+  updatedAt: string | null;
+}
+
 export interface StoreProduct {
   id: string;
-  ebookId: string;
+  /** The Scrivetta ebook whose PDF is delivered; null for a standalone product (uploaded files only). */
+  ebookId: string | null;
   title: string;
   description: string | null;
   /** "What you'll be able to do", one point per line. */
@@ -580,8 +593,14 @@ export interface StoreProduct {
   sortOrder: number;
   /** Pages of the finished PDF (0 if unknown). */
   pageCount: number;
-  /** Relative API path of the cover (the PDF's first page). */
-  coverUrl: string;
+  /** Relative API path of the cover (own cover, else the PDF's first page); null when there is none. */
+  coverUrl: string | null;
+  /** Whether the author uploaded their own cover. */
+  customCover: boolean;
+  /** Uploaded downloadable files (current versions). */
+  files: ProductFile[];
+  /** Whether buyers would get anything (the ebook's PDF or at least one file). */
+  deliverable: boolean;
 }
 
 /** The author's public profile fields, shared by the dashboard and the store. */
@@ -630,7 +649,7 @@ export interface PublicStoreProduct {
   currency: string;
   pageCount: number;
   language: string | null;
-  coverUrl: string;
+  coverUrl: string | null;
 }
 
 export interface PublicStore {
@@ -654,8 +673,10 @@ export interface PublicProduct {
   pageCount: number;
   language: string | null;
   updatedAt: string | null;
-  coverUrl: string;
+  coverUrl: string | null;
   chapters: { number: number; title: string }[];
+  /** What buyers get, e.g. ["PDF", "EPUB"]. */
+  formats: ProductFileFormat[];
   more: PublicStoreProduct[];
 }
 
@@ -681,10 +702,32 @@ export interface DownloadInfo {
   authorName: string | null;
   contactEmail: string | null;
   logoUrl: string | null;
-  coverUrl: string;
+  coverUrl: string | null;
+  /** Total size of all files. */
   fileSizeBytes: number;
+  /** Every file of the purchase; each download counts one. */
+  files: ProductFile[];
   downloadsRemaining: number;
   expiresAt: string;
   /** Other ebooks still on sale in the store. */
   more: PublicStoreProduct[];
+}
+
+/** One paid purchase in My Purchases. */
+export interface Purchase {
+  orderId: string;
+  productId: string;
+  productTitle: string;
+  storeName: string | null;
+  /** Null when the store isn't published any more. */
+  storeSlug: string | null;
+  authorName: string | null;
+  contactEmail: string | null;
+  coverUrl: string | null;
+  amount: number;
+  currency: string;
+  purchasedAt: string | null;
+  /** Whether the product is still on sale (the files stay yours either way). */
+  onSale: boolean;
+  files: ProductFile[];
 }

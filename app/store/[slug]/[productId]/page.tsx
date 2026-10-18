@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ApiError, apiAsset, publicStoreApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { formatPrice } from "@/lib/pricing";
 import type { PublicProduct } from "@/lib/types";
 import { MarketingShell } from "@/components/marketing-shell";
@@ -19,6 +20,7 @@ export default function StoreProductPage() {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [buying, setBuying] = useState(false);
+  const { token, user } = useAuth();
 
   useEffect(() => {
     publicStoreApi
@@ -32,7 +34,8 @@ export default function StoreProductPage() {
     setBuying(true);
     setError(null);
     try {
-      const { checkoutUrl } = await publicStoreApi.checkout(data.id);
+      // Signed in: the purchase is linked to the account (My Purchases).
+      const { checkoutUrl } = await publicStoreApi.checkout(data.id, token);
       window.location.assign(checkoutUrl);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not start checkout. Please try again.");
@@ -66,7 +69,7 @@ export default function StoreProductPage() {
   const who = store.authorName || store.name;
   const price = formatPrice(data.priceCents);
   const chips = [
-    "PDF",
+    ...(data.formats.length > 0 ? data.formats : ["PDF"]),
     data.pageCount > 0 ? `${data.pageCount} pages` : null,
     data.language,
     data.updatedAt ? `Updated ${new Date(data.updatedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : null,
@@ -118,7 +121,10 @@ export default function StoreProductPage() {
             {!store.purchasable && store.unavailableReason && <Alert variant="info">{store.unavailableReason}</Alert>}
             {error && <Alert>{error}</Alert>}
             <ul className="flex flex-col gap-2.5 text-sm text-foreground-2">
-              <li className="flex items-start gap-2.5"><TrustIcon name="mail" />Download link emailed right after payment — valid 30 days, up to 5 downloads</li>
+              <li className="flex items-start gap-2.5"><TrustIcon name="mail" />Download link emailed right after payment — valid 30 days, up to 5 downloads per file</li>
+              <li className="flex items-start gap-2.5"><TrustIcon name="download" />
+                {user ? <>Saved to My Purchases in your account ({user.email}) — download any time</> : <>With a free Scrivetta account, it stays in My Purchases — download any time</>}
+              </li>
               <li className="flex items-start gap-2.5"><TrustIcon name="lock" />Secure card checkout by Stripe</li>
               <li className="flex items-start gap-2.5"><TrustIcon name="person" />Sold by {who} — questions go straight to them</li>
             </ul>
