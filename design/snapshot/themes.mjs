@@ -38,111 +38,114 @@ const OUT = path.join(HERE, "out", "themes", style);
 const DESKTOP = { width: 1440, height: 900 };
 const MOBILE = { width: 390, height: 844 };
 
-// ---- Sample store -------------------------------------------------------------
-
-const SLUG = "marta-lis";
-
-const store = {
-  slug: SLUG,
-  name: "Small Hours Press",
-  headline: "Essays and poems for the *quiet part* of the day.",
-  description:
-    "I write short essays and poems about ordinary evenings — kitchens, trains, the light at 6 p.m. Each book is small enough to finish in one sitting and typeset like a printed one.\n\nI've been writing for literary magazines for ten years; these are the pieces readers kept asking for.",
-  authorName: "Marta Lis",
-  contactEmail: "marta@smallhours.press",
-  instagramUrl: "https://instagram.com/smallhours.press",
-  tiktokUrl: null,
-  websiteUrl: "https://smallhours.press",
-  logoUrl: null,
-  photoUrl: null,
-  purchasable: true,
-  unavailableReason: null,
-};
-
-const products = [
-  {
-    id: "p-evening",
-    title: "The Evening Hours",
-    subtitle: "Twelve essays on slowing down",
-    description:
-      "Twelve short essays about the hour after work — cooking for one, the last train home, a window left open in October. Read one a night.",
-    priceCents: 1400,
-    currency: "usd",
-    pageCount: 86,
-    language: "en",
-    coverUrl: "/covers/evening.png",
-  },
-  {
-    id: "p-salt",
-    title: "Salt & Paper",
-    subtitle: "Poems",
-    description: "Forty poems about the sea, letters, and the people we write to.",
-    priceCents: 900,
-    currency: "usd",
-    pageCount: 54,
-    language: "en",
-    coverUrl: "/covers/salt.png",
-  },
-  {
-    id: "p-letters",
-    title: "Letters to a Slow Reader",
-    subtitle: "On reading less, and better",
-    description: "A short book of letters on attention, rereading and keeping a notebook.",
-    priceCents: 1200,
-    currency: "usd",
-    pageCount: 68,
-    language: "en",
-    coverUrl: "/covers/letters.png",
-  },
-  {
-    id: "p-notebook",
-    title: "A Notebook for October",
-    subtitle: "Prompts for slow evenings",
-    description: "Thirty-one short prompts, one for every evening of the month.",
-    priceCents: 700,
-    currency: "usd",
-    pageCount: 40,
-    language: "en",
-    coverUrl: "/covers/salt.png",
-  },
-  {
-    id: "p-rooms",
-    title: "Rooms",
-    subtitle: "Poems",
-    description: "Poems about the rooms we leave behind.",
-    priceCents: 900,
-    currency: "usd",
-    pageCount: 48,
-    language: "en",
-    coverUrl: "/covers/evening.png",
-  },
-].slice(0, Number(process.env.BOOKS) || 3);
-
-const chapters = [
-  "The hour after work",
-  "Cooking for one",
-  "The last train home",
-  "A window left open in October",
-  "Notes from a balcony",
-  "What the radio said",
-  "Lamps",
-  "Walking the long way",
-  "Dishes, slowly",
-  "The neighbour's piano",
-  "Sunday, 6 p.m.",
-  "Going to bed early",
-].map((title, i) => ({ number: i + 1, title }));
+// ---- Sample stores ----------------------------------------------------------------
+// A literary author by default; the code style gets a technical author, so each
+// style is shown with the kind of books it is made for.
 
 const file = (over) => ({
   id: "ebook-pdf", filename: null, format: "PDF", sizeBytes: 2_400_000, version: 1, updatedAt: null,
   label: null, note: null, accountOnly: false, downloadsLeft: null, updated: false, ...over,
 });
 
-const included = [
-  file({}),
-  file({ id: "f-epub", format: "EPUB", sizeBytes: 900_000, label: "For e-readers", note: "EPUB — for Kindle, Kobo or Apple Books" }),
-  file({ id: "f-audio", format: "ZIP", sizeBytes: 48_000_000, label: "Read by the author", note: "Three essays as audio (MP3)", accountOnly: true }),
-];
+const product = (id, title, subtitle, description, price, pageCount, cover) =>
+  ({ id, title, subtitle, description, priceCents: price, currency: "usd", pageCount, language: "en", coverUrl: `/covers/${cover}.png` });
+
+const SAMPLES = {
+  books: {
+    slug: "marta-lis",
+    store: {
+      name: "Small Hours Press",
+      headline: "Essays and poems for the *quiet part* of the day.",
+      description:
+        "I write short essays and poems about ordinary evenings — kitchens, trains, the light at 6 p.m. Each book is small enough to finish in one sitting and typeset like a printed one.\n\nI've been writing for literary magazines for ten years; these are the pieces readers kept asking for.",
+      authorName: "Marta Lis",
+      contactEmail: "marta@smallhours.press",
+      instagramUrl: "https://instagram.com/smallhours.press",
+      tiktokUrl: null,
+      websiteUrl: "https://smallhours.press",
+    },
+    products: [
+      product("p-evening", "The Evening Hours", "Twelve essays on slowing down",
+        "Twelve short essays about the hour after work — cooking for one, the last train home, a window left open in October. Read one a night.", 1400, 86, "evening"),
+      product("p-salt", "Salt & Paper", "Poems", "Forty poems about the sea, letters, and the people we write to.", 900, 54, "salt"),
+      product("p-letters", "Letters to a Slow Reader", "On reading less, and better", "A short book of letters on attention, rereading and keeping a notebook.", 1200, 68, "letters"),
+      product("p-notebook", "A Notebook for October", "Prompts for slow evenings", "Thirty-one short prompts, one for every evening of the month.", 700, 40, "salt"),
+      product("p-rooms", "Rooms", "Poems", "Poems about the rooms we leave behind.", 900, 48, "evening"),
+    ],
+    chapters: [
+      "The hour after work", "Cooking for one", "The last train home", "A window left open in October", "Notes from a balcony", "What the radio said",
+      "Lamps", "Walking the long way", "Dishes, slowly", "The neighbour's piano", "Sunday, 6 p.m.", "Going to bed early",
+    ],
+    highlights: ["Read one essay a night, in ten minutes", "Notice the small things that make an evening yours", "Typeset like a printed book, on any screen"],
+    included: [
+      file({}),
+      file({ id: "f-epub", format: "EPUB", sizeBytes: 900_000, label: "For e-readers", note: "EPUB — for Kindle, Kobo or Apple Books" }),
+      file({ id: "f-audio", format: "ZIP", sizeBytes: 48_000_000, label: "Read by the author", note: "Three essays as audio (MP3)", accountOnly: true }),
+    ],
+    sampleHtml:
+      "<p>There is an hour, after the door closes and before anyone asks for dinner, that belongs to no one. I used to fill it — with email, with the radio, with the small chores that wait by the sink. Lately I have been leaving it empty.</p>" +
+      "<p>It is not a long hour. Some days it is barely ten minutes. But it has a particular light, and a particular sound: the fridge, a neighbour's door, the bus going round the corner. If you sit still long enough, the day finishes arriving.</p>" +
+      "<p>This book is about that hour, and the others like it.</p>",
+    covers: {
+      look: "serif",
+      evening: { bg: "#2E3A4F", fg: "#F1E6CF", accent: "#D9A55B", title: "The Evening<br>Hours", sub: "Twelve essays on slowing down" },
+      salt: { bg: "#E9E1D2", fg: "#2A2722", accent: "#7A2E2E", title: "Salt &amp;<br>Paper", sub: "Poems" },
+      letters: { bg: "#5B3A29", fg: "#F4EBDD", accent: "#E7C38C", title: "Letters to a<br>Slow Reader", sub: "On reading less, and better" },
+    },
+  },
+  tech: {
+    slug: "kuba-nowak",
+    store: {
+      name: "Backend Notes",
+      headline: "Production-ready backends, *one chapter at a time*.",
+      description:
+        "I've built payment and order systems in Java for twelve years. These books are the guides I wish I'd had: one real project each, tests included, no toy examples.\n\nEvery book comes with the full source code, chapter by chapter.",
+      authorName: "Kuba Nowak",
+      contactEmail: "kuba@backendnotes.dev",
+      instagramUrl: null,
+      tiktokUrl: null,
+      websiteUrl: "https://backendnotes.dev",
+    },
+    products: [
+      product("p-spring", "Production-Ready Spring Boot", "Build an e-commerce backend, step by step",
+        "One real project from first commit to deploy: JWT security, idempotent orders, centralised errors, Testcontainers and a CI pipeline.", 3900, 251, "spring"),
+      product("p-testing", "Testing Java Services", "From unit tests to contract tests", "Fast, honest tests for services that talk to databases, queues and other teams.", 2400, 148, "testing"),
+      product("p-postgres", "PostgreSQL for Backend Developers", "Indexes, locks and migrations", "What your ORM doesn't tell you: query plans, indexes, locking and zero-downtime migrations.", 2900, 182, "postgres"),
+      product("p-kafka", "Kafka in Practice", "Events without the pain", "Topics, partitions, retries and the outbox pattern, in one order-processing system.", 2700, 160, "spring"),
+      product("p-logs", "Clean Logs", "A short guide to logging", "Structured logs, correlation ids and alerts that wake you for the right reasons.", 900, 48, "testing"),
+    ],
+    chapters: [
+      "Project setup and the domain model", "REST API design that lasts", "Validation and centralised errors", "Security with JWT and refresh tokens",
+      "Orders: idempotency and state machines", "Payments and webhooks", "Persistence with JPA and Flyway", "Testing with Testcontainers",
+      "Caching with Redis", "Observability: logs, metrics, traces", "Docker and the CI pipeline", "Deploying to production",
+    ],
+    highlights: ["Ship a backend with security, payments and tests that you'd put in production", "Follow one real project, commit by commit", "Reuse the patterns at work the next day"],
+    included: [
+      file({ sizeBytes: 6_800_000 }),
+      file({ id: "f-epub", format: "EPUB", sizeBytes: 2_100_000, label: "For e-readers", note: "EPUB — for Kindle, Kobo or Apple Books" }),
+      file({ id: "f-code", format: "ZIP", sizeBytes: 3_400_000, label: "Source code", note: "The full project, one folder per chapter" }),
+      file({ id: "f-sheet", format: "PDF", sizeBytes: 400_000, label: "Cheat sheet", note: "Annotations, config and test recipes on two pages", accountOnly: true }),
+    ],
+    sampleHtml:
+      "<p>Most tutorials stop where production starts. We'll build the same shop backend you would at work — and keep it running when two requests arrive at once.</p>" +
+      "<h3>Creating the project</h3><p>Start from Spring Initializr with Web, Validation, Data JPA, PostgreSQL and Flyway. Then add the first entity:</p>" +
+      "<pre><code>@Entity\npublic class Order {\n    @Id @GeneratedValue\n    private Long id;\n    private String idempotencyKey;\n    @Enumerated(EnumType.STRING)\n    private OrderStatus status = OrderStatus.NEW;\n}</code></pre>" +
+      "<p>The <code>idempotencyKey</code> is what lets a client retry a payment without charging twice. We'll come back to it in chapter 5.</p>",
+    covers: {
+      look: "tech",
+      spring: { bg: "#0F1720", fg: "#E6EDF3", accent: "#6EE7B7", title: "Production-Ready<br>Spring Boot", sub: "Build an e-commerce backend" },
+      testing: { bg: "#14161F", fg: "#E6E8F0", accent: "#93C5FD", title: "Testing Java<br>Services", sub: "Unit to contract tests" },
+      postgres: { bg: "#F1F5F9", fg: "#0F172A", accent: "#2563EB", title: "PostgreSQL for<br>Backend Devs", sub: "Indexes, locks, migrations" },
+    },
+  },
+};
+
+const SAMPLE = SAMPLES[style === "code" ? "tech" : "books"];
+const SLUG = SAMPLE.slug;
+const store = { slug: SLUG, ...SAMPLE.store, logoUrl: null, photoUrl: null, purchasable: true, unavailableReason: null };
+const products = SAMPLE.products.slice(0, Number(process.env.BOOKS) || 3);
+const chapters = SAMPLE.chapters.map((title, i) => ({ number: i + 1, title }));
+const included = SAMPLE.included;
 
 // Every optional section on, with the sample copy filled in.
 const fullTheme = {
@@ -166,14 +169,10 @@ const publicStore = (full) => ({ store, products, themeSettings: design(full), f
 const publicProduct = (full) => ({
   store,
   ...products[0],
-  highlights: [
-    "Read one essay a night, in ten minutes",
-    "Notice the small things that make an evening yours",
-    "Typeset like a printed book, on any screen",
-  ],
+  highlights: SAMPLE.highlights,
   updatedAt: "2026-09-12T10:00:00Z",
   chapters,
-  formats: ["PDF", "EPUB"],
+  formats: [...new Set(included.filter((f) => !f.accountOnly).map((f) => f.format))],
   more: products.slice(1),
   themeSettings: design(full),
   pageSettings: null,
@@ -183,14 +182,7 @@ const publicProduct = (full) => ({
   downloadDays: 30,
 });
 
-const sample = (n) => ({
-  number: n,
-  title: chapters[n - 1].title,
-  html:
-    "<p>There is an hour, after the door closes and before anyone asks for dinner, that belongs to no one. I used to fill it — with email, with the radio, with the small chores that wait by the sink. Lately I have been leaving it empty.</p>" +
-    "<p>It is not a long hour. Some days it is barely ten minutes. But it has a particular light, and a particular sound: the fridge, a neighbour's door, the bus going round the corner. If you sit still long enough, the day finishes arriving.</p>" +
-    "<p>This book is about that hour, and the others like it.</p>",
-});
+const sample = (n) => ({ number: n, title: chapters[n - 1].title, html: SAMPLE.sampleHtml });
 
 const order = {
   orderId: "o-1",
@@ -203,7 +195,7 @@ const order = {
   coverUrl: products[0].coverUrl,
   amount: products[0].priceCents,
   buyerEmail: "reader@example.com",
-  files: included.filter((f) => !f.accountOnly).map((f) => ({ ...f, filename: f.format === "PDF" ? "the-evening-hours.pdf" : "the-evening-hours.epub", downloadsLeft: 5 })),
+  files: included.filter((f) => !f.accountOnly).map((f) => ({ ...f, filename: `${products[0].id}-${f.id}.${f.format.toLowerCase()}`, downloadsLeft: 5 })),
   perks: included.filter((f) => f.accountOnly),
   expiresAt: "2026-11-18T10:00:00Z",
   inLibrary: false,
@@ -212,20 +204,23 @@ const order = {
 
 // ---- Covers -------------------------------------------------------------------
 
-const COVERS = {
-  evening: { bg: "#2E3A4F", fg: "#F1E6CF", accent: "#D9A55B", title: "The Evening<br>Hours", sub: "Twelve essays on slowing down" },
-  salt: { bg: "#E9E1D2", fg: "#2A2722", accent: "#7A2E2E", title: "Salt &amp;<br>Paper", sub: "Poems" },
-  letters: { bg: "#5B3A29", fg: "#F4EBDD", accent: "#E7C38C", title: "Letters to a<br>Slow Reader", sub: "On reading less, and better" },
-};
-
 async function renderCovers(browser) {
   const page = await browser.newPage({ viewport: { width: 600, height: 900 } });
   const out = {};
-  for (const [id, c] of Object.entries(COVERS)) {
-    await page.setContent(`<!doctype html><html><body style="margin:0">
+  const { look, ...specs } = SAMPLE.covers;
+  for (const [id, c] of Object.entries(specs)) {
+    await page.setContent(look === "tech" ? `<!doctype html><html><body style="margin:0">
+      <div style="width:600px;height:900px;background:${c.bg};color:${c.fg};font-family:ui-monospace,Menlo,monospace;box-sizing:border-box;padding:64px 56px;display:flex;flex-direction:column;position:relative;overflow:hidden;
+        background-image:linear-gradient(${c.fg}10 1px,transparent 1px),linear-gradient(90deg,${c.fg}10 1px,transparent 1px);background-size:40px 40px">
+        <div style="position:relative;font-size:18px;letter-spacing:.2em;text-transform:uppercase;opacity:.7">${store.authorName}</div>
+        <div style="position:relative;margin-top:90px;font-size:22px;color:${c.accent}">$ ./mvnw verify<br><span style="opacity:.7">BUILD SUCCESS</span></div>
+        <div style="position:relative;margin-top:auto;font-family:system-ui,sans-serif;font-weight:800;font-size:62px;line-height:1.02;letter-spacing:-.03em">${c.title}</div>
+        <div style="position:relative;margin-top:22px;font-size:20px;opacity:.8">${c.sub}</div>
+        <div style="position:relative;margin-top:44px;height:6px;width:96px;background:${c.accent}"></div>
+      </div></body></html>` : `<!doctype html><html><body style="margin:0">
       <div style="width:600px;height:900px;background:${c.bg};color:${c.fg};font-family:Georgia,serif;box-sizing:border-box;padding:70px 60px;display:flex;flex-direction:column;position:relative;overflow:hidden">
         <div style="position:absolute;right:-120px;top:120px;width:420px;height:420px;border-radius:50%;background:${c.accent};opacity:.85"></div>
-        <div style="position:relative;font-size:18px;letter-spacing:.3em;text-transform:uppercase;opacity:.8">Marta Lis</div>
+        <div style="position:relative;font-size:18px;letter-spacing:.3em;text-transform:uppercase;opacity:.8">${store.authorName}</div>
         <div style="position:relative;margin-top:auto;font-size:76px;line-height:1.02;font-style:italic">${c.title}</div>
         <div style="position:relative;margin-top:24px;font-size:22px;opacity:.85">${c.sub}</div>
         <div style="position:relative;margin-top:48px;height:2px;width:80px;background:${c.fg};opacity:.6"></div>
@@ -271,6 +266,7 @@ const only = process.argv.slice(3);
 
 for (const [id, title, route, opts] of SCREENS) {
   if (only.length && !only.includes(id)) continue;
+  if (opts.full && !fullTheme[style]) continue;
   const context = await browser.newContext({
     viewport: opts.mobile ? MOBILE : DESKTOP,
     deviceScaleFactor: 2,
