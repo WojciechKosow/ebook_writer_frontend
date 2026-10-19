@@ -17,10 +17,10 @@ const intro = (c: Ctx) => firstParagraph(c.store.description);
  * A button that names the featured ebook — or, when its title is too long for
  * a button, says what it does ("Get the book — $19").
  */
-const buy = (c: Ctx, verb: "Get" | "Start with", sep = "—", fallback = "See the books") => {
+const buy = (c: Ctx, verb: "Get" | "Buy" | "Start with", sep = "—", fallback = "See the books") => {
   if (!c.featured) return fallback;
   const short = c.featured.title.length <= 26;
-  const what = short ? `${verb} ${c.featured.title}` : verb === "Get" ? "Get the book" : "Start reading";
+  const what = short ? `${verb} ${c.featured.title}` : verb === "Start with" ? "Start reading" : `${verb} the book`;
   return `${what} ${sep} ${c.price(c.featured)}`;
 };
 const startCta = (c: Ctx) => buy(c, "Start with", "—", "See the ebooks");
@@ -102,50 +102,47 @@ const contentsSection = (eyebrow: string, title: (c: Ctx) => string): SectionSch
 
 // ---- Scrivetta / literary (concept 1, the default) ----------------------------------------------------------
 
+const literaryFaq = faqSection();
+
 const literary: StyleSchema = {
   id: "literary",
   name: "Scrivetta",
-  tagline: "Warm paper, a serif display and drifting pages. For fiction, poetry and essays.",
-  swatch: { bg: "#F4F0E8", fg: "#1D1B17", accent: "#8B5E24", font: "var(--font-newsreader), Georgia, serif", sample: "Aa" },
-  accents: ["#8B5E24", "#3A3270", "#7A2E2E", "#2F5A45"],
-  decor: {
-    options: [
-      { id: "pages", label: "Pages + letters" },
-      { id: "letters", label: "Letters only" },
-      { id: "none", label: "None" },
-    ],
-    def: "pages",
-  },
+  tagline: "Warm paper, a quiet serif and books on a shelf. For fiction, poetry and essays.",
+  swatch: { bg: "#F4EFE6", fg: "#1C1A16", accent: "#7F5220", font: "var(--font-newsreader), Georgia, serif", sample: "Aa" },
+  accents: ["#7F5220", "#7A2E2A", "#2F4A3A", "#2C3B5A"],
+  decor: null,
   sections: [
     {
       id: "hero",
       label: "Hero",
       fields: [
-        f.text("badgeTag", "Badge tag", () => "NEW"),
-        f.text("badge", "Badge text", (c) => (c.featured ? `${c.featured.title} is out` : "")),
+        f.text("eyebrow", "Small label", (c) => c.who),
         f.area("headline", "Headline", headline, HL),
         f.area("intro", "Intro", intro),
-        f.text("primary", "Main button", (c) => `${startCta(c)} →`),
-        f.text("secondary", "Second button", () => "See all books"),
-        f.list("trust", "Reassurances", () => ["Instant PDF by email", "Secure checkout by Stripe", "Straight from the author"]),
-        f.text("excerptTitle", "Page behind the book — title", () => ""),
-        f.area("excerpt", "Page behind the book — text", () => "", "A few lines from the book on a page behind the cover. Leave empty to hide it."),
-        f.text("card1Title", "Floating card 1 — title", (c) => (c.featured?.pageCount ? `${c.featured.pageCount} pages` : "Ready to read")),
-        f.text("card1Text", "Floating card 1 — text", (c) => c.featured?.subtitle || "Typeset PDF"),
-        f.text("card2Title", "Floating card 2 — title", () => "Ready to read"),
-        f.text("card2Text", "Floating card 2 — text", () => "Typeset PDF, yours to keep"),
+        f.text("primary", "Main button", (c) => buy(c, "Buy", "—", "See the books")),
+        f.text("secondary", "Second link", () => "See all books →"),
+        f.list("trust", "Reassurances", () => ["Instant download", "Read on any device", "Secure checkout by Stripe"]),
+        f.text("badgeTag", "Label on the newest book", () => "New", "Shown next to the first book. Leave empty to hide."),
       ],
     },
     {
       id: "strip",
-      label: "Three promises",
+      label: "How buying works",
       optional: true,
       fields: [
-        f.items("items", "Promises", [{ key: "label", label: "Label" }, { key: "text", label: "Text" }], () => [
-          { label: "YOU READ", text: "Short pieces, one sitting each" },
-          { label: "YOU KEEP", text: "A typeset PDF, yours forever" },
-          { label: "YOU SUPPORT", text: "An independent writer, directly" },
+        f.items("items", "Steps", [{ key: "label", label: "Step" }, { key: "text", label: "Text" }], () => [
+          { label: "Choose a book", text: "Read a sample first if you like." },
+          { label: "Pay once, by card", text: "No account, no subscription." },
+          { label: "Download straight away", text: "On screen, plus a link by email." },
         ], { max: 4 }),
+      ],
+    },
+    {
+      id: "books",
+      label: "Ebooks",
+      fields: [
+        f.text("title", "Title", (c) => (c.products.length > 1 ? "The books" : "The book"), HL),
+        f.text("note", "Small print", () => "prices in USD"),
       ],
     },
     {
@@ -154,72 +151,40 @@ const literary: StyleSchema = {
       optional: true,
       offByDefault: true,
       fields: [
-        f.text("eyebrow", "Small label", () => "READ A PAGE"),
-        f.text("title", "Title", () => "Before you buy, *open it*.", HL),
-        f.text("leftLabel", "Left page — running head", (c) => (c.featured ? c.featured.title.toUpperCase() : "")),
+        f.text("eyebrow", "Small label", (c) => (c.featured ? `From ${c.featured.title}` : "A sample")),
+        f.text("title", "Title", () => "Read the first *pages*.", HL),
+        f.text("leftLabel", "Left page — running head", (c) => c.featured?.title ?? ""),
         f.text("leftTitle", "Left page — title", () => "[Title of a piece]"),
         f.area("leftText", "Left page — text", () => "Paste the first lines of a poem, story or chapter here.\nKeep the line breaks the way they are in the book."),
         f.text("leftPage", "Left page — number", () => "12"),
-        f.text("rightLabel", "Right page — running head", (c) => c.who.toUpperCase()),
+        f.text("rightLabel", "Right page — running head", (c) => c.who),
         f.text("rightTitle", "Right page — title", () => "[Another title]"),
         f.area("rightText", "Right page — text", () => "A second short passage,\nso readers hear your voice\nbefore they buy."),
         f.text("rightPage", "Right page — number", () => "13"),
-        f.text("note", "Sticky note", (c) => (c.featured ? `Sample from ${c.featured.title}` : "")),
+        f.text("button", "Button", (c) => (c.featured ? `Keep reading — ${c.price(c.featured)}` : "")),
+        f.text("link", "Link", (c) => (c.featured && c.chapters.length ? `See all ${c.chapters.length} chapters →` : "See the book →")),
       ],
     },
-    {
-      id: "inside",
-      label: "What's inside (cards)",
-      optional: true,
-      offByDefault: true,
-      fields: [
-        f.text("eyebrow", "Small label", () => "WHAT'S INSIDE"),
-        f.text("title", "Title", () => "Small books, made with *care*.", HL),
-        f.text("partsTitle", "Parts card — title", (c) => (c.featured ? `Inside ${c.featured.title}` : "How it's organised")),
-        f.text("partsText", "Parts card — text", () => "Read it in order, or open anywhere."),
-        f.items("parts", "Parts", [{ key: "name", label: "Name" }, { key: "n", label: "Numeral" }, { key: "sub", label: "Small text" }], (c) =>
-          c.chapters.slice(0, 4).map((ch, i) => ({ n: ["I", "II", "III", "IV"][i], name: ch.title, sub: "" })),
-          { max: 4 }),
-        f.area("quote", "Quote", () => "A line from the book that stays with people."),
-        f.text("quoteSource", "Quote source", (c) => (c.featured ? `FROM “${c.featured.title.toUpperCase()}”` : "")),
-        f.items("cards", "Small cards", [{ key: "title", label: "Title" }, { key: "text", label: "Text", multiline: true }], () => [
-          { title: "Typeset like a printed book", text: "Real margins, real line breaks — the page looks the way it was written." },
-          { title: "Made for a phone at night", text: "Opens on any phone. No scrolling past the last line." },
-          { title: "In your inbox in a minute", text: "Pay once, get the PDF by email. No account, no app." },
-        ], { max: 3 }),
-      ],
-    },
-    {
-      id: "books",
-      label: "Ebooks",
-      fields: [
-        f.text("eyebrow", "Small label", () => "THE BOOKS"),
-        f.text("title", "Title", (c) => (c.products.length > 1 ? `${c.products.length} books.` : "The book."), HL),
-        f.list("bullets", "Featured book — bullet points", () => ["Read in one evening, or a little each night", "Yours to keep, on every device", "A gift that fits in an email"]),
-        f.text("button", "Featured book — button", () => "Get the book →"),
-      ],
-    },
-    contentsSection("CONTENTS", (c) => (c.featured ? `Inside *${c.featured.title}*` : "Contents")),
     {
       id: "about",
       label: "About the author",
       optional: true,
       fields: [
-        f.text("eyebrow", "Small label", () => "THE AUTHOR"),
+        f.text("eyebrow", "Small label", () => "The author"),
         f.text("title", "Title", (c) => `A note from ${c.first}`),
         f.area("text", "Text", (c) => c.store.description || ""),
       ],
     },
-    faqSection(),
+    { ...literaryFaq, fields: literaryFaq.fields.filter((x) => x.key !== "eyebrow") },
     {
       id: "closing",
       label: "Closing call to action",
       optional: true,
       fields: [
         f.text("title", "Title", () => "Tonight, read something *slowly*.", HL),
-        f.text("primary", "Main button", (c) => buy(c, "Get")),
-        f.text("secondary", "Second button", () => "All books"),
-        f.text("fine", "Small print", () => "PDF by email · Secure checkout by Stripe · Sold directly by the author"),
+        f.text("primary", "Main button", (c) => buy(c, "Buy")),
+        f.text("secondary", "Second link", () => "Browse all books →"),
+        f.text("fine", "Small print", () => "Instant download · Secure checkout by Stripe · Sold directly by the author"),
       ],
     },
   ],

@@ -5,10 +5,9 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/pricing";
 import { formatSize } from "@/lib/files";
 import type { ProductFile, SampleChapter } from "@/lib/types";
-import { isColor, lst, itm, safeCss, txt, type DesignDoc, type StyleId } from "@/lib/store-design/core";
-import { STYLES } from "@/lib/store-design/schemas";
+import { lst, itm, txt, type DesignDoc, type StyleId } from "@/lib/store-design/core";
 import { STYLE_FONTS } from "@/lib/store-design/fonts";
-import { PAGE_THEMES, pageThemeVars } from "@/lib/store-design/page-theme";
+import { PAGE_THEMES, pageLook, pageThemeVars } from "@/lib/store-design/page-theme";
 import {
   fileName,
   fileNote,
@@ -22,20 +21,13 @@ import {
 } from "@/lib/store-design/product-page";
 import { BrandMark } from "@/components/brand-mark";
 import { Cover, Photo, Rich, SLink, initials } from "./kit";
+import { LiteraryProductPage, LiteraryPurchasePage } from "./styles/literary-pages";
 import s from "./product-page.module.css";
-
-/** The store's look for this page: style, accent and the author's CSS. */
-function useLook(design: DesignDoc, styleId?: StyleId) {
-  const id = styleId ?? design.active;
-  const settings = design.themes[id];
-  const accent = isColor(settings?.accent) ? settings!.accent! : STYLES[id].accents[0];
-  return { id, accent, css: safeCss(settings?.customCss) ?? "" };
-}
 
 function Frame({ design, styleId, data, children }: {
   design: DesignDoc; styleId?: StyleId; data: ProductPageData; children: React.ReactNode;
 }) {
-  const look = useLook(design, styleId);
+  const look = pageLook(design, styleId);
   const { store } = data;
   return (
     <div className={`${STYLE_FONTS[look.id]} ${s.root} store-page store-${look.id} store-product-page`}
@@ -67,7 +59,7 @@ function Frame({ design, styleId, data, children }: {
 
 // ---- The sales page ----------------------------------------------------------------
 
-export function ProductPageView({ design, styleId, data, doc, sampleRefs, loadSample, onBuy, buying, buyError, buyerEmail, openFirstSample }: {
+export interface ProductPageProps {
   design: DesignDoc;
   styleId?: StyleId;
   data: ProductPageData;
@@ -82,7 +74,14 @@ export function ProductPageView({ design, styleId, data, doc, sampleRefs, loadSa
   buyerEmail?: string | null;
   /** The editor's preview shows the first free chapter opened. */
   openFirstSample?: boolean;
-}) {
+}
+
+/** A product's sales page in the store's style (Scrivetta has its own layout). */
+export function ProductPageView(props: ProductPageProps) {
+  return (props.styleId ?? props.design.active) === "literary" ? <LiteraryProductPage {...props} /> : <SharedProductPage {...props} />;
+}
+
+function SharedProductPage({ design, styleId, data, doc, sampleRefs, loadSample, onBuy, buying, buyError, buyerEmail, openFirstSample }: ProductPageProps) {
   const ctx = useMemo(() => makeProductCtx(data), [data]);
   const S = useMemo(() => resolvePage(doc, "product", ctx), [doc, ctx]);
   const { store, product } = data;
@@ -336,7 +335,7 @@ function MoreFrom({ title, data }: { title: string; data: ProductPageData }) {
  * What buyers see after paying, in the store's style: the author's thank-you,
  * the files (or, on the success page, the payment status) and what's next.
  */
-export function PurchasePageView({ design, styleId, data, doc, files, perks = [], fileHref, onFileClick, status, footnote }: {
+export interface PurchasePageProps {
   design: DesignDoc;
   styleId?: StyleId;
   data: ProductPageData;
@@ -351,7 +350,13 @@ export function PurchasePageView({ design, styleId, data, doc, files, perks = []
   status?: React.ReactNode;
   /** Small print under the files, e.g. downloads left. */
   footnote?: React.ReactNode;
-}) {
+}
+
+export function PurchasePageView(props: PurchasePageProps) {
+  return (props.styleId ?? props.design.active) === "literary" ? <LiteraryPurchasePage {...props} /> : <SharedPurchasePage {...props} />;
+}
+
+function SharedPurchasePage({ design, styleId, data, doc, files, perks = [], fileHref, onFileClick, status, footnote }: PurchasePageProps) {
   const ctx = useMemo(() => makeProductCtx(data), [data]);
   const S = useMemo(() => resolvePage(doc, "purchase", ctx), [doc, ctx]);
   const { product } = data;

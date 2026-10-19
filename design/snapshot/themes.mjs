@@ -125,26 +125,12 @@ const included = [
 const fullTheme = {
   literary: {
     sections: {
-      hero: {
-        excerptTitle: "The hour after work",
-        excerpt: "There is an hour, after the door closes\nand before anyone asks for dinner,\nthat belongs to no one.",
-      },
       read: {
         enabled: true,
         leftTitle: "Cooking for one",
         leftText: "I set the table anyway.\nOne plate, one glass, a fork laid straight —\nthe way my grandmother did\nwhen there was no one to see it.",
         rightTitle: "Lamps",
         rightText: "By October the lamps come on at five.\nThe street turns into a row of small, lit rooms,\neach one a story I will never read.",
-      },
-      inside: {
-        enabled: true,
-        parts: [
-          { n: "I", name: "Evenings", sub: "Four essays" },
-          { n: "II", name: "Journeys", sub: "Three essays" },
-          { n: "III", name: "Rooms", sub: "Three essays" },
-          { n: "IV", name: "Endings", sub: "Two essays" },
-        ],
-        quote: "The day isn't over when the work is. It's just finally yours.",
       },
     },
   },

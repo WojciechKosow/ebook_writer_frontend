@@ -3,7 +3,7 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { apiAsset } from "@/lib/api";
-import type { PublicStoreProduct } from "@/lib/types";
+import type { PublicStoreProduct, StoreProfile } from "@/lib/types";
 import type { Ctx, ResolvedStyle } from "@/lib/store-design/core";
 
 /** What every style component gets. */
@@ -97,15 +97,33 @@ export function initials(name: string) {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "S";
 }
 
+export type SocialKind = "instagram" | "tiktok" | "website" | "email";
+
 /** Social / contact links the author set in their profile. */
-export function socialLinks(ctx: Ctx): { label: string; href: string }[] {
+export function socialLinks(ctx: { store: StoreProfile }): { label: string; href: string; kind: SocialKind }[] {
   const s = ctx.store;
   return [
-    s.instagramUrl ? { label: "Instagram", href: s.instagramUrl } : null,
-    s.tiktokUrl ? { label: "TikTok", href: s.tiktokUrl } : null,
-    s.websiteUrl ? { label: "Website", href: s.websiteUrl } : null,
-    s.contactEmail ? { label: "Email", href: `mailto:${s.contactEmail}` } : null,
-  ].filter((x): x is { label: string; href: string } => !!x);
+    s.instagramUrl ? { label: "Instagram", href: s.instagramUrl, kind: "instagram" as const } : null,
+    s.tiktokUrl ? { label: "TikTok", href: s.tiktokUrl, kind: "tiktok" as const } : null,
+    s.websiteUrl ? { label: "Website", href: s.websiteUrl, kind: "website" as const } : null,
+    s.contactEmail ? { label: "Email", href: `mailto:${s.contactEmail}`, kind: "email" as const } : null,
+  ].filter((x) => !!x);
+}
+
+/** A line icon for a social / contact link; takes the text color. */
+export function SocialIcon({ kind, size = 18 }: { kind: SocialKind; size?: number }) {
+  const p = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7,
+    strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+  switch (kind) {
+    case "instagram":
+      return <svg {...p}><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r=".6" fill="currentColor" /></svg>;
+    case "tiktok":
+      return <svg {...p}><path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5" /><path d="M14 3c.4 2.6 2.2 4.4 5 4.7" /></svg>;
+    case "website":
+      return <svg {...p}><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" /></svg>;
+    case "email":
+      return <svg {...p}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3.5 6.5 8.5 6.5 8.5-6.5" /></svg>;
+  }
 }
 
 export function pagesLabel(p: PublicStoreProduct) {
