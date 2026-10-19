@@ -33,7 +33,7 @@ function firstParagraph(s: string | null): string {
 const faqDefaults = (c: Ctx): Item[] => [
   {
     q: "How do I get my ebook?",
-    a: "Right after payment you get an email with a download link. It works for 30 days and up to 5 downloads.",
+    a: "Your files appear on screen right after you pay, and we email you a link too. Download each file up to 5 times within 30 days.",
   },
   { q: "Can I read it on my phone?", a: "Yes. It's a PDF, so it opens on any phone, tablet or computer." },
   { q: "Do I need an account?", a: "No. Pay securely by card through Stripe and the link arrives in your inbox." },

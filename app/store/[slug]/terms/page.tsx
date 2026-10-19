@@ -57,8 +57,9 @@ export default function StoreTermsPage() {
           <section>
             <h2 className="font-display text-[22px] text-foreground">Delivery</h2>
             <p className="mt-2">
-              Right after your payment is confirmed you receive an email with a download link. The link is valid for 30
-              days and up to 5 downloads.
+              Right after your payment is confirmed your files appear on screen, and you receive an email with a
+              download link. The link is valid for 30 days, with up to 5 downloads of each file. Some products include
+              extras that come with a free Scrivetta account; those are listed on the product page.
             </p>
           </section>
           <section>

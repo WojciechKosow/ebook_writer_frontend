@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError, storeApi } from "@/lib/api";
 import type { StoreDashboard } from "@/lib/types";
-import { ProductEditor } from "@/components/store-design/product-editor";
+import { ProductEditor, type EditorTab } from "@/components/store-design/product-editor";
 import { Alert, Spinner } from "@/components/ui";
 
-/** The product page designer: the sales page and the after-purchase page, in the store's style. */
-export default function ProductDesignPage() {
+const TABS: EditorTab[] = ["product", "purchase", "files"];
+
+/** Edit product: the sales page, the after-purchase page, and Files & price (?tab=files). */
+function ProductDesignInner() {
   const { id } = useParams<{ id: string }>();
+  const tab = useSearchParams().get("tab");
   const { token } = useAuth();
   const [store, setStore] = useState<StoreDashboard | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -41,5 +44,14 @@ export default function ProductDesignPage() {
       </div>
     );
   }
-  return <ProductEditor token={token!} initial={store} productId={id} />;
+  const initialTab = TABS.find((t) => t === tab) ?? "product";
+  return <ProductEditor token={token!} initial={store} productId={id} initialTab={initialTab} />;
+}
+
+export default function ProductDesignPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProductDesignInner />
+    </Suspense>
+  );
 }

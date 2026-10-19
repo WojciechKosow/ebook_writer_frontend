@@ -571,11 +571,22 @@ export type ProductFileFormat = "PDF" | "EPUB" | "ZIP";
 /** A downloadable file of a store product. `id` is opaque ("ebook-pdf" = the ebook's own PDF). */
 export interface ProductFile {
   id: string;
-  filename: string;
+  /** The download name; null on pages before purchase ("What's included"). */
+  filename: string | null;
   format: ProductFileFormat;
   sizeBytes: number;
   version: number;
   updatedAt: string | null;
+  /** The name buyers see ("For e-readers"); null = the filename. */
+  label: string | null;
+  /** What it's for, one line. */
+  note: string | null;
+  /** An account perk: only buyers with a Scrivetta account get it. */
+  accountOnly: boolean;
+  /** Downloads left on a guest link (null where unlimited). */
+  downloadsLeft: number | null;
+  /** My Purchases: replaced with a new version since the purchase. */
+  updated: boolean;
 }
 
 export interface StoreProduct {
@@ -607,6 +618,23 @@ export interface StoreProduct {
   chapters: { number: number; title: string; hasText: boolean }[];
   subtitle: string | null;
   language: string | null;
+  /** Shown to buyers right now — the fields above are the draft the author is editing. */
+  liveActive: boolean;
+  /** The price buyers pay right now. */
+  livePriceCents: number;
+}
+
+/**
+ * One change buyers don't see yet ("Publish changes" applies them all).
+ * `before`/`after` are the live and the draft value as text (null = empty).
+ */
+export interface PendingChange {
+  kind: "profile" | "theme" | "order" | "product" | "file";
+  productId: string | null;
+  fileId: string | null;
+  field: string;
+  before: string | null;
+  after: string | null;
 }
 
 /** A chapter buyers can read for free; `html` is sanitised by the backend (no scripts, no images). */
@@ -643,6 +671,10 @@ export interface StoreDashboard extends StoreProfileFields {
   themeSettings: string | null;
   /** Chapters of the first ebook, for designs that show its contents. */
   featuredChapters: { number: number; title: string }[];
+  /** What "Publish changes" would apply; every other field already shows the draft. */
+  changes: PendingChange[];
+  /** When the draft was last saved; null when nothing is pending. */
+  draftSavedAt: string | null;
 }
 
 /** The seller as buyers see them on every store page. */
@@ -697,6 +729,11 @@ export interface PublicProduct {
   pageSettings: string | null;
   /** Chapters buyers can read for free. */
   sampleChapters: { number: number; title: string }[];
+  /** What's included: every file a buyer gets (no download names), account perks marked. */
+  included: ProductFile[];
+  /** The guest download rule: each file `downloadLimit` times within `downloadDays` days. */
+  downloadLimit: number;
+  downloadDays: number;
 }
 
 export type StoreOrderStatus = "PENDING" | "PAID" | "EXPIRED" | "REFUNDED";
@@ -711,6 +748,18 @@ export interface StoreOrderStatusResponse {
   pageSettings: string | null;
   productId: string;
   coverUrl: string | null;
+  /** The rest is only there for the buyer's own browser (with the Checkout Session id). */
+  amount: number | null;
+  /** Where the download link was emailed. */
+  buyerEmail: string | null;
+  /** The files, each with its downloads left — null until the payment is confirmed. */
+  files: ProductFile[] | null;
+  /** Account perks a guest doesn't get. */
+  perks: ProductFile[] | null;
+  expiresAt: string | null;
+  /** Already linked to a Scrivetta account (it's in their My purchases). */
+  inLibrary: boolean | null;
+  downloadLimit: number;
 }
 
 export interface StoreCheckoutResponse {
@@ -728,8 +777,9 @@ export interface DownloadInfo {
   coverUrl: string | null;
   /** Total size of all files. */
   fileSizeBytes: number;
-  /** Every file of the purchase; each download counts one. */
+  /** Every file of the purchase, each with its own downloads left. */
   files: ProductFile[];
+  /** Downloads left across all files. */
   downloadsRemaining: number;
   expiresAt: string;
   /** Other ebooks still on sale in the store. */
@@ -738,6 +788,10 @@ export interface DownloadInfo {
   store: StoreProfile | null;
   themeSettings: string | null;
   pageSettings: string | null;
+  /** Account perks this link leaves out ("comes with a free account"). */
+  perks: ProductFile[];
+  /** Downloads per file. */
+  downloadLimit: number;
 }
 
 /** One paid purchase in My Purchases. */
@@ -756,5 +810,8 @@ export interface Purchase {
   purchasedAt: string | null;
   /** Whether the product is still on sale (the files stay yours either way). */
   onSale: boolean;
+  /** Account perks included; `updated` marks a file replaced since the purchase. */
   files: ProductFile[];
+  /** When the latest of those updates happened, or null. */
+  updatedAt: string | null;
 }

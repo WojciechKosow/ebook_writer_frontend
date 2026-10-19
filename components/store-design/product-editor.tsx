@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ApiError, storeApi } from "@/lib/api";
+import { ApiError, apiAsset, storeApi } from "@/lib/api";
 import type { ProductFile, SampleChapter, StoreDashboard, StoreProduct } from "@/lib/types";
+import { draftStatus } from "@/lib/store/changes";
+import { DraftDot } from "@/components/store/kit";
+import { PublishChanges } from "@/components/store/publish";
+import { FilesAndPrice } from "./files-and-price";
 import { parseDesign, type FieldValue, type SectionEdits } from "@/lib/store-design/core";
 import { STYLES } from "@/lib/store-design/schemas";
 import {
@@ -19,6 +23,7 @@ import {
   type ProductPageDoc,
 } from "@/lib/store-design/product-page";
 import { DevicePreview, type Device } from "./device-preview";
+import { formatPrice } from "@/lib/pricing";
 import {
   Chevron,
   FieldEditor,
@@ -41,9 +46,14 @@ import {
 
 type Toast = { msg: string; error?: boolean } | null;
 const HISTORY = 50;
-const KINDS: { id: PageKind; label: string }[] = [
-  { id: "product", label: "Product page" },
+/** Edits save themselves this long after the last keystroke. */
+const AUTOSAVE_MS = 900;
+
+export type EditorTab = PageKind | "files";
+const TABS: { id: EditorTab; label: string }[] = [
+  { id: "product", label: "Page" },
   { id: "purchase", label: "After purchase" },
+  { id: "files", label: "Files & price" },
 ];
 
 /** The draft: the page document, with the product's own fields edited in place (see PRODUCT_FIELDS). */
@@ -54,22 +64,25 @@ function fromProduct(p: StoreProduct): ProductPageDoc {
 const key = (kind: PageKind, sec: string) => `${kind}.${sec}`;
 
 /**
- * The product page designer: the product's sales page and the page buyers see
- * after paying, live in the store's style on phone and desktop, with
- * click-to-edit, the free preview (contents list and readable sample chapters)
- * and one Save for the page and the product's title, description and points.
+ * Edit product — one editor with three tabs: the sales page and the page buyers
+ * see after paying (live in the store's style on phone and desktop, with
+ * click-to-edit and the free preview), and Files & price. Everything autosaves
+ * as a draft; "Publish changes" puts it live.
  */
-export function ProductEditor({ token, initial, productId }: { token: string; initial: StoreDashboard; productId: string }) {
+export function ProductEditor({ token, initial, productId, initialTab = "product" }: {
+  token: string; initial: StoreDashboard; productId: string; initialTab?: EditorTab;
+}) {
   const [dashboard, setDashboard] = useState(initial);
   const product = dashboard.products.find((p) => p.id === productId)!;
   const [saved, setSaved] = useState<ProductPageDoc>(() => fromProduct(product));
   const [draft, setDraft] = useState<ProductPageDoc>(saved);
   const [past, setPast] = useState<ProductPageDoc[]>([]);
   const [future, setFuture] = useState<ProductPageDoc[]>([]);
-  const [kind, setKind] = useState<PageKind>("product");
+  const [tab, setTab] = useState<EditorTab>(initialTab);
+  const kind: PageKind = tab === "purchase" ? "purchase" : "product";
   const [device, setDevice] = useState<Device>("desktop");
   const [section, setSection] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSavingCount] = useState(0);
   const [toast, setToast] = useState<Toast>(null);
   const [samples, setSamples] = useState<SampleChapter[]>([]);
   const lastKey = useRef<{ key: string; at: number } | null>(null);
@@ -83,10 +96,12 @@ export function ProductEditor({ token, initial, productId }: { token: string; in
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const picked = sampleChapters(draft);
   const labels = useMemo(() => Object.fromEntries(schemas.map((s) => [s.id, s.label])), [schemas]);
-  const files: ProductFile[] = useMemo(() => [
-    ...(product.ebookId ? [{ id: "ebook-pdf", filename: `${product.title.replace(/[^a-zA-Z0-9-_ ]/g, "").trim().replace(/\s+/g, "_") || "ebook"}.pdf`, format: "PDF" as const, sizeBytes: 0, version: 1, updatedAt: null }] : []),
-    ...product.files,
-  ], [product]);
+  // The after-purchase preview shows what a guest gets: the files, and the perks locked.
+  const files: ProductFile[] = useMemo(
+    () => data.product.included.filter((f) => !f.accountOnly).map((f) => ({ ...f, downloadsLeft: data.product.downloadLimit })),
+    [data]);
+  const perks: ProductFile[] = useMemo(() => data.product.included.filter((f) => f.accountOnly), [data]);
+  const onSaving = useCallback((on: boolean) => setSavingCount((n) => Math.max(0, n + (on ? 1 : -1))), []);
 
   const say = useCallback((msg: string, error = false) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -95,11 +110,11 @@ export function ProductEditor({ token, initial, productId }: { token: string; in
   }, []);
 
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty && !saving) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  }, [dirty, saving]);
 
   // The free chapters' text, for the preview (the frame can't fetch it itself).
   useEffect(() => {
@@ -148,7 +163,7 @@ export function ProductEditor({ token, initial, productId }: { token: string; in
     setFuture((f) => f.slice(1));
   }, [future, draft]);
 
-  const saveRef = useRef<() => void>(() => {});
+  const flushRef = useRef<() => Promise<boolean>>(async () => true);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -156,7 +171,7 @@ export function ProductEditor({ token, initial, productId }: { token: string; in
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        saveRef.current();
+        void flushRef.current();
       } else if (mod && e.key.toLowerCase() === "z" && !typing) {
         e.preventDefault();
         if (e.shiftKey) redo();
@@ -193,15 +208,16 @@ export function ProductEditor({ token, initial, productId }: { token: string; in
     });
 
   const openSection = useCallback((sec: string) => setSection(sec), []);
-  const switchKind = (k: PageKind) => {
-    setKind(k);
+  const switchTab = (t: EditorTab) => {
+    setTab(t);
     setSection(null);
   };
 
-  async function save() {
+  /** Save a version of the page as the product's draft. False when it couldn't be saved. */
+  async function persist(page: ProductPageDoc): Promise<boolean> {
     // The product's own fields go to the product; the rest is the page document.
-    const sales = resolvePage(draft, "product", ctx);
-    const doc: ProductPageDoc = { v: 1, sections: { ...(draft.sections ?? {}) }, preview: { chapters: sampleChapters(draft) } };
+    const sales = resolvePage(page, "product", ctx);
+    const doc: ProductPageDoc = { v: 1, sections: { ...(page.sections ?? {}) }, preview: { chapters: sampleChapters(page) } };
     const fields: { title?: string; description?: string; highlights?: string } = {};
     for (const [name, at] of Object.entries(PRODUCT_FIELDS)) {
       const edits = doc.sections![key("product", at.section)];
@@ -215,103 +231,127 @@ export function ProductEditor({ token, initial, productId }: { token: string; in
       else delete doc.sections![key("product", at.section)];
     }
     if (fields.title !== undefined && !fields.title.trim()) {
-      say("The title can't be empty.", true);
-      return;
+      say("The title can't be empty — the draft is saved once it has one.", true);
+      return false;
     }
     const empty = !Object.keys(doc.sections!).length && !doc.preview!.chapters!.length;
-    setSaving(true);
+    onSaving(true);
     try {
-      const next = await storeApi.updateProduct(token, productId, { ...fields, pageSettings: empty ? "" : JSON.stringify(doc) });
-      setDashboard(next);
-      const stored = fromProduct(next.products.find((p) => p.id === productId)!);
-      setSaved(stored);
-      setDraft(stored);
-      setPast([]);
-      setFuture([]);
-      say(product.active && dashboard.published ? "Saved · buyers see it now" : "Saved");
+      setDashboard(await storeApi.updateProduct(token, productId, { ...fields, pageSettings: empty ? "" : JSON.stringify(doc) }));
+      setSaved(page);
+      return true;
     } catch (e) {
-      say(e instanceof ApiError ? e.message : "Could not save the page.", true);
+      say(e instanceof ApiError ? e.message : "Could not save your draft.", true);
+      return false;
     } finally {
-      setSaving(false);
+      onSaving(false);
     }
   }
 
+  // Autosave: a moment after the last edit, the page is saved as a draft.
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    saveRef.current = () => {
-      if (dirty && !saving) void save();
+    if (!dirty) return;
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      void persist(draftRef.current);
+    }, AUTOSAVE_MS);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, dirty]);
+
+  /** Save now (before publishing or leaving). */
+  async function flush(): Promise<boolean> {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    return dirty ? persist(draftRef.current) : true;
+  }
+  useEffect(() => {
+    flushRef.current = flush;
   });
 
-  const leave = (e: React.MouseEvent) => {
-    if (dirty && !window.confirm("You have unsaved changes. Leave without saving them?")) e.preventDefault();
+  /** After publishing or discarding: the page starts over from the store as it is now. */
+  function reset(next: StoreDashboard) {
+    setDashboard(next);
+    const p = next.products.find((x) => x.id === productId);
+    if (!p) return;
+    const doc = fromProduct(p);
+    setSaved(doc);
+    setDraft(doc);
+    draftRef.current = doc;
+    setPast([]);
+    setFuture([]);
+  }
+
+  const leave = () => {
+    void flush();
   };
 
-  const status = dirty
-    ? { dot: "bg-[#E8B05A]", label: "Unsaved changes" }
-    : product.active && dashboard.published
-      ? { dot: "bg-[#7CC99A]", label: "Live · up to date" }
-      : { dot: "bg-faint", label: product.active ? "Saved · store not published yet" : "Saved · product hidden" };
+  const status = draftStatus(dashboard, saving > 0 || dirty);
+  const cover = apiAsset(product.coverUrl);
 
   const current = section ? schemas.find((s) => s.id === section) ?? null : null;
-  const liveUrl = kind === "product" ? `/store/${dashboard.slug}/${product.id}` : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-      <header className="flex min-h-[60px] shrink-0 flex-wrap items-center gap-3 border-b border-hairline bg-surface px-3 py-2 sm:pl-3 sm:pr-4 lg:h-[60px] lg:flex-nowrap lg:py-0">
+      <header className="flex min-h-[60px] shrink-0 flex-wrap items-center gap-3 border-b border-hairline bg-surface px-3 py-2 sm:pl-3 sm:pr-4 lg:flex-nowrap">
         <div className="flex min-w-0 flex-[1_1_260px] items-center gap-2.5">
-          <Link href="/store#ebooks-sec" onClick={leave} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] pl-1.5 pr-2.5 text-sm text-foreground-2 hover:bg-surface-2">
+          <Link href="/store" onClick={leave} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] pl-1.5 pr-2.5 text-sm text-foreground-2 hover:bg-surface-2">
             <Chevron dir="left" />
             Your store
           </Link>
           <span className="h-5 w-px bg-hairline-2" />
+          {cover && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={cover} alt="" className="h-9 w-6 shrink-0 rounded-[2px] object-cover" />
+          )}
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="truncate font-display text-[18px] leading-tight text-foreground">{product.title}</span>
-            <span className="flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
-              <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-              {status.label}
-            </span>
+            <DraftDot {...status} />
           </div>
         </div>
 
-        <div role="group" aria-label="Preview size" className="flex gap-0.5 rounded-xl border border-hairline bg-background p-[3px]">
-          {(["desktop", "phone"] as Device[]).map((d) => (
-            <button key={d} type="button" aria-pressed={device === d} onClick={() => setDevice(d)}
-              className={`inline-flex h-8 items-center gap-1.5 rounded-[9px] px-3 text-[13px] font-medium capitalize ${device === d ? "bg-foreground text-background" : "text-muted hover:text-foreground"}`}>
-              {d === "desktop" ? <IconDesktop /> : <IconPhone />}
-              {d}
+        <nav aria-label="Product editor" className="flex gap-0.5 rounded-xl border border-hairline bg-background p-[3px]">
+          {TABS.map((t) => (
+            <button key={t.id} type="button" aria-current={tab === t.id ? "page" : undefined} onClick={() => switchTab(t.id)}
+              className={`h-8 whitespace-nowrap rounded-[9px] px-3 text-[13px] font-medium ${tab === t.id ? "bg-foreground text-background" : "text-muted hover:text-foreground"}`}>
+              {t.label}
             </button>
           ))}
-        </div>
+        </nav>
 
-        <div className="flex flex-[1_1_260px] items-center justify-end gap-1.5">
-          <IconButton label="Undo" hint="Ctrl+Z" disabled={!past.length} onClick={undo}><IconUndo /></IconButton>
-          <IconButton label="Redo" hint="Ctrl+Shift+Z" disabled={!future.length} onClick={redo}><IconRedo /></IconButton>
-          {liveUrl && product.active && dashboard.published && (
-            <a href={liveUrl} target="_blank" rel="noopener noreferrer"
-              className="ml-1 inline-flex h-[38px] items-center gap-1.5 rounded-[11px] border border-hairline-2 px-3.5 text-sm font-medium text-foreground hover:bg-surface-2">
+        <div className="flex flex-[1_1_260px] flex-wrap items-center justify-end gap-1.5">
+          {tab !== "files" && (
+            <>
+              <div role="group" aria-label="Preview size" className="flex gap-0.5 rounded-xl border border-hairline bg-background p-[3px]">
+                {(["desktop", "phone"] as Device[]).map((d) => (
+                  <button key={d} type="button" aria-pressed={device === d} aria-label={d === "desktop" ? "Desktop preview" : "Phone preview"} onClick={() => setDevice(d)}
+                    className={`inline-flex h-8 items-center rounded-[9px] px-2.5 ${device === d ? "bg-surface-2 text-foreground" : "text-muted hover:text-foreground"}`}>
+                    {d === "desktop" ? <IconDesktop /> : <IconPhone />}
+                  </button>
+                ))}
+              </div>
+              <IconButton label="Undo" hint="Ctrl+Z" disabled={!past.length} onClick={undo}><IconUndo /></IconButton>
+              <IconButton label="Redo" hint="Ctrl+Shift+Z" disabled={!future.length} onClick={redo}><IconRedo /></IconButton>
+            </>
+          )}
+          {product.liveActive && dashboard.published && (
+            <a href={`/store/${dashboard.slug}/${product.id}`} target="_blank" rel="noopener noreferrer"
+              className="inline-flex h-10 items-center gap-1.5 rounded-[11px] border border-hairline-2 px-3.5 text-sm font-medium text-foreground hover:bg-surface-2">
               View live <IconExternal />
             </a>
           )}
-          <button type="button" onClick={save} disabled={!dirty || saving} title="Save (Ctrl+S)"
-            className="h-[38px] rounded-[11px] bg-foreground px-[18px] text-sm font-semibold text-background transition hover:brightness-110 disabled:cursor-default disabled:opacity-40">
-            {saving ? "Saving…" : "Save"}
-          </button>
+          <PublishChanges token={token} store={dashboard} onChange={reset} flush={flush} />
         </div>
       </header>
 
+      {tab === "files" ? (
+        <FilesAndPrice token={token} store={dashboard} product={product} onChange={setDashboard} onSaving={onSaving} />
+      ) : (
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
         <aside className="flex shrink-0 flex-col border-hairline bg-surface lg:h-full lg:w-[380px] lg:border-r">
-          <div className="px-4 pt-4">
-            <div role="tablist" aria-label="Page" className="grid grid-cols-2 gap-0.5 rounded-xl border border-hairline bg-background p-[3px]">
-              {KINDS.map((k) => (
-                <button key={k.id} type="button" role="tab" aria-selected={kind === k.id} onClick={() => switchKind(k.id)}
-                  className={`h-9 rounded-[9px] text-sm font-medium ${kind === k.id ? "bg-surface-2 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : "text-muted hover:text-foreground"}`}>
-                  {k.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="flex-1 overflow-y-auto px-4 pb-6 pt-2 [scrollbar-color:var(--hairline-2)_transparent] [scrollbar-width:thin] lg:min-h-0">
             {!current && (
               <div className="animate-[sd-in_.18s_ease-out]">
@@ -320,17 +360,23 @@ export function ProductEditor({ token, initial, productId }: { token: string; in
                   <span>
                     {kind === "product"
                       ? "Click any part of the preview to edit it. The Buy button works as usual on the live page."
-                      : "This is what buyers see right after paying — on the download page from their email."}
+                      : "This is what buyers see right after paying — on the success page and on the download page from their email."}
                   </span>
                 </div>
-                <h2 className="mx-0.5 mb-2 mt-1 font-display text-[22px] font-normal text-foreground">Page sections</h2>
+                <h2 className="mx-0.5 mb-2 mt-1 flex items-baseline justify-between font-display text-[22px] font-normal text-foreground">
+                  {kind === "product" ? "Product page" : "After purchase"}
+                  <span className="font-sans text-xs text-muted">{schemas.length} sections</span>
+                </h2>
                 <div className="flex flex-col border-t border-hairline">
                   {schemas.map((sec, i) => {
                     const r = resolved[sec.id];
                     const shown = r?.enabled ?? true;
+                    const n = data.product.included.length;
                     const lead = sec.id === "preview" && picked.length
                       ? `${picked.length} free chapter${picked.length === 1 ? "" : "s"} · ${leadOf(sec, r?.values ?? {})}`
-                      : leadOf(sec, r?.values ?? {});
+                      : sec.id === "included"
+                        ? `${n} item${n === 1 ? "" : "s"} · from Files & price`
+                        : leadOf(sec, r?.values ?? {});
                     return (
                       <div key={sec.id} className="flex items-center border-b border-hairline">
                         <button type="button" onClick={() => openSection(sec.id)}
@@ -356,7 +402,7 @@ export function ProductEditor({ token, initial, productId }: { token: string; in
                 <p className="mx-0.5 mt-4 text-[12.5px] leading-relaxed text-muted">
                   The look — {STYLES[design.active].name} style, colors, fonts — comes from your{" "}
                   <Link href="/store/design" onClick={leave} className="text-foreground underline">store design</Link>. Price, cover and files
-                  are in <Link href="/store#ebooks-sec" onClick={leave} className="text-foreground underline">Your store</Link>.
+                  are in <button type="button" onClick={() => switchTab("files")} className="text-foreground underline">Files &amp; price</button>.
                 </p>
               </div>
             )}
@@ -375,7 +421,14 @@ export function ProductEditor({ token, initial, productId }: { token: string; in
                       text={(resolved[current.id]?.enabled ?? true) ? "Shown" : "Hidden"} />
                   )}
                 </div>
-                <p className="mx-0.5 mb-4 text-[13px] text-muted">Edits show in the preview as you type.</p>
+                <p className="mx-0.5 mb-4 text-[13px] text-muted">Edits show in the preview as you type and save as a draft.</p>
+                {kind === "product" && current.id === "hero" && <DataTokens product={product} data={data} onFiles={() => switchTab("files")} />}
+                {kind === "product" && current.id === "included" && (
+                  <p className="mx-0.5 mb-4 rounded-xl bg-accent-soft px-3.5 py-3 text-[13px] leading-snug text-accent-ink">
+                    The list comes from <button type="button" onClick={() => switchTab("files")} className="font-semibold underline">Files &amp; price</button>:
+                    each file&apos;s name for buyers, what it&apos;s for, and which ones need a free account.
+                  </p>
+                )}
                 {!(resolved[current.id]?.enabled ?? true) && (
                   <div className="mx-0.5 mb-4 rounded-xl bg-warn-soft px-3.5 py-3 text-[13px] leading-snug text-warn">
                     This section is hidden. Turn it on to show it.
@@ -425,7 +478,7 @@ export function ProductEditor({ token, initial, productId }: { token: string; in
               message={{
                 doc: design, data: previewData(dashboard), styleId: design.active, focus: section,
                 pick: { labels, selected: section },
-                page: { kind, data, doc: draft, samples, files },
+                page: { kind, data, doc: draft, samples, files, perks },
               }}
             />
           </div>
@@ -437,6 +490,27 @@ export function ProductEditor({ token, initial, productId }: { token: string; in
           )}
         </main>
       </div>
+      )}
+    </div>
+  );
+}
+
+/** Values Scrivetta fills in — shown as tokens so nobody retypes (and outdates) them. */
+function DataTokens({ product, data, onFiles }: { product: StoreProduct; data: ReturnType<typeof pageDataFromDashboard>; onFiles: () => void }) {
+  const token = "inline-flex h-[26px] items-center rounded-md bg-accent-soft px-2 text-[13px] font-medium text-accent-ink";
+  return (
+    <div className="mx-0.5 mb-5 flex flex-col gap-2 rounded-xl border border-hairline p-3.5">
+      <span className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-muted">Filled in by Scrivetta</span>
+      <div className="flex flex-wrap gap-1.5">
+        <span className={token}>{formatPrice(product.priceCents)} · price</span>
+        <span className={token}>{data.product.formats.join(" · ") || "No files yet"}</span>
+        {product.pageCount > 0 && <span className={token}>{product.pageCount} pages</span>}
+        <span className={token}>{data.product.downloadLimit} downloads per file · {data.product.downloadDays} days</span>
+      </div>
+      <p className="text-xs leading-relaxed text-faint">
+        Write {"{price}"} in the buy button and it always shows the current price. Change the price once in{" "}
+        <button type="button" onClick={onFiles} className="text-foreground underline">Files &amp; price</button> — every button follows.
+      </p>
     </div>
   );
 }

@@ -69,8 +69,47 @@ export interface ProductPageData {
     formats: string[];
     /** The ebook's chapters (the default table of contents). */
     chapters: { number: number; title: string }[];
+    /** What's included: every file a buyer gets, account perks marked (from Files & price). */
+    included: ProductFile[];
+    /** The guest download rule: each file `downloadLimit` times within `downloadDays` days. */
+    downloadLimit: number;
+    downloadDays: number;
   };
   more: PublicStoreProduct[];
+}
+
+/** The guest download rule, unless the backend says otherwise. */
+export const DOWNLOAD_LIMIT = 5;
+export const DOWNLOAD_DAYS = 30;
+
+/** The ebook's own PDF, as "What's included" lists it. */
+export const EBOOK_PDF_ID = "ebook-pdf";
+
+/** The name buyers see for a file: "The book", the author's name for an extra, else the filename. */
+export function fileName(f: ProductFile): string {
+  if (f.id === EBOOK_PDF_ID) return "The book";
+  return f.label?.trim() || f.filename || `${f.format} file`;
+}
+
+/** One line on what a file is for — the author's words, else something true about its format. */
+export function fileNote(f: ProductFile, pageCount = 0): string {
+  if (f.note?.trim()) return f.note.trim();
+  if (f.id === EBOOK_PDF_ID) return pageCount > 0 ? `PDF · ${pageCount} pages` : "PDF";
+  return { PDF: "PDF", EPUB: "EPUB — for Kindle, Kobo or Apple Books", ZIP: "ZIP archive" }[f.format];
+}
+
+/** The account perks of a product, by name: "the starter schedule and …". */
+export function perkNames(included: ProductFile[]): string {
+  const names = included.filter((f) => f.accountOnly).map(fileName);
+  return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/** The ebook's PDF as a file entry (the dashboard lists only uploads). */
+function ebookPdf(sizeBytes = 0): ProductFile {
+  return {
+    id: EBOOK_PDF_ID, filename: null, format: "PDF", sizeBytes, version: 1, updatedAt: null,
+    label: null, note: null, accountOnly: false, downloadsLeft: null, updated: false,
+  };
 }
 
 /** The public product page's data. */
@@ -81,6 +120,7 @@ export function pageDataFromPublic(p: PublicProduct): ProductPageData {
       id: p.id, title: p.title, subtitle: p.subtitle, description: p.description, highlights: p.highlights,
       priceCents: p.priceCents, pageCount: p.pageCount, language: p.language, updatedAt: p.updatedAt,
       coverUrl: p.coverUrl, formats: p.formats, chapters: p.chapters,
+      included: p.included ?? [], downloadLimit: p.downloadLimit ?? DOWNLOAD_LIMIT, downloadDays: p.downloadDays ?? DOWNLOAD_DAYS,
     },
     more: p.more,
   };
@@ -105,6 +145,8 @@ export function pageDataFromDashboard(d: StoreDashboard, p: StoreProduct): Produ
       highlights: (p.highlights ?? "").split("\n").map((l) => l.trim()).filter(Boolean),
       priceCents: p.priceCents, pageCount: p.pageCount, language: p.language, updatedAt: null, coverUrl: p.coverUrl,
       formats, chapters: p.chapters.map((c) => ({ number: c.number, title: c.title })),
+      included: [...(p.ebookId ? [ebookPdf()] : []), ...p.files],
+      downloadLimit: DOWNLOAD_LIMIT, downloadDays: DOWNLOAD_DAYS,
     },
     more: d.products.filter((x) => x.active && x.id !== p.id).map((x) => ({
       id: x.id, title: x.title, subtitle: x.subtitle, description: x.description, priceCents: x.priceCents,
@@ -125,9 +167,18 @@ export function pageDataFromDownload(info: DownloadInfo): ProductPageData {
     product: {
       id: "", title: info.productTitle, subtitle: null, description: null, highlights: [], priceCents: 0, pageCount: 0,
       language: null, updatedAt: null, coverUrl: info.coverUrl, formats: info.files.map((f) => f.format), chapters: [],
+      included: [...info.files, ...(info.perks ?? [])], downloadLimit: info.downloadLimit ?? DOWNLOAD_LIMIT, downloadDays: DOWNLOAD_DAYS,
     },
     more: info.more,
   };
+}
+
+/** Written in a text where the price goes; always shows the product's current price. */
+export const PRICE_TOKEN = "{price}";
+
+/** A text with {price} filled in. */
+export function withPrice(text: string, ctx: { price: string }): string {
+  return text.split(PRICE_TOKEN).join(ctx.price);
 }
 
 export interface ProductCtx extends ProductPageData {
@@ -158,12 +209,26 @@ export const SALES_SECTIONS: SectionSchema<ProductCtx>[] = [
           .filter(Boolean).join(" · ") },
       { key: "title", label: "Title", type: "text", hint: "The product's name everywhere in your store.", def: (c) => c.product.title },
       { key: "subtitle", label: "Subtitle", type: "textarea", hint: "One or two sentences under the title.", def: (c) => c.product.subtitle ?? "" },
-      { key: "buyLabel", label: "Buy button", type: "text", def: (c) => `Buy now — ${c.price}` },
-      { key: "trust", label: "Reassurance lines", type: "list", def: () => [
-        "Instant download link by email — 30 days, up to 5 downloads per file",
-        "Secure card checkout by Stripe",
-        "With a free Scrivetta account it stays in My Purchases — download any time",
-      ] },
+      { key: "buyLabel", label: "Buy button", type: "text", hint: "{price} is filled in from Files & price, so the button always shows the real price.",
+        def: () => `Buy now — ${PRICE_TOKEN}` },
+      { key: "trust", label: "Under the button", type: "list", hint: "Starts from your settings: the download rule and what a free account adds.",
+        def: (c) => [
+          `Files right after paying, and a link by email. Download each file up to ${c.product.downloadLimit} times within ${c.product.downloadDays} days.`,
+          perkNames(c.product.included)
+            ? `With a free Scrivetta account: keep it for good, plus ${perkNames(c.product.included)}.`
+            : "With a free Scrivetta account it stays in My purchases — download any time.",
+          "Secure card checkout by Stripe. No account needed to buy.",
+        ] },
+    ],
+  },
+  {
+    id: "included",
+    label: "What's included",
+    optional: true,
+    fields: [
+      { key: "title", label: "Heading", type: "text", hint: "The list itself comes from Files & price.", def: () => `Everything you get for ${PRICE_TOKEN}` },
+      { key: "note", label: "Small print", type: "text", def: (c) =>
+        c.product.included.some((f) => f.accountOnly) ? "Items marked “with a free account” come with a free Scrivetta account." : "" },
     ],
   },
   {
@@ -221,8 +286,10 @@ export const SALES_SECTIONS: SectionSchema<ProductCtx>[] = [
     fields: [
       { key: "items", label: "Questions", type: "items", max: 8, fields: [{ key: "q", label: "Question" }, { key: "a", label: "Answer", multiline: true }],
         def: (c) => [
-          { q: "How do I get my files?", a: "Right after payment you get an email with a download link. It works for 30 days and up to 5 downloads per file. With a free Scrivetta account under the same email, the purchase also stays in My Purchases." },
-          { q: "Do I need an account?", a: "No. Pay securely by card through Stripe and the link arrives in your inbox." },
+          { q: "How do I get my files?", a: `They appear on screen right after you pay, and we email you a link too. Download each file up to ${c.product.downloadLimit} times within ${c.product.downloadDays} days. With a free Scrivetta account, it's yours for good.` },
+          { q: "Do I need an account?", a: perkNames(c.product.included)
+            ? `No — pay securely by card through Stripe. A free Scrivetta account adds ${perkNames(c.product.included)} and keeps everything in My purchases.`
+            : "No. Pay securely by card through Stripe — the files appear right away and the link arrives in your inbox." },
           { q: "Something went wrong — who do I contact?", a: c.store.contactEmail ? `Write to ${c.store.contactEmail} — ${c.who} answers personally.` : `Reply to your receipt email to reach ${c.who}.` },
         ] },
     ],
@@ -253,8 +320,8 @@ export const PURCHASE_SECTIONS: SectionSchema<ProductCtx>[] = [
     label: "Keep it for good",
     optional: true,
     fields: [
-      { key: "text", label: "Text", type: "textarea", def: () =>
-        "Want to keep it for good? Create a free Scrivetta account with the email you bought with — your purchase appears in My Purchases, with unlimited downloads." },
+      { key: "text", label: "Text", type: "textarea", def: (c) =>
+        `Keep it for good: create a free Scrivetta account with the email you bought with — your purchase appears in My purchases, with unlimited downloads${perkNames(c.product.included) ? `, plus ${perkNames(c.product.included)}` : ""}.` },
     ],
   },
   {
@@ -308,6 +375,8 @@ export interface ProductPreview {
   samples: SampleChapter[];
   /** What a buyer of this product gets, for the after-purchase page. */
   files: ProductFile[];
+  /** Account perks, shown locked as a guest sees them. */
+  perks?: ProductFile[];
 }
 
 export type { FieldValue };

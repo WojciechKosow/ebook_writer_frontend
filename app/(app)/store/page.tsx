@@ -1,52 +1,33 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError, apiAsset, ebookApi, storeApi } from "@/lib/api";
-import { StoreCover } from "@/components/store/store-cover";
-import { LibraryPicker, useLibraryNotice } from "@/components/asset-library";
-import { formatPrice } from "@/lib/pricing";
-import { PRODUCT_FILE_ACCEPT, formatSize } from "@/lib/files";
-import type { EbookStatusResponse, LibraryAsset, ProductFile, StoreDashboard, StoreProduct } from "@/lib/types";
-import { Alert, Button, ButtonLink, Field, Spinner, TextAreaField, controlBase } from "@/components/ui";
+import type { EbookStatusResponse, StoreDashboard } from "@/lib/types";
+import { draftStatus, publishBlocker, storeAddress } from "@/lib/store/changes";
 import { parseDesign } from "@/lib/store-design/core";
 import { STYLES } from "@/lib/store-design/schemas";
-
-const card = "mt-6 rounded-2xl border border-hairline bg-surface p-6";
-const h2 = "font-display text-[22px] font-normal leading-tight text-foreground";
-
-// Countries offered for a new Stripe account (it can't change afterwards).
-// English-speaking markets first; Stripe validates the code.
-const COUNTRIES: [string, string][] = [
-  ["US", "United States"],
-  ["GB", "United Kingdom"],
-  ["CA", "Canada"],
-  ["AU", "Australia"],
-  ["NZ", "New Zealand"],
-  ["IE", "Ireland"],
-  ["DE", "Germany"],
-  ["FR", "France"],
-  ["ES", "Spain"],
-  ["IT", "Italy"],
-  ["NL", "Netherlands"],
-  ["PL", "Poland"],
-  ["SE", "Sweden"],
-  ["SG", "Singapore"],
-];
+import { BookCover } from "@/components/library/book-cover";
+import { AddProductDialog } from "@/components/store/add-product";
+import { BrandCard, BrandDialog } from "@/components/store/brand";
+import { Dialog, DialogHeader, DraftDot, MoreMenu, StoreStateChip, useCopy } from "@/components/store/kit";
+import { PaymentsSummary, StripeStep } from "@/components/store/payments";
+import { ProductList } from "@/components/store/products";
+import { PublishChanges } from "@/components/store/publish";
+import { Alert, Button, ButtonLink, Spinner } from "@/components/ui";
 
 function message(e: unknown, fallback: string) {
   return e instanceof ApiError ? e.message : fallback;
 }
 
-/** "12.99" → 1299; null when not a valid amount. */
-function toCents(value: string): number | null {
-  const v = value.trim().replace(/^\$/, "");
-  if (!/^\d+(\.\d{1,2})?$/.test(v)) return null;
-  return Math.round(parseFloat(v) * 100);
-}
-
+/**
+ * Your store, in three states: the first run (name + address, nothing else),
+ * the setup checklist while the store is a draft, and the live store. Every
+ * edit here saves as a draft; "Publish changes" is the only way it reaches
+ * buyers.
+ */
 function StoreInner() {
   const { token } = useAuth();
   const router = useRouter();
@@ -57,7 +38,12 @@ function StoreInner() {
   const [ebooks, setEbooks] = useState<EbookStatusResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSavingCount] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [brand, setBrand] = useState(false);
   const handledReturn = useRef(false);
+
+  const onSaving = useCallback((on: boolean) => setSavingCount((n) => Math.max(0, n + (on ? 1 : -1))), []);
 
   useEffect(() => {
     if (!token) return;
@@ -99,45 +85,90 @@ function StoreInner() {
     );
   }
 
+  if (!store) {
+    return <FirstRun token={token!} ebooks={ebooks} error={error} onCreated={setStore} />;
+  }
+
+  const finished = ebooks.filter((e) => e.status === "COMPLETED" && e.downloadReady);
+
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="font-display text-[34px] font-light leading-[1.05] tracking-[-0.02em] text-foreground sm:text-[40px]">
-        Your store
-      </h1>
-      <p className="mt-2 text-sm text-muted">
-        Sell your ebooks from your own page. Buyers pay you directly through your Stripe account — Scrivetta
-        takes no commission.
-      </p>
-      {error && (
-        <div className="mt-4">
-          <Alert>{error}</Alert>
-        </div>
+    <div className="mx-auto flex max-w-[1040px] flex-col gap-8 pb-20 sm:pb-0">
+      {error && <Alert>{error}</Alert>}
+      <StoreHeader token={token!} store={store} saving={saving > 0} onChange={setStore} onBrand={() => setBrand(true)} />
+
+      {!store.published && (
+        <SetupChecklist token={token!} store={store} onChange={setStore} onAdd={() => setAdding(true)} onBrand={() => setBrand(true)} />
       )}
 
-      {!store ? (
-        <CreateStore token={token!} onCreated={setStore} />
-      ) : (
-        <>
-          <PublishBar token={token!} store={store} onChange={setStore} />
-          <DesignCard store={store} />
-          <Checklist store={store} />
-          <ProfileForm token={token!} store={store} onChange={setStore} />
-          <Products token={token!} store={store} ebooks={ebooks} onChange={setStore} />
-          <StripeCard token={token!} store={store} onChange={setStore} />
-        </>
+      <ProductList token={token!} store={store} onChange={setStore} onSaving={onSaving} onAdd={() => setAdding(true)} />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <BrandCard store={store} onEdit={() => setBrand(true)} />
+        <DesignCard store={store} />
+      </div>
+
+      {store.published && <PaymentsSummary token={token!} store={store} onChange={setStore} />}
+
+      {adding && (
+        <AddProductDialog open token={token!} store={store} ebooks={ebooks} onClose={() => setAdding(false)}
+          onAdded={(s, id, own) => {
+            setStore(s);
+            setAdding(false);
+            if (id) router.push(`/store/products/${id}/design${own ? "?tab=files" : ""}`);
+          }} />
+      )}
+      {brand && (
+        <BrandDialog open token={token!} store={store} onChange={setStore} onSaving={onSaving} onClose={() => setBrand(false)} />
+      )}
+      {finished.length === 0 && store.products.length === 0 && (
+        <p className="text-sm text-muted">
+          No finished ebook yet? <Link href="/ebooks/new" className="font-medium underline underline-offset-4">Write one</Link> — or add
+          your own files as a product.
+        </p>
       )}
     </div>
   );
 }
 
-// ---- Create ------------------------------------------------------------------
+// ---- First run ----------------------------------------------------------------------
 
-function CreateStore({ token, onCreated }: { token: string; onCreated: (s: StoreDashboard) => void }) {
+function slugify(name: string): string {
+  return name.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "")
+    .replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "");
+}
+
+const NEXT_STEPS: [string, string][] = [
+  ["Connect Stripe", "So buyers can pay you."],
+  ["Add your first product", "Pick an ebook, set a price."],
+  ["Add your brand", "Logo, headline, a few words about you."],
+  ["Choose a look", "5 themes, live preview."],
+  ["Publish", "Get your link for your bio."],
+];
+
+function FirstRun({ token, ebooks, error: loadError, onCreated }: {
+  token: string; ebooks: EbookStatusResponse[]; error: string | null; onCreated: (s: StoreDashboard) => void;
+}) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [check, setCheck] = useState<{ slug: string; available: boolean; message: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const finished = ebooks.filter((e) => e.status === "COMPLETED" && e.downloadReady);
+  const address = slugEdited ? slug : slugify(name);
+
+  // Is the address free? Checked as the author types (debounced).
+  useEffect(() => {
+    if (address.length < 3) return;
+    const id = setTimeout(() => {
+      storeApi.slugAvailable(token, address)
+        .then((r) => setCheck({ slug: address, ...r }))
+        .catch(() => setCheck(null));
+    }, 350);
+    return () => clearTimeout(id);
+  }, [address, token]);
+  const status = address.length < 3 ? null : check?.slug === address ? check : undefined;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -145,819 +176,307 @@ function CreateStore({ token, onCreated }: { token: string; onCreated: (s: Store
     setError(null);
     setFieldErrors({});
     try {
-      onCreated(await storeApi.create(token, { name: name.trim(), slug: slug.trim() }));
+      onCreated(await storeApi.create(token, { name: name.trim(), slug: address }));
     } catch (err) {
       if (err instanceof ApiError && err.fieldErrors) setFieldErrors(err.fieldErrors);
-      setError(message(err, "Could not create your store."));
+      setError(message(err, "Could not open your store."));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <form onSubmit={submit} className={card}>
-      <h2 className={h2}>Create your store</h2>
-      <div className="mt-4 flex flex-col gap-4">
-        <Field label="Store name" name="name" value={name} maxLength={80} required
-          onChange={(e) => setName(e.target.value)} error={fieldErrors.name} />
-        <Field label="Store address" name="slug" value={slug} maxLength={40} required
-          placeholder="your-name"
-          onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-          error={fieldErrors.slug} />
-        <p className="-mt-2 text-xs text-faint">scrivetta.com/store/{slug || "your-name"}</p>
-        {error && <Alert>{error}</Alert>}
-        <div>
-          <Button type="submit" loading={busy}>Create store</Button>
+    <div className="mx-auto flex max-w-[1040px] flex-wrap items-start gap-10 py-4">
+      <section className="flex min-w-0 flex-[3_1_440px] flex-col gap-7">
+        <div className="flex flex-col gap-3">
+          <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">Your store</span>
+          <h1 className="font-display text-[38px] font-light leading-[1.05] tracking-[-0.02em] sm:text-[46px]">
+            Sell your books from a page that looks like <em>yours</em>.
+          </h1>
+          <p className="max-w-[520px] text-[15px] leading-relaxed text-muted">
+            Buyers pay you directly through your own Stripe account. Scrivetta takes no commission.
+          </p>
         </div>
-      </div>
-    </form>
+        {loadError && <Alert>{loadError}</Alert>}
+        <form onSubmit={submit} className="flex flex-col gap-5 rounded-2xl border border-hairline bg-surface p-6 sm:p-7">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="store-name" className="text-sm font-medium">Store name</label>
+            <input id="store-name" required maxLength={80} value={name} onChange={(e) => setName(e.target.value)}
+              placeholder="Jane's Kitchen"
+              className="h-12 rounded-xl border border-hairline-2 bg-background px-3.5 text-[15px] outline-none focus:border-foreground" />
+            {fieldErrors.name && <span className="text-xs text-red-700 dark:text-red-400">{fieldErrors.name}</span>}
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="store-slug" className="text-sm font-medium">Store address</label>
+            <div className="flex h-12 items-center overflow-hidden rounded-xl border border-hairline-2 bg-background focus-within:border-foreground">
+              <span className="whitespace-nowrap pl-3.5 pr-0.5 text-[15px] text-muted">scrivetta.com/store/</span>
+              <input id="store-slug" required maxLength={40} value={address}
+                onChange={(e) => {
+                  setSlugEdited(true);
+                  setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+                }}
+                className="h-full min-w-0 flex-1 bg-transparent text-[15px] font-medium outline-none" />
+              {status && (
+                <span className={`whitespace-nowrap px-3.5 text-[13px] ${status.available ? "text-good" : "text-red-700 dark:text-red-400"}`}>
+                  {status.available ? "✓ Available" : "Not available"}
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-muted">
+              {status && !status.available && status.message
+                ? status.message
+                : fieldErrors.slug || "Made from your store name. This is the link you'll put in your bio."}
+            </span>
+          </div>
+          {error && <Alert>{error}</Alert>}
+          <div className="flex flex-wrap items-center gap-4 pt-1">
+            <Button type="submit" loading={busy} disabled={!name.trim() || address.length < 3 || status?.available === false} className="h-12 px-6">
+              Open my store →
+            </Button>
+            <span className="text-xs text-muted">Nothing is public until you publish. You can rename it later.</span>
+          </div>
+        </form>
+      </section>
+
+      <aside className="flex min-w-0 flex-[2_1_300px] flex-col gap-5">
+        {finished.length > 0 && (
+          <>
+            <div className="flex items-end pl-2 pt-2">
+              {finished.slice(0, 3).map((b, i) => (
+                <div key={b.id} className="w-[92px] shrink-0" style={{ transform: `rotate(${[-4, 5, -2][i]}deg)`, marginLeft: i ? -16 : 0 }}>
+                  <BookCover book={b} />
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="font-semibold">{finished.length} finished ebook{finished.length === 1 ? " is" : "s are"} ready to sell</span>
+              <span className="text-[13px] text-muted">{finished.slice(0, 3).map((b) => b.title || "Untitled").join(" · ")}</span>
+            </div>
+          </>
+        )}
+        <div className="flex flex-col">
+          <span className="pb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">After this — 5 short steps</span>
+          <ol>
+            {NEXT_STEPS.map(([t, h], i) => (
+              <li key={t} className={`flex items-start gap-3.5 border-t border-hairline py-3.5 ${i === NEXT_STEPS.length - 1 ? "border-b" : ""}`}>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-hairline-2 font-mono text-xs text-muted">{i + 1}</span>
+                <span className="flex flex-col"><span className="text-sm font-semibold">{t}</span><span className="text-xs text-muted">{h}</span></span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </aside>
+    </div>
   );
 }
 
-// ---- Publish + share ---------------------------------------------------------
+// ---- Header -------------------------------------------------------------------------
 
-function PublishBar({ token, store, onChange }: {
-  token: string; store: StoreDashboard; onChange: (s: StoreDashboard) => void;
+function StoreHeader({ token, store, saving, onChange, onBrand }: {
+  token: string; store: StoreDashboard; saving: boolean; onChange: (s: StoreDashboard) => void; onBrand: () => void;
 }) {
-  const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const path = `/store/${store.slug}`;
-  const shown = `scrivetta.com${path}`;
-
-  async function togglePublish() {
-    setBusy(true);
-    setError(null);
-    try {
-      onChange(store.published ? await storeApi.unpublish(token) : await storeApi.publish(token));
-    } catch (e) {
-      setError(message(e, "Could not change the store's visibility."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}${path}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setError("Could not copy — select the address and copy it by hand.");
-    }
-  }
+  const { copied, copy } = useCopy();
+  const [unpublishing, setUnpublishing] = useState(false);
+  const { path, shown } = storeAddress(store.slug);
+  const logo = apiAsset(store.logoUrl);
+  const status = draftStatus(store, saving);
 
   return (
-    <div className={card}>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${store.published
-            ? "border-[color-mix(in_oklab,var(--good)_35%,transparent)] bg-good-soft text-good"
-            : "border-hairline-2 text-muted"}`}>
-            {store.published ? "Live" : "Not published"}
-          </span>
-          <span className="truncate text-sm text-foreground-2">{shown}</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {store.published && (
-            <>
-              <Button variant="secondary" onClick={copy}>{copied ? "Copied" : "Copy link for your bio"}</Button>
-              <ButtonLink href={path} variant="secondary">View store</ButtonLink>
-            </>
+    <header className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-4">
+          {logo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logo} alt="" className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
           )}
-          <Button variant={store.published ? "ghost" : "primary"} loading={busy}
-            disabled={!store.published && !store.pro} onClick={togglePublish}>
-            {store.published ? "Unpublish" : "Publish store"}
-          </Button>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="font-display text-[34px] font-light leading-[1.05] tracking-[-0.02em] sm:text-[40px]">{store.name}</h1>
+              <StoreStateChip published={store.published} />
+            </div>
+            {store.published ? (
+              <DraftDot {...status} />
+            ) : (
+              <span className="text-[13px] text-muted">{shown} · only you can see it for now</span>
+            )}
+          </div>
+        </div>
+        {store.published ? (
+          <div className="hidden sm:block"><PublishChanges token={token} store={store} onChange={onChange} /></div>
+        ) : (
+          <ButtonLink href="/store/design" variant="secondary">Preview store</ButtonLink>
+        )}
+      </div>
+
+      {store.published && (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface p-2 pl-4">
+          <span className="w-full min-w-0 truncate py-1 text-sm text-foreground-2 sm:w-auto sm:flex-1">{shown}</span>
+          <Button variant="secondary" onClick={() => copy(`${window.location.origin}${path}`)}>{copied ? "Copied" : "Copy link for your bio"}</Button>
+          <a href={path} target="_blank" rel="noopener noreferrer"
+            className="inline-flex h-10 items-center rounded-xl border border-hairline-2 bg-surface px-4 text-sm font-semibold hover:border-muted">View store ↗</a>
+          <MoreMenu label="More store actions" items={[
+            { label: "Rename or edit brand…", onSelect: onBrand },
+            "sep",
+            { label: "Unpublish store…", danger: true, onSelect: () => setUnpublishing(true) },
+          ]} />
+        </div>
+      )}
+      {store.published && status.tone !== "live" && (
+        // Phone: Publish stays in thumb reach.
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-hairline bg-surface px-4 py-3 sm:hidden">
+          <DraftDot {...status} />
+          <PublishChanges token={token} store={store} onChange={onChange} />
+        </div>
+      )}
+      <UnpublishDialog open={unpublishing} token={token} store={store} onChange={onChange} onClose={() => setUnpublishing(false)} />
+    </header>
+  );
+}
+
+function UnpublishDialog({ open, token, store, onChange, onClose }: {
+  open: boolean; token: string; store: StoreDashboard; onChange: (s: StoreDashboard) => void; onClose: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <Dialog open={open} onClose={onClose} labelledBy="unpublish-title">
+      <DialogHeader id="unpublish-title" title={`Unpublish ${store.name}?`} onClose={onClose} />
+      <div className="flex flex-col gap-4 px-6 pb-6">
+        <p className="text-sm leading-relaxed text-muted">
+          Your store and product pages go offline and nobody can buy. Buyers keep their downloads. Your draft stays, and
+          you can publish again anytime.
+        </p>
+        {error && <Alert>{error}</Alert>}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>Keep it live</Button>
+          <Button loading={busy} className="!bg-red-700 !text-white" onClick={async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              onChange(await storeApi.unpublish(token));
+              onClose();
+            } catch (e) {
+              setError(message(e, "Could not unpublish the store."));
+            } finally {
+              setBusy(false);
+            }
+          }}>Unpublish</Button>
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
+// ---- Setup checklist (draft store) ------------------------------------------------------
+
+function SetupChecklist({ token, store, onChange, onAdd, onBrand }: {
+  token: string; store: StoreDashboard; onChange: (s: StoreDashboard) => void; onAdd: () => void; onBrand: () => void;
+}) {
+  const stripe = store.stripe.state === "READY";
+  const product = store.products.some((p) => p.active && p.deliverable);
+  const brand = !!store.headline && !!(store.description || store.authorName);
+  const steps = [
+    { done: true, title: "Open your store" },
+    { done: stripe, title: "Connect Stripe so buyers can pay you" },
+    { done: product, title: "Add your first product", hint: "Pick a finished ebook and set a price." },
+    { done: brand, title: "Add your brand", hint: "Logo, headline, a photo and a few words about you." },
+    { done: false, title: "Choose a look, then publish", hint: "Publishing unlocks once Stripe is connected and one product is added." },
+  ];
+  const done = steps.filter((s) => s.done).length;
+  // The first open step is the one to do now; Stripe stays first until it's ready.
+  const current = steps.findIndex((s) => !s.done);
+  const blocker = publishBlocker(store);
+
+  return (
+    <section className="flex flex-col gap-1 rounded-2xl border border-hairline bg-surface p-5 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+        <div className="flex items-baseline gap-3">
+          <h2 className="font-display text-[26px] font-normal leading-tight">Set up your store</h2>
+          <span className="text-sm text-muted">{done} of {steps.length} done</span>
+        </div>
+        <div aria-hidden className="flex gap-1">
+          {steps.map((s, i) => <span key={i} className={`h-1.5 w-8 rounded-full ${s.done ? "bg-good" : "bg-hairline-2"}`} />)}
         </div>
       </div>
       {!store.pro && (
-        <div className="mt-4">
+        <div className="pb-3">
           <Alert variant="info">
-            Publishing and selling require Scrivetta PRO.{" "}
+            Opening a store and selling need Scrivetta PRO. You can set everything up first.{" "}
             <Link href="/billing" className="font-semibold underline">Upgrade</Link>
           </Alert>
         </div>
       )}
-      {error && <div className="mt-4"><Alert>{error}</Alert></div>}
-    </div>
+      <ol className="flex flex-col">
+        {steps.map((s, i) => {
+          const open = i === current;
+          return (
+            <li key={s.title} className={`flex gap-4 border-t border-hairline py-4 ${open ? "rounded-xl border-transparent bg-background px-4" : ""}`}>
+              <span aria-hidden className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${s.done ? "bg-good-soft text-good" : open ? "bg-foreground text-background" : "border border-hairline-2 text-muted"}`}>
+                {s.done ? "✓" : i + 1}
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-col gap-0.5">
+                    <span className={`text-[15px] ${s.done ? "text-muted line-through decoration-hairline-2" : "font-semibold"}`}>{s.title}</span>
+                    {!s.done && s.hint && <span className="text-xs text-muted">{s.hint}</span>}
+                    <span className="sr-only">{s.done ? "done" : "to do"}</span>
+                  </div>
+                  {!open && !s.done && i === 2 && <TertiaryButton onClick={onAdd}>Add product</TertiaryButton>}
+                  {!open && !s.done && i === 3 && <TertiaryButton onClick={onBrand}>Add brand</TertiaryButton>}
+                  {!open && i === 4 && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-faint">
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 015 0v2" /></svg>
+                      Publish
+                    </span>
+                  )}
+                </div>
+                {open && i === 1 && <StripeStep token={token} store={store} onChange={onChange} />}
+                {open && i === 2 && <div><Button onClick={onAdd} className="h-11 px-5">+ Add product</Button></div>}
+                {open && i === 3 && <div><Button onClick={onBrand} className="h-11 px-5">Add brand</Button></div>}
+                {open && i === 4 && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <ButtonLink href="/store/design" variant="secondary">Choose a look</ButtonLink>
+                    <PublishChanges token={token} store={store} onChange={onChange} />
+                    {blocker && <span className="text-xs text-muted">{blocker}</span>}
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 
-// ---- Store design --------------------------------------------------------------
+function TertiaryButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="text-sm font-medium underline decoration-hairline-2 underline-offset-4 hover:decoration-foreground">
+      {children}
+    </button>
+  );
+}
+
+// ---- Design summary -------------------------------------------------------------------
 
 function DesignCard({ store }: { store: StoreDashboard }) {
-  const style = STYLES[parseDesign(store.themeSettings).active];
+  const design = parseDesign(store.themeSettings);
+  const style = STYLES[design.active];
+  const accent = design.themes[design.active]?.accent ?? style.accents[0];
   return (
-    <div className={card}>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className={h2}>Design</h2>
-          <p className="mt-1 text-sm text-muted">
-            Style: <span className="font-semibold text-foreground">{style.name}</span> — {style.tagline}
-          </p>
-        </div>
-        <ButtonLink href="/store/design">Customize design</ButtonLink>
+    <div className="flex min-w-0 flex-col gap-4 rounded-2xl border border-hairline bg-surface p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-display text-[22px] font-normal">Design</h3>
+        <ButtonLink href="/store/design" variant="secondary">Open designer</ButtonLink>
       </div>
-    </div>
-  );
-}
-
-// ---- Ready-to-sell checklist ---------------------------------------------------
-
-function Checklist({ store }: { store: StoreDashboard }) {
-  const listed = store.products.filter((p) => p.active).length;
-  const items: { done: boolean; label: string; href: string }[] = [
-    { done: !!store.logoUrl && !!store.headline, label: "Store logo and headline", href: "#brand" },
-    { done: !!store.description && !!store.photoUrl, label: "About you, with a photo", href: "#about-you" },
-    { done: listed > 0, label: listed > 0 ? `${listed} product${listed === 1 ? "" : "s"} for sale` : "At least one product for sale", href: "#ebooks-sec" },
-    { done: store.stripe.state === "READY", label: "Payments ready in Stripe", href: "#payments" },
-    { done: store.published, label: "Store published", href: "#" },
-  ];
-  const done = items.filter((i) => i.done).length;
-  if (done === items.length) return null;
-  return (
-    <div className={card}>
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className={h2}>Ready to sell?</h2>
-        <span className="text-sm font-semibold text-muted">{done} of {items.length}</span>
+      <div aria-hidden className="flex h-24 items-end gap-3 overflow-hidden rounded-xl p-4" style={{ background: style.swatch.bg, color: style.swatch.fg }}>
+        <span className="text-[22px] leading-none" style={{ fontFamily: style.swatch.font }}>{style.swatch.sample}</span>
+        <span className="ml-auto h-6 w-6 rounded-full" style={{ background: accent }} />
       </div>
-      <ul className="mt-4 flex flex-col gap-2.5 text-sm">
-        {items.map((i) => (
-          <li key={i.label} className="flex items-center gap-3">
-            <span aria-hidden className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${i.done ? "bg-good-soft text-good" : "border border-hairline-2 text-faint"}`}>
-              {i.done ? "✓\uFE0E" : ""}
-            </span>
-            <span className={i.done ? "text-muted" : "text-foreground"}>{i.label}</span>
-            {!i.done && i.href !== "#" && <a href={i.href} className="font-semibold text-accent hover:underline">Fix</a>}
-            <span className="sr-only">{i.done ? "done" : "to do"}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-// ---- Profile: brand + about you -------------------------------------------------
-
-function ProfileForm({ token, store, onChange }: {
-  token: string; store: StoreDashboard; onChange: (s: StoreDashboard) => void;
-}) {
-  const [form, setForm] = useState({
-    name: store.name,
-    headline: store.headline ?? "",
-    authorName: store.authorName ?? "",
-    description: store.description ?? "",
-    contactEmail: store.contactEmail ?? "",
-    instagramUrl: store.instagramUrl ?? "",
-    tiktokUrl: store.tiktokUrl ?? "",
-    websiteUrl: store.websiteUrl ?? "",
-  });
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [k]: e.target.value });
-    setSaved(false);
-  };
-
-  async function save() {
-    setBusy(true);
-    setError(null);
-    setFieldErrors({});
-    try {
-      onChange(await storeApi.update(token, { ...form, name: form.name.trim() }));
-      setSaved(true);
-    } catch (e) {
-      if (e instanceof ApiError && e.fieldErrors) setFieldErrors(e.fieldErrors);
-      setError(message(e, "Could not save."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <>
-      <div id="brand" className={`${card} scroll-mt-6`}>
-        <h2 className={h2}>Brand</h2>
-        <div className="mt-4 flex flex-col gap-4">
-          <ImagePicker token={token} kind="logo" url={store.logoUrl} round onChange={onChange}
-            label="Logo" hint="PNG, JPG or WebP · square works best · up to 3 MB" />
-          <Field label="Store name" name="storeName" value={form.name} maxLength={80} onChange={set("name")}
-            error={fieldErrors.name} />
-          <div className="flex flex-col gap-1.5">
-            <Field label="Headline" name="headline" value={form.headline} maxLength={160} onChange={set("headline")}
-              placeholder="Bake bread you're proud of — in your own kitchen." error={fieldErrors.headline} />
-            <p className="text-xs text-faint">The first thing people see. Say what readers get, not what you sell.</p>
-          </div>
-        </div>
-      </div>
-
-      <div id="about-you" className={`${card} scroll-mt-6`}>
-        <h2 className={h2}>About you</h2>
-        <div className="mt-4 flex flex-col gap-4">
-          <ImagePicker token={token} kind="photo" url={store.photoUrl} onChange={onChange}
-            label="Your photo" hint="A friendly photo of you or your work · up to 3 MB" />
-          <Field label="Your name (as readers see it)" name="authorName" value={form.authorName} maxLength={80}
-            onChange={set("authorName")} placeholder="Jane Morrow" error={fieldErrors.authorName} />
-          <TextAreaField label="About you" name="storeDescription" value={form.description} maxLength={2000}
-            hint="2–3 sentences in your own words: who you are and what readers get." onChange={set("description")} />
-          <Field label="Contact email for buyers" name="contactEmail" type="email" value={form.contactEmail}
-            maxLength={254} onChange={set("contactEmail")} error={fieldErrors.contactEmail} />
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Instagram" name="instagramUrl" value={form.instagramUrl} placeholder="https://instagram.com/…"
-              onChange={set("instagramUrl")} error={fieldErrors.instagramUrl} />
-            <Field label="TikTok" name="tiktokUrl" value={form.tiktokUrl} placeholder="https://tiktok.com/@…"
-              onChange={set("tiktokUrl")} error={fieldErrors.tiktokUrl} />
-            <Field label="Website" name="websiteUrl" value={form.websiteUrl} placeholder="https://…"
-              onChange={set("websiteUrl")} error={fieldErrors.websiteUrl} />
-          </div>
-          {error && <Alert>{error}</Alert>}
-          <div className="flex items-center gap-3">
-            <Button loading={busy} disabled={!form.name.trim()} onClick={save}>Save profile</Button>
-            {saved && <span className="text-sm text-good">Saved — buyers see it right away.</span>}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// The store takes raster images up to 3 MB (never SVG, which can carry script).
-const STORE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-
-function storeAccepts(asset: LibraryAsset): string | null {
-  if (!STORE_IMAGE_TYPES.has(asset.contentType)) return "PNG, JPG or WebP only";
-  if (asset.sizeBytes > 3 * 1024 * 1024) return "Larger than 3 MB";
-  return null;
-}
-
-function ImagePicker({ token, kind, url, round = false, label, hint, onChange }: {
-  token: string; kind: "logo" | "photo"; url: string | null; round?: boolean; label: string; hint: string;
-  onChange: (s: StoreDashboard) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [libraryOpen, setLibraryOpen] = useState(false);
-  const { notice, afterUpload } = useLibraryNotice();
-  const input = useRef<HTMLInputElement>(null);
-  const src = apiAsset(url);
-
-  async function upload(file: File | undefined) {
-    if (!file) return;
-    setBusy(true);
-    setError(null);
-    try {
-      onChange(await storeApi.uploadImage(token, kind, file));
-      afterUpload();
-    } catch (e) {
-      setError(message(e, "Could not upload the image."));
-    } finally {
-      setBusy(false);
-      if (input.current) input.current.value = "";
-    }
-  }
-
-  async function remove() {
-    setBusy(true);
-    setError(null);
-    try {
-      onChange(await storeApi.removeImage(token, kind));
-    } catch (e) {
-      setError(message(e, "Could not remove the image."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-4">
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" className={`h-16 w-16 object-cover ${round ? "rounded-full" : "rounded-xl"}`} />
-      ) : (
-        <span aria-hidden className={`flex h-16 w-16 items-center justify-center border border-dashed border-hairline-2 text-xs text-faint ${round ? "rounded-full" : "rounded-xl"}`}>
-          None
-        </span>
-      )}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-sm font-medium text-foreground-2">{label}</span>
-        <span className="text-xs text-faint">{hint}</span>
-        {error && <span className="text-xs text-red-600 dark:text-red-400">{error}</span>}
-      </div>
-      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
-        aria-label={`Upload ${label.toLowerCase()}`} onChange={(e) => upload(e.target.files?.[0])} />
-      <div className="flex gap-2">
-        <Button variant="secondary" loading={busy} onClick={() => input.current?.click()}>{src ? "Replace" : "Upload"}</Button>
-        <Button variant="ghost" disabled={busy} onClick={() => setLibraryOpen(true)}>From library</Button>
-        {src && <Button variant="ghost" disabled={busy} onClick={remove}>Remove</Button>}
-      </div>
-      {libraryOpen && (
-        <LibraryPicker
-          title={`Pick your ${label.toLowerCase()}`}
-          accepts={storeAccepts}
-          onPick={async (asset) => onChange(await storeApi.useLibraryImage(token, kind, asset.id))}
-          onClose={() => setLibraryOpen(false)}
-        />
-      )}
-      {notice}
-    </div>
-  );
-}
-
-// ---- Stripe status -----------------------------------------------------------
-
-// Right after onboarding Stripe usually needs a moment to verify the account;
-// while it does, re-check a few times so the card flips to ready on its own.
-const VERIFY_POLL_MS = 5000;
-const VERIFY_POLL_TRIES = 12;
-
-function StripeCard({ token, store, onChange }: {
-  token: string; store: StoreDashboard; onChange: (s: StoreDashboard) => void;
-}) {
-  const [country, setCountry] = useState("US");
-  const [busy, setBusy] = useState(false);
-  const [checking, setChecking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { state, currentlyDue } = store.stripe;
-  const polls = useRef(0);
-
-  useEffect(() => {
-    if (state !== "PENDING_VERIFICATION" || polls.current >= VERIFY_POLL_TRIES) return;
-    const id = setTimeout(async () => {
-      polls.current += 1;
-      try {
-        onChange(await storeApi.syncStripe(token));
-      } catch {
-        polls.current = VERIFY_POLL_TRIES; // stop quietly; "Check again" still works
-      }
-    }, VERIFY_POLL_MS);
-    return () => clearTimeout(id);
-  }, [state, store, token, onChange]);
-
-  async function checkStatus() {
-    setChecking(true);
-    setError(null);
-    try {
-      onChange(await storeApi.syncStripe(token));
-    } catch (e) {
-      setError(message(e, "Could not check your Stripe account."));
-    } finally {
-      setChecking(false);
-    }
-  }
-
-  async function openStripe() {
-    setBusy(true);
-    setError(null);
-    try {
-      const { url } = await storeApi.connectStripe(token, state === "NOT_CONNECTED" ? country : undefined);
-      window.location.assign(url);
-    } catch (e) {
-      setError(message(e, "Could not open Stripe."));
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div id="payments" className={`${card} scroll-mt-6`}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className={h2}>Payments</h2>
-        <StatusPill state={state} />
-      </div>
-
-      {state === "NOT_CONNECTED" && (
-        <>
-          <p className="mt-2 text-sm text-muted">
-            Connect a Stripe account to get paid. Buyers pay you directly; refunds, disputes and payouts are
-            handled in your own Stripe Dashboard.
-          </p>
-          <div className="mt-4 flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-foreground-2">
-              Country of your business
-              <select className={controlBase} value={country} onChange={(e) => setCountry(e.target.value)}>
-                {COUNTRIES.map(([code, label]) => (
-                  <option key={code} value={code}>{label}</option>
-                ))}
-              </select>
-            </label>
-            <Button loading={busy} onClick={openStripe}>Connect Stripe</Button>
-          </div>
-        </>
-      )}
-
-      {state === "ACTION_REQUIRED" && (
-        <>
-          <p className="mt-2 text-sm text-muted">
-            Stripe needs more information before you can accept payments
-            {currentlyDue.length > 0 ? ` (${currentlyDue.length} item${currentlyDue.length === 1 ? "" : "s"} due)` : ""}.
-          </p>
-          <div className="mt-4">
-            <Button loading={busy} onClick={openStripe}>Continue in Stripe</Button>
-          </div>
-        </>
-      )}
-
-      {state === "PENDING_VERIFICATION" && (
-        <>
-          <p className="mt-2 text-sm text-muted">
-            You&apos;ve submitted everything Stripe asked for. Stripe is verifying your account — this usually takes a
-            moment, sometimes longer. You&apos;ll be able to sell as soon as it&apos;s done.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Button loading={checking} onClick={checkStatus}>Check again</Button>
-            <Button variant="ghost" loading={busy} onClick={openStripe}>Review in Stripe</Button>
-          </div>
-        </>
-      )}
-
-      {state === "READY" && (
-        <p className="mt-2 text-sm text-muted">
-          Your Stripe account can accept payments. Manage refunds and payouts in your{" "}
-          <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer"
-            className="font-medium text-accent hover:underline">Stripe Dashboard</a>.
-        </p>
-      )}
-
-      {error && (
-        <div className="mt-4">
-          <Alert>{error}</Alert>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatusPill({ state }: { state: StoreDashboard["stripe"]["state"] }) {
-  const map = {
-    NOT_CONNECTED: ["Not connected", "border-hairline-2 text-muted"],
-    ACTION_REQUIRED: ["Action required", "border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300"],
-    PENDING_VERIFICATION: ["Verifying", "border-hairline-2 text-muted"],
-    READY: ["Ready to sell", "border-[color-mix(in_oklab,var(--good)_35%,transparent)] bg-good-soft text-good"],
-  } as const;
-  const [label, cls] = map[state];
-  return <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${cls}`}>{label}</span>;
-}
-
-// ---- Products ----------------------------------------------------------------
-
-function Products({ token, store, ebooks, onChange }: {
-  token: string; store: StoreDashboard; ebooks: EbookStatusResponse[]; onChange: (s: StoreDashboard) => void;
-}) {
-  const listed = new Set(store.products.map((p) => p.ebookId));
-  const available = ebooks.filter((e) => e.status === "COMPLETED" && e.downloadReady && !listed.has(e.id));
-  const [ebookId, setEbookId] = useState("");
-  const [price, setPrice] = useState("9.99");
-  const [ownTitle, setOwnTitle] = useState("");
-  const [ownPrice, setOwnPrice] = useState("9.99");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function addOwn() {
-    const cents = toCents(ownPrice);
-    if (!ownTitle.trim() || cents === null) {
-      setError("Give the product a title and a price like 9.99.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      onChange(await storeApi.addProduct(token, { title: ownTitle.trim(), priceCents: cents }));
-      setOwnTitle("");
-    } catch (e) {
-      setError(message(e, "Could not add the product."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function add() {
-    const cents = toCents(price);
-    if (!ebookId || cents === null) {
-      setError("Choose an ebook and enter a price like 9.99.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      onChange(await storeApi.addProduct(token, { ebookId, priceCents: cents }));
-      setEbookId("");
-    } catch (e) {
-      setError(message(e, "Could not add the ebook."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div id="ebooks-sec" className={`${card} scroll-mt-6`}>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className={h2}>Products</h2>
-        <span className="text-xs text-faint">The first one is featured · prices in USD</span>
-      </div>
-      <p className="mt-1 text-sm text-muted">
-        Each product gets its own page with its cover and your description. Sell your Scrivetta ebooks, and add your
-        own PDF, EPUB or ZIP files to any product. Buyers get a download link by email, and the purchase stays in
-        their My Purchases if they have a Scrivetta account.
-      </p>
-
-      {store.products.length > 0 && (
-        <ul className="mt-4 divide-y divide-hairline">
-          {store.products.map((p, i) => (
-            <ProductRow key={p.id} token={token} product={p} slug={store.slug} published={store.published}
-              first={i === 0} last={i === store.products.length - 1} onChange={onChange} />
-          ))}
-        </ul>
-      )}
-
-      <div className="mt-5 flex flex-wrap items-end gap-3">
-        {available.length === 0 ? (
-          <p className="text-sm text-faint">
-            {store.products.length === 0 ? "Finish an ebook to put it on sale." : "All your finished ebooks are listed."}
-          </p>
-        ) : (
-          <>
-            <label className="flex min-w-[220px] flex-1 flex-col gap-1.5 text-sm font-medium text-foreground-2">
-              Ebook
-              <select className={controlBase} value={ebookId} onChange={(e) => setEbookId(e.target.value)}>
-                <option value="">Choose a finished ebook…</option>
-                {available.map((e) => (
-                  <option key={e.id} value={e.id}>{e.title || "Untitled ebook"}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex w-32 flex-col gap-1.5 text-sm font-medium text-foreground-2">
-              Price ($)
-              <input className={controlBase} inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
-            </label>
-            <Button loading={busy} onClick={add}>Add to store</Button>
-          </>
-        )}
-      </div>
-
-      <div className="mt-5 border-t border-hairline pt-5">
-        <p className="text-sm font-medium text-foreground-2">Sell your own files</p>
-        <p className="mt-0.5 text-xs text-faint">
-          A product without a Scrivetta ebook — upload PDF, EPUB or ZIP files to it. It stays hidden until it has a file.
-        </p>
-        <div className="mt-3 flex flex-wrap items-end gap-3">
-          <label className="flex min-w-[220px] flex-1 flex-col gap-1.5 text-sm font-medium text-foreground-2">
-            Title
-            <input className={controlBase} value={ownTitle} maxLength={200} placeholder="Budget templates bundle"
-              onChange={(e) => setOwnTitle(e.target.value)} />
-          </label>
-          <label className="flex w-32 flex-col gap-1.5 text-sm font-medium text-foreground-2">
-            Price ($)
-            <input className={controlBase} inputMode="decimal" value={ownPrice} onChange={(e) => setOwnPrice(e.target.value)} />
-          </label>
-          <Button variant="secondary" loading={busy} onClick={addOwn}>Create product</Button>
-        </div>
-      </div>
-      {error && (
-        <div className="mt-4">
-          <Alert>{error}</Alert>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ProductRow({ token, product, slug, published, first, last, onChange }: {
-  token: string; product: StoreProduct; slug: string; published: boolean; first: boolean; last: boolean;
-  onChange: (s: StoreDashboard) => void;
-}) {
-  const [price, setPrice] = useState((product.priceCents / 100).toFixed(2));
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function run(fn: () => Promise<StoreDashboard>) {
-    setBusy(true);
-    setError(null);
-    try {
-      onChange(await fn());
-    } catch (e) {
-      setError(message(e, "Could not update."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const cents = toCents(price);
-  return (
-    <li className="py-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex flex-col gap-0.5">
-          <button type="button" aria-label={`Move ${product.title} up`} disabled={busy || first}
-            onClick={() => run(() => storeApi.moveProduct(token, product.id, "up"))}
-            className="rounded px-1.5 text-faint hover:text-foreground disabled:opacity-30">▲&#xFE0E;</button>
-          <button type="button" aria-label={`Move ${product.title} down`} disabled={busy || last}
-            onClick={() => run(() => storeApi.moveProduct(token, product.id, "down"))}
-            className="rounded px-1.5 text-faint hover:text-foreground disabled:opacity-30">▼&#xFE0E;</button>
-        </div>
-        <div className="w-11 shrink-0"><StoreCover coverUrl={product.coverUrl} title={product.title} className="shadow-none" /></div>
-        <div className="min-w-[160px] flex-1">
-          <p className={`text-sm font-medium ${product.active ? "text-foreground" : "text-faint line-through"}`}>
-            {product.title}
-          </p>
-          <p className="text-xs text-faint">
-            {[first && product.active ? "Featured" : null, product.pageCount > 0 ? `${product.pageCount} pages` : null,
-              product.files.length > 0 ? `${product.files.length} file${product.files.length === 1 ? "" : "s"}` : null,
-              formatPrice(product.priceCents), product.active ? null : "hidden"].filter(Boolean).join(" · ")}
-          </p>
-          {!product.deliverable && (
-            <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">
-              Add a file so buyers get something — then show it.
-            </p>
-          )}
-          {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
-        </div>
-        <input aria-label="Price in USD" className={`${controlBase} w-24`} inputMode="decimal" value={price}
-          onChange={(e) => setPrice(e.target.value)} />
-        <Button variant="secondary" disabled={busy || cents === null || cents === product.priceCents}
-          onClick={() => cents !== null && run(() => storeApi.updateProduct(token, product.id, { priceCents: cents }))}>
-          Save price
-        </Button>
-        <ButtonLink href={`/store/products/${product.id}/design`} variant="secondary">Design page</ButtonLink>
-        <Button variant="ghost" disabled={busy} onClick={() => setOpen(!open)} aria-expanded={open}>
-          {open ? "Close" : "Files & cover"}
-        </Button>
-        <Button variant="ghost" disabled={busy || (!product.active && !product.deliverable)}
-          onClick={() => run(() => storeApi.updateProduct(token, product.id, { active: !product.active }))}>
-          {product.active ? "Hide" : "Show"}
-        </Button>
-      </div>
-      {open && (
-        <div className="mt-4 flex flex-col gap-4 rounded-xl border border-hairline bg-surface-2 p-4">
-          <ProductFiles token={token} product={product} onChange={onChange} />
-          <ProductCoverPicker token={token} product={product} onChange={onChange} />
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="text-muted">Title, description, free preview and the after-purchase page:</span>
-            <Link href={`/store/products/${product.id}/design`} className="font-semibold text-accent hover:underline">Design page</Link>
-            {published && product.active && (
-              <Link href={`/store/${slug}/${product.id}`} className="font-semibold text-accent hover:underline">View page</Link>
-            )}
-          </div>
-        </div>
-      )}
-    </li>
-  );
-}
-
-// ---- Product files + cover ------------------------------------------------------
-
-function ProductFiles({ token, product, onChange }: {
-  token: string; product: StoreProduct; onChange: (s: StoreDashboard) => void;
-}) {
-  const [progress, setProgress] = useState<number | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const input = useRef<HTMLInputElement>(null);
-
-  async function run(fn: (onProgress: (p: number) => void) => Promise<StoreDashboard>) {
-    setBusy(true);
-    setError(null);
-    setProgress(0);
-    try {
-      onChange(await fn(setProgress));
-    } catch (e) {
-      setError(message(e, "Could not update the files."));
-    } finally {
-      setBusy(false);
-      setProgress(null);
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-sm font-medium text-foreground-2">Downloadable files</span>
-        <span className="text-xs text-faint">PDF, EPUB or ZIP · stored exactly as uploaded · private</span>
-      </div>
-      <ul className="flex flex-col divide-y divide-hairline rounded-xl border border-hairline bg-surface">
-        {product.ebookId && (
-          <li className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm">
-            <span className="rounded-md bg-surface-2 px-2 py-0.5 font-mono text-[11px] font-semibold text-foreground-2">PDF</span>
-            <span className="min-w-0 flex-1 text-foreground">Your Scrivetta ebook <span className="text-faint">· always the latest render</span></span>
-          </li>
-        )}
-        {product.files.map((f) => (
-          <FileItem key={f.id} token={token} product={product} file={f} disabled={busy} run={run} />
-        ))}
-        {!product.ebookId && product.files.length === 0 && (
-          <li className="px-3 py-3 text-sm text-faint">No files yet.</li>
-        )}
-      </ul>
-      <input ref={input} type="file" accept={PRODUCT_FILE_ACCEPT} className="hidden" aria-label="Add a file"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (input.current) input.current.value = "";
-          if (file) run((p) => storeApi.uploadProductFile(token, product.id, file, p));
-        }} />
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="secondary" loading={busy} onClick={() => input.current?.click()}>Add file</Button>
-        {progress !== null && <span className="text-xs text-muted">Uploading… {progress}%</span>}
-      </div>
-      {error && <Alert>{error}</Alert>}
-      <p className="text-xs text-faint">
-        Replacing a file gives every buyer the new version — past purchases keep working.
-      </p>
-    </div>
-  );
-}
-
-function FileItem({ token, product, file, disabled, run }: {
-  token: string; product: StoreProduct; file: ProductFile; disabled: boolean;
-  run: (fn: (onProgress: (p: number) => void) => Promise<StoreDashboard>) => void;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  const size = formatSize(file.sizeBytes);
-  return (
-    <li className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm">
-      <span className="rounded-md bg-surface-2 px-2 py-0.5 font-mono text-[11px] font-semibold text-foreground-2">{file.format}</span>
-      <span className="min-w-0 flex-1">
-        <span className="break-words text-foreground">{file.filename}</span>
-        <span className="text-faint">{[size, file.version > 1 ? `version ${file.version}` : null].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>
+      <span className="text-sm">
+        <b className="font-semibold">{style.name} theme</b> <span className="text-muted">· {style.tagline}</span>
       </span>
-      <input ref={input} type="file" accept={PRODUCT_FILE_ACCEPT} className="hidden" aria-label={`Replace ${file.filename}`}
-        onChange={(e) => {
-          const next = e.target.files?.[0];
-          if (input.current) input.current.value = "";
-          if (next) run((p) => storeApi.replaceProductFile(token, product.id, file.id, next, p));
-        }} />
-      <Button variant="ghost" disabled={disabled} onClick={() => input.current?.click()}>Replace</Button>
-      <Button variant="ghost" disabled={disabled}
-        onClick={() => {
-          if (window.confirm(`Remove ${file.filename}? Buyers won't get it any more.`)) {
-            run(() => storeApi.removeProductFile(token, product.id, file.id));
-          }
-        }}>
-        Remove
-      </Button>
-    </li>
-  );
-}
-
-function ProductCoverPicker({ token, product, onChange }: {
-  token: string; product: StoreProduct; onChange: (s: StoreDashboard) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [libraryOpen, setLibraryOpen] = useState(false);
-  const { notice, afterUpload } = useLibraryNotice();
-  const input = useRef<HTMLInputElement>(null);
-
-  async function run(fn: () => Promise<StoreDashboard>, uploaded = false) {
-    setBusy(true);
-    setError(null);
-    try {
-      onChange(await fn());
-      if (uploaded) afterUpload();
-    } catch (e) {
-      setError(message(e, "Could not update the cover."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-4">
-      <div className="w-12 shrink-0"><StoreCover coverUrl={product.coverUrl} title={product.title} className="shadow-none" /></div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-sm font-medium text-foreground-2">Cover</span>
-        <span className="text-xs text-faint">
-          {product.customCover ? "Your own cover." : product.ebookId ? "The first page of your ebook." : "No cover yet."}{" "}
-          PNG, JPG or WebP · up to 3 MB · not part of the download
-        </span>
-        {error && <span className="text-xs text-red-600 dark:text-red-400">{error}</span>}
-      </div>
-      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" aria-label="Upload cover"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (input.current) input.current.value = "";
-          if (file) run(() => storeApi.uploadProductCover(token, product.id, file), true);
-        }} />
-      <div className="flex gap-2">
-        <Button variant="secondary" loading={busy} onClick={() => input.current?.click()}>
-          {product.customCover ? "Replace" : "Upload"}
-        </Button>
-        <Button variant="ghost" disabled={busy} onClick={() => setLibraryOpen(true)}>From library</Button>
-        {product.customCover && (
-          <Button variant="ghost" disabled={busy} onClick={() => run(() => storeApi.removeProductCover(token, product.id))}>
-            Remove
-          </Button>
-        )}
-      </div>
-      {libraryOpen && (
-        <LibraryPicker
-          title="Pick a cover"
-          accepts={storeAccepts}
-          onPick={async (asset) => onChange(await storeApi.useLibraryProductCover(token, product.id, asset.id))}
-          onClose={() => setLibraryOpen(false)}
-        />
-      )}
-      {notice}
     </div>
   );
 }

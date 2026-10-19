@@ -608,6 +608,13 @@ export const storeApi = {
   get(token: string) {
     return request<StoreDashboard | null>("/api/store", { token });
   },
+  /** Whether a store address is free (first run). */
+  slugAvailable(token: string, slug: string) {
+    return request<{ available: boolean; message: string | null }>(
+      `/api/store/slug-available?slug=${encodeURIComponent(slug)}`,
+      { token },
+    );
+  },
   create(token: string, input: { slug: string; name: string; description?: string }) {
     return request<StoreDashboard>("/api/store", { method: "POST", body: input, token });
   },
@@ -651,14 +658,38 @@ export const storeApi = {
   updateTheme(token: string, settings: string | null) {
     return request<StoreDashboard>("/api/store/theme", { method: "PUT", body: { settings }, token });
   },
+  /** "Publish changes": apply every draft change and make the store public. */
   publish(token: string) {
     return request<StoreDashboard>("/api/store/publish", { method: "POST", token });
+  },
+  /** Throw away every change that isn't published yet. */
+  discardDraft(token: string) {
+    return request<StoreDashboard>("/api/store/draft/discard", { method: "POST", token });
+  },
+  /** Every product, in the order buyers see them (first = featured). Saved as a draft. */
+  reorderProducts(token: string, productIds: string[]) {
+    return request<StoreDashboard>("/api/store/products/order", { method: "PUT", body: { productIds }, token });
+  },
+  /** Remove a product from the store right away (buyers keep their purchases). */
+  removeProduct(token: string, productId: string) {
+    return request<StoreDashboard>(`/api/store/products/${productId}`, { method: "DELETE", token });
+  },
+  /** An extra's name for buyers, what it's for, and whether it's an account perk (draft). */
+  updateProductFile(token: string, productId: string, fileId: string, input: { label?: string; note?: string; accountOnly?: boolean }) {
+    return request<StoreDashboard>(`/api/store/products/${productId}/files/${encodeURIComponent(fileId)}`, {
+      method: "PATCH",
+      body: input,
+      token,
+    });
   },
   unpublish(token: string) {
     return request<StoreDashboard>("/api/store/unpublish", { method: "POST", token });
   },
-  /** Without `ebookId`: a standalone product (title required) that starts hidden until it has a file. */
-  addProduct(token: string, input: { ebookId?: string; priceCents: number; title?: string; description?: string }) {
+  /**
+   * Without `ebookId`: a standalone product (title required) that stays hidden until it has a file.
+   * Either way it goes live with the next publish; `featured` puts it first.
+   */
+  addProduct(token: string, input: { ebookId?: string; priceCents: number; title?: string; description?: string; featured?: boolean }) {
     return request<StoreDashboard>("/api/store/products", { method: "POST", body: input, token });
   },
   updateProduct(
@@ -751,8 +782,14 @@ export const publicStoreApi = {
       `/api/public/stores/${encodeURIComponent(slug)}/products/${encodeURIComponent(productId)}/preview/${chapter}`,
     );
   },
-  order(orderId: string) {
-    return request<StoreOrderStatusResponse>(`/api/public/orders/${encodeURIComponent(orderId)}`);
+  /** With the Checkout Session id (from Stripe's redirect) a paid order also lists its files. */
+  order(orderId: string, sessionId?: string | null) {
+    const q = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : "";
+    return request<StoreOrderStatusResponse>(`/api/public/orders/${encodeURIComponent(orderId)}${q}`);
+  },
+  /** Plain link for a download straight from the success page (counts one download). */
+  orderFileUrl(orderId: string, sessionId: string, fileId: string) {
+    return `${API_URL}/api/public/orders/${encodeURIComponent(orderId)}/files/${encodeURIComponent(fileId)}?session_id=${encodeURIComponent(sessionId)}`;
   },
   download(token: string) {
     return request<DownloadInfo>(`/api/public/downloads/${encodeURIComponent(token)}`);

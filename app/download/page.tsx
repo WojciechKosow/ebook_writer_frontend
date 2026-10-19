@@ -70,13 +70,14 @@ export default function DownloadPage() {
   }
 
   return (
-    <PurchasePageView design={design} data={data} doc={doc} files={info.files}
+    <PurchasePageView design={design} data={data} doc={doc} files={info.files} perks={info.perks ?? []}
       fileHref={(f) => publicStoreApi.downloadFileUrl(token, f.id)}
       onFileClick={() => setTimeout(load, 3000)}
       footnote={
-        <p style={{ margin: 0, fontSize: 12.5, color: "var(--pp-muted)" }}>
-          {info.downloadsRemaining} download{info.downloadsRemaining === 1 ? "" : "s"} left · link valid until{" "}
-          {new Date(info.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: "var(--pp-body)" }}>
+          This link works until{" "}
+          <b>{new Date(info.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</b>
+          {" "}— up to {info.downloadLimit ?? 5} downloads of each file.
         </p>
       } />
   );
