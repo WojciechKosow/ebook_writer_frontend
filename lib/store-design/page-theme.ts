@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
-import type { StyleId } from "./core";
+import { isColor, safeCss, type DesignDoc, type StyleId } from "./core";
+import { STYLES } from "./schemas";
 
 /**
  * How each store style dresses the pages beyond the store's home page — a
@@ -37,11 +38,11 @@ export interface PageTheme {
 
 export const PAGE_THEMES: Record<StyleId, PageTheme> = {
   literary: {
-    accentText: "accent", dark: false, bg: "#F4F0E8", surface: "#FBF9F4", surface2: "#EEE8DC", ink: "#1D1B17", body: "#4A453D", muted: "#6B645A",
-    line: "rgba(29,27,23,.12)", display: "var(--font-newsreader), Georgia, serif", text: "var(--font-instrument), system-ui, sans-serif",
-    mono: "var(--sd-plex-mono), ui-monospace, monospace", displayWeight: 300, displayCase: "none", displayTracking: "-0.03em",
-    btnBg: "#1D1B17", btnFg: "#F4F0E8", btnRadius: "12px", btnBorder: "none", btnShadow: "0 12px 28px -14px rgba(29,27,23,.55)",
-    cardRadius: "18px", cardBorder: "1px solid rgba(29,27,23,.10)", cardShadow: "0 20px 40px -32px rgba(60,45,20,.35)",
+    accentText: "accent", dark: false, bg: "#F4EFE6", surface: "#FBF8F2", surface2: "#EBE3D5", ink: "#1C1A16", body: "#3A352E", muted: "#57514A",
+    line: "#DCD3C4", display: "var(--font-newsreader), Georgia, serif", text: "var(--sd-hanken), system-ui, sans-serif",
+    mono: "var(--sd-hanken), system-ui, sans-serif", displayWeight: 300, displayCase: "none", displayTracking: "-0.02em",
+    btnBg: "#1C1A16", btnFg: "#F4EFE6", btnRadius: "4px", btnBorder: "none", btnShadow: "none",
+    cardRadius: "6px", cardBorder: "1px solid #DCD3C4", cardShadow: "none",
   },
   code: {
     accentText: "accent", dark: true, bg: "#07080A", surface: "#0E1014", surface2: "#14171C", ink: "#E6EBF1", body: "#C9D1DC", muted: "#8B95A3",
@@ -85,4 +86,12 @@ export function pageThemeVars(t: PageTheme, accent: string): CSSProperties {
     "--pp-card-radius": t.cardRadius, "--pp-card-border": t.cardBorder, "--pp-card-shadow": t.cardShadow,
     colorScheme: t.dark ? "dark" : "light",
   } as CSSProperties;
+}
+
+/** The store's look for a product or after-purchase page: style, accent and the author's CSS. */
+export function pageLook(design: DesignDoc, styleId?: StyleId) {
+  const id = styleId ?? design.active;
+  const settings = design.themes[id];
+  const accent = isColor(settings?.accent) ? settings!.accent! : STYLES[id].accents[0];
+  return { id, accent, css: safeCss(settings?.customCss) ?? "" };
 }
