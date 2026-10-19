@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { ebookApi, storeApi } from "@/lib/api";
 import { useCredits } from "@/lib/credits-context";
 import { BRAND } from "@/lib/brand";
 import { BrandMark } from "./brand-mark";
@@ -47,11 +48,36 @@ const ACCOUNT: NavItem[] = [
   },
 ];
 
+/**
+ * Reader mode: someone who only buys (no ebooks, no store) sees My purchases as
+ * a plain library — no credits, no "New ebook", no author tools.
+ */
+function useReaderMode(pathname: string): boolean {
+  const { token } = useAuth();
+  const onPurchases = pathname.startsWith("/purchases");
+  const [reader, setReader] = useState(false);
+  useEffect(() => {
+    if (!token || !onPurchases) return;
+    let live = true;
+    Promise.all([ebookApi.list(token), storeApi.get(token)])
+      .then(([ebooks, store]) => live && setReader(ebooks.length === 0 && !store))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [token, onPurchases]);
+  return onPurchases && reader;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   // The library gets a quiet band of drifting pages above its header; other
   // workspace screens stay plain (the writing room brings its own).
-  const showBand = usePathname() === "/dashboard";
+  const showBand = pathname === "/dashboard";
+  const reader = useReaderMode(pathname);
+
+  if (reader) return <ReaderShell>{children}</ReaderShell>;
 
   return (
     <div className="flex min-h-screen">
@@ -99,6 +125,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function ReaderShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  return (
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-20 border-b border-ip-hair bg-ip-glass backdrop-blur-md">
+        <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-4 px-4 sm:px-6">
+          <span className="flex items-center gap-2">
+            <BrandMark className="h-7 w-7" />
+            <span className="font-display text-xl font-medium">{BRAND}</span>
+          </span>
+          <nav aria-label="Reader" className="flex-1">
+            <Link href="/purchases" aria-current="page" className="text-sm font-semibold text-ip-ink">My purchases</Link>
+          </nav>
+          <span className="hidden truncate text-xs text-ip-muted sm:block">{user?.email}</span>
+          <ThemeToggle />
+          <button type="button" onClick={async () => {
+            await logout();
+            router.replace("/login");
+          }} className="text-sm text-ip-ink-2 hover:text-ip-ink">Log out</button>
+        </div>
+      </header>
+      <main className="relative z-[1] mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+    </div>
+  );
+}
+
 function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -136,7 +189,15 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
 
         <GroupLabel>Workspace</GroupLabel>
         {WORKSPACE.map((item) => (
-          <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+          <div key={item.href}>
+            <NavLink item={item} pathname={pathname} onNavigate={onNavigate} />
+            {item.href === "/store" && pathname === "/store" && (
+              <div className="ml-[42px] flex flex-col gap-0.5 py-1">
+                <Link href="/store" onClick={onNavigate} aria-current="page" className="rounded-lg px-3 py-1.5 text-[13px] font-semibold text-ip-ink">Overview</Link>
+                <Link href="/store/design" onClick={onNavigate} className="rounded-lg px-3 py-1.5 text-[13px] text-ip-ink-2 hover:bg-ip-bg hover:text-ip-ink">Design</Link>
+              </div>
+            )}
+          </div>
         ))}
 
         <GroupLabel>Account</GroupLabel>

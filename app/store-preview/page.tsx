@@ -115,8 +115,8 @@ export default function StorePreviewPage() {
 function PagePreview({ msg, page }: { msg: PreviewMessage; page: ProductPreview }) {
   if (page.kind === "purchase") {
     return (
-      <PurchasePageView design={msg.doc} styleId={msg.styleId} data={page.data} doc={page.doc} files={page.files}
-        footnote={<p style={{ margin: 0, fontSize: 12.5, color: "var(--pp-muted)" }}>15 downloads left · link valid for 30 days</p>} />
+      <PurchasePageView design={msg.doc} styleId={msg.styleId} data={page.data} doc={page.doc} files={page.files} perks={page.perks}
+        footnote={<p style={{ margin: 0, fontSize: 12.5, color: "var(--pp-muted)" }}>This link works for {page.data.product.downloadDays} days.</p>} />
     );
   }
   const load = (n: number) => {

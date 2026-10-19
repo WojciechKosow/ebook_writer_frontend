@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/pricing";
 import { formatSize } from "@/lib/files";
@@ -10,9 +10,12 @@ import { STYLES } from "@/lib/store-design/schemas";
 import { STYLE_FONTS } from "@/lib/store-design/fonts";
 import { PAGE_THEMES, pageThemeVars } from "@/lib/store-design/page-theme";
 import {
+  fileName,
+  fileNote,
   makeProductCtx,
   resolvePage,
   sampleChapters,
+  withPrice,
   type ProductCtx,
   type ProductPageData,
   type ProductPageDoc,
@@ -51,6 +54,10 @@ function Frame({ design, styleId, data, children }: {
       <footer className={s.footer}>
         <div className={`${s.wrap} ${s.footerIn}`}>
           <span>© {new Date().getFullYear()} {store.name}</span>
+          <span style={{ display: "inline-flex", gap: 16 }}>
+            <SLink to={`/store/${store.slug}/terms`}>Terms of sale</SLink>
+            {store.contactEmail && <a href={`mailto:${store.contactEmail}`} style={{ color: "inherit" }}>Contact</a>}
+          </span>
           <Link href="/" className={s.made}><BrandMark className="h-5 w-5" />Made with Scrivetta</Link>
         </div>
       </footer>
@@ -84,6 +91,19 @@ export function ProductPageView({ design, styleId, data, doc, sampleRefs, loadSa
   const contents = lst(S.preview, "contents");
   const showPreview = S.preview.enabled && (contents.length > 0 || sampleRefs.length > 0 || !!txt(S.preview, "intro"));
   const faq = itm(S.faq, "items").filter((x) => x.q?.trim());
+  const buyLabel = buying ? "Opening checkout…" : withPrice(txt(hero, "buyLabel"), ctx) || `Buy now — ${ctx.price}`;
+  const included = product.included;
+
+  // The buy bar appears once the buy box has scrolled away, so the price and Buy stay in reach.
+  const buyBox = useRef<HTMLDivElement>(null);
+  const [barShown, setBarShown] = useState(false);
+  useEffect(() => {
+    const el = buyBox.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setBarShown(!e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   return (
     <Frame design={design} styleId={styleId} data={data}>
@@ -101,13 +121,13 @@ export function ProductPageView({ design, styleId, data, doc, sampleRefs, loadSa
               <h1 className={`${s.display} ${s.title}`}><Rich text={txt(hero, "title")} /></h1>
               {txt(hero, "subtitle") && <p className={s.subtitle}>{txt(hero, "subtitle")}</p>}
               <p className={s.by}>by <SLink to={`/store/${store.slug}`}>{ctx.who}</SLink></p>
-              <div className={`${s.card} ${s.buyBox}`}>
+              <div ref={buyBox} className={`${s.card} ${s.buyBox}`}>
                 <div className={s.price}>
                   <span className={s.priceNum}>{ctx.price}</span>
                   <span className={s.muted}>one-time · USD</span>
                 </div>
                 <button type="button" className={s.btn} onClick={onBuy} disabled={!store.purchasable || buying}>
-                  {buying ? "Opening checkout…" : txt(hero, "buyLabel") || `Buy now — ${ctx.price}`}
+                  {buyLabel}
                 </button>
                 {buyError && <div role="alert" className={s.alert}>{buyError}</div>}
                 {buyerEmail && <p className={s.small}>Signed in as {buyerEmail} — it goes straight to your My Purchases.</p>}
@@ -116,6 +136,25 @@ export function ProductPageView({ design, styleId, data, doc, sampleRefs, loadSa
             </div>
           </section>
         </div>
+
+        {S.included.enabled && included.length > 0 && (
+          <section data-section="included" className={`${s.wrap} ${s.section}`} style={{ paddingTop: 8 }}>
+            <span className={s.eyebrow} style={{ display: "block", marginBottom: 10 }}>What&apos;s included</span>
+            <h2 className={`${s.display} ${s.h2}`} style={{ marginBottom: 20 }}>{withPrice(txt(S.included, "title"), ctx)}</h2>
+            <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+              {included.map((f) => (
+                <li key={f.id} className={s.card} style={{ padding: 18, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span className={s.mono} style={{ fontSize: 11.5, letterSpacing: ".08em", color: "var(--pp-muted)" }}>
+                    {[f.format, f.accountOnly ? "WITH A FREE ACCOUNT" : null].filter(Boolean).join(" · ")}
+                  </span>
+                  <span style={{ fontWeight: 600, fontSize: 16 }}>{fileName(f)}</span>
+                  <span className={s.muted} style={{ fontSize: 14, lineHeight: 1.5 }}>{fileNote(f, product.pageCount)}</span>
+                </li>
+              ))}
+            </ul>
+            {txt(S.included, "note") && <p className={s.small} style={{ marginTop: 12 }}>{txt(S.included, "note")}</p>}
+          </section>
+        )}
 
         {S.highlights.enabled && lst(S.highlights, "items").length > 0 && (
           <section data-section="highlights" className={`${s.wrap} ${s.section}`} style={{ paddingTop: 8 }}>
@@ -150,7 +189,10 @@ export function ProductPageView({ design, styleId, data, doc, sampleRefs, loadSa
                 {sampleRefs.length > 0 && (
                   <div className={s.samples}>
                     <span className={s.eyebrow}>{txt(S.preview, "sampleTitle")}</span>
-                    {sampleRefs.map((r, i) => <SampleCard key={r.number} chapter={r} load={loadSample} initiallyOpen={!!openFirstSample && i === 0} />)}
+                    {sampleRefs.map((r, i) => (
+                      <SampleCard key={r.number} chapter={r} load={loadSample} initiallyOpen={!!openFirstSample && i === 0}
+                        buy={store.purchasable && onBuy ? { label: `Get the full ${product.chapters.length ? "book" : "product"} — ${ctx.price}`, onBuy } : null} />
+                    ))}
                   </div>
                 )}
               </div>
@@ -198,12 +240,28 @@ export function ProductPageView({ design, styleId, data, doc, sampleRefs, loadSa
           </section>
         )}
       </main>
+      {barShown && store.purchasable && (
+        <div role="region" aria-label="Buy" className={s.card}
+          style={{ position: "sticky", bottom: 12, zIndex: 5, margin: "0 auto 12px", width: "min(720px, calc(100% - 24px))", padding: "10px 10px 10px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+            <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt(hero, "title") || product.title}</span>
+            <span className={s.muted} style={{ fontSize: 13 }}>
+              {included.length > 1 ? `${fileName(included[0])} + ${included.length - 1} more` : "One-time · USD"}
+            </span>
+          </span>
+          <button type="button" className={s.btn} style={{ minHeight: 44 }} onClick={onBuy} disabled={buying}>
+            {buying ? "Opening…" : `Buy · ${ctx.price}`}
+          </button>
+        </div>
+      )}
     </Frame>
   );
 }
 
-function SampleCard({ chapter, load, initiallyOpen = false }: {
+function SampleCard({ chapter, load, initiallyOpen = false, buy }: {
   chapter: { number: number; title: string }; load: (n: number) => Promise<SampleChapter>; initiallyOpen?: boolean;
+  /** A buy button at the end of the free chapter. */
+  buy?: { label: string; onBuy: () => void } | null;
 }) {
   const [open, setOpen] = useState(initiallyOpen);
   const [text, setText] = useState<SampleChapter | null>(null);
@@ -246,6 +304,7 @@ function SampleCard({ chapter, load, initiallyOpen = false }: {
             <div className={s.prose} dangerouslySetInnerHTML={{ __html: text.html }} />
           )}
           {text && <p className={s.fade}>That&apos;s the end of the free preview — the full book is one click away.</p>}
+          {text && buy && <button type="button" className={s.btn} onClick={buy.onBuy} style={{ marginTop: 8 }}>{buy.label}</button>}
         </div>
       )}
     </div>
@@ -277,13 +336,15 @@ function MoreFrom({ title, data }: { title: string; data: ProductPageData }) {
  * What buyers see after paying, in the store's style: the author's thank-you,
  * the files (or, on the success page, the payment status) and what's next.
  */
-export function PurchasePageView({ design, styleId, data, doc, files, fileHref, onFileClick, status, footnote }: {
+export function PurchasePageView({ design, styleId, data, doc, files, perks = [], fileHref, onFileClick, status, footnote }: {
   design: DesignDoc;
   styleId?: StyleId;
   data: ProductPageData;
   doc: ProductPageDoc;
   /** The files to download; null when they aren't shown here (the success page, before the email). */
   files: ProductFile[] | null;
+  /** Account perks this buyer doesn't have yet (a guest): shown locked, with what unlocks them. */
+  perks?: ProductFile[];
   fileHref?: (f: ProductFile) => string;
   onFileClick?: () => void;
   /** Shown instead of the files (payment status) or under them. */
@@ -316,13 +377,34 @@ export function PurchasePageView({ design, styleId, data, doc, files, fileHref, 
                     <div className={s.alert}>The files aren&apos;t available right now. Please contact {ctx.who}.</div>
                   ) : (
                     <ul className={s.files}>
-                      {files.map((f, i) => (
-                        <li key={f.id}>
-                          <a href={fileHref ? fileHref(f) : "#"} onClick={onFileClick} rel="noreferrer"
-                            className={i === 0 ? s.btn : s.ghost} style={i === 0 ? { minHeight: 48 } : { minHeight: 48 }}>
-                            Download {f.format}
-                          </a>
-                          <span className={s.fileName}><b>{f.filename}</b>{formatSize(f.sizeBytes) ? ` · ${formatSize(f.sizeBytes)}` : ""}</span>
+                      {files.map((f, i) => {
+                        const used = f.downloadsLeft === 0;
+                        return (
+                          <li key={f.id}>
+                            {used ? (
+                              <span className={s.ghost} style={{ minHeight: 48, opacity: 0.55 }}>No downloads left</span>
+                            ) : (
+                              <a href={fileHref ? fileHref(f) : "#"} onClick={onFileClick} rel="noreferrer"
+                                className={i === 0 ? s.btn : s.ghost} style={{ minHeight: 48 }}>
+                                Download {f.format}
+                              </a>
+                            )}
+                            <span className={s.fileName}>
+                              <b>{fileName(f)}</b>
+                              {[fileNote(f, product.pageCount), formatSize(f.sizeBytes) || null,
+                                f.downloadsLeft != null ? `${f.downloadsLeft} of ${product.downloadLimit} downloads left` : null]
+                                .filter(Boolean).map((x) => ` · ${x}`).join("")}
+                            </span>
+                          </li>
+                        );
+                      })}
+                      {perks.map((f) => (
+                        <li key={f.id} style={{ opacity: 0.8 }}>
+                          <span className={s.ghost} style={{ minHeight: 48, borderStyle: "dashed" }}>
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 015 0v2" /></svg>
+                            {f.format}
+                          </span>
+                          <span className={s.fileName}><b>{fileName(f)}</b> · Comes with a free Scrivetta account{formatSize(f.sizeBytes) ? ` · ${formatSize(f.sizeBytes)}` : ""}</span>
                         </li>
                       ))}
                     </ul>

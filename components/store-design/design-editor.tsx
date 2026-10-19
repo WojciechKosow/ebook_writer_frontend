@@ -23,6 +23,9 @@ import {
 import { STYLES } from "@/lib/store-design/schemas";
 import { ALL_STYLE_FONTS } from "@/lib/store-design/fonts";
 import { DevicePreview, type Device } from "./device-preview";
+import { draftStatus } from "@/lib/store/changes";
+import { DraftDot } from "@/components/store/kit";
+import { PublishChanges } from "@/components/store/publish";
 
 /** What the preview needs, built from the dashboard (the store as buyers would see it). */
 export function previewData(d: StoreDashboard): DesignContext {
@@ -60,7 +63,7 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
   const [tab, setTab] = useState<Tab>("look");
   const [section, setSection] = useState<string | null>(null);
   const [advanced, setAdvanced] = useState(false);
-  const [publishing, setPublishing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
   const lastKey = useRef<{ key: string; at: number } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,11 +90,11 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
   }, []);
 
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty && !saving) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  }, [dirty, saving]);
 
   // ---- history -------------------------------------------------------------
 
@@ -130,7 +133,7 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
   }, [future, draft]);
 
   // Ctrl/⌘+Z undo, +Shift redo (outside text fields, which keep their own undo),
-  // Ctrl/⌘+S publish, Esc back to the section list.
+  // Ctrl/⌘+S save the draft now, Esc back to the section list.
   const publishRef = useRef<() => void>(() => {});
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -183,41 +186,69 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
     setSection(sec);
   }, []);
 
-  async function publish() {
-    if (cssError) {
+  /** Save the design as the store's draft. False when it couldn't be saved. */
+  async function persist(doc: DesignDoc): Promise<boolean> {
+    const problem = doc.themes[doc.active]?.customCss ? cssProblem(doc.themes[doc.active]!.customCss!) : null;
+    if (problem) {
       setTab("look");
       setAdvanced(true);
-      say(cssError, true);
-      return;
+      say(`${problem} — the draft is saved once it's fixed.`, true);
+      return false;
     }
-    setPublishing(true);
+    setSaving(true);
     try {
-      const next = await storeApi.updateTheme(token, JSON.stringify(draft));
-      setDashboard(next);
-      setSaved(draft);
-      say(dashboard.published ? "Published · your store is updated" : "Saved · publish your store to make it public");
+      setDashboard(await storeApi.updateTheme(token, JSON.stringify(doc)));
+      setSaved(doc);
+      return true;
     } catch (e) {
-      say(e instanceof ApiError ? e.message : "Could not publish your design.", true);
+      say(e instanceof ApiError ? e.message : "Could not save your draft.", true);
+      return false;
     } finally {
-      setPublishing(false);
+      setSaving(false);
     }
   }
 
+  // Autosave: a moment after the last edit, the design is saved as a draft.
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    publishRef.current = () => {
-      if (dirty && !publishing) void publish();
+    if (!dirty) return;
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      void persist(draftRef.current);
+    }, 900);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, dirty]);
+
+  /** Save now (before publishing or leaving). */
+  async function flush(): Promise<boolean> {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    return dirty ? persist(draftRef.current) : true;
+  }
+
+  useEffect(() => {
+    publishRef.current = () => void flush();
   });
 
-  const leave = (e: React.MouseEvent) => {
-    if (dirty && !window.confirm("You have unpublished changes. Leave without publishing them?")) e.preventDefault();
+  /** After publishing or discarding: start over from the store as it is now. */
+  function reset(next: StoreDashboard) {
+    setDashboard(next);
+    const doc = parseDesign(next.themeSettings);
+    setSaved(doc);
+    setDraft(doc);
+    draftRef.current = doc;
+    setPast([]);
+    setFuture([]);
+  }
+
+  const leave = () => {
+    void flush();
   };
 
-  const status = dirty
-    ? { dot: "bg-[#E8B05A]", label: "Unpublished changes" }
-    : dashboard.published
-      ? { dot: "bg-[#7CC99A]", label: "Live · up to date" }
-      : { dot: "bg-faint", label: "Saved · store not published yet" };
+  const status = draftStatus(dashboard, saving || dirty);
 
   const current = section ? schema.sections.find((s) => s.id === section) ?? null : null;
 
@@ -232,11 +263,8 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
           </Link>
           <span className="h-5 w-px bg-hairline-2" />
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="truncate font-display text-[18px] leading-tight text-foreground">{dashboard.name}</span>
-            <span className="flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
-              <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-              {status.label}
-            </span>
+            <span className="truncate font-display text-[18px] leading-tight text-foreground">{dashboard.name} <span className="text-muted">· Store design</span></span>
+            <DraftDot {...status} />
           </div>
         </div>
 
@@ -259,10 +287,7 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
               View live <IconExternal />
             </a>
           )}
-          <button type="button" onClick={publish} disabled={!dirty || publishing} title="Publish (Ctrl+S)"
-            className="h-[38px] rounded-[11px] bg-foreground px-[18px] text-sm font-semibold text-background transition hover:brightness-110 disabled:cursor-default disabled:opacity-40">
-            {publishing ? "Publishing…" : "Publish"}
-          </button>
+          <PublishChanges token={token} store={dashboard} onChange={reset} flush={flush} className="ml-1" />
         </div>
       </header>
 
