@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StoreDesignView } from "@/components/store-design/store-design-view";
+import { ProductPageView, PurchasePageView, sampleRefsOf } from "@/components/store-design/product-page-view";
 import type { PreviewMessage, PreviewPick } from "@/lib/store-design/core";
+import type { ProductPreview } from "@/lib/store-design/product-page";
 
 type Box = { id: string; top: number; left: number; width: number; height: number };
 
@@ -100,11 +102,30 @@ export default function StorePreviewPage() {
     <>
       {/* The editor's own page already handles cookie consent. */}
       <style>{`body > [role="dialog"]{display:none !important}html{scrollbar-width:none}html::-webkit-scrollbar{display:none}${msg?.pick ? "[data-section]{cursor:pointer}" : ""}`}</style>
-      {msg && <StoreDesignView doc={msg.doc} data={msg.data} styleId={msg.styleId} />}
+      {msg && !msg.page && <StoreDesignView doc={msg.doc} data={msg.data} styleId={msg.styleId} />}
+      {msg?.page && <PagePreview msg={msg} page={msg.page} />}
       {msg?.pick && [selected, hover && hover.id !== selected?.id ? hover : null].map((b, i) =>
         b ? <Outline key={i} box={b} label={labels[b.id] ?? b.id} strong={i === 0} /> : null,
       )}
     </>
+  );
+}
+
+/** A product's sales page or after-purchase page, from the product page editor. */
+function PagePreview({ msg, page }: { msg: PreviewMessage; page: ProductPreview }) {
+  if (page.kind === "purchase") {
+    return (
+      <PurchasePageView design={msg.doc} styleId={msg.styleId} data={page.data} doc={page.doc} files={page.files}
+        footnote={<p style={{ margin: 0, fontSize: 12.5, color: "var(--pp-muted)" }}>15 downloads left · link valid for 30 days</p>} />
+    );
+  }
+  const load = (n: number) => {
+    const found = page.samples.find((x) => x.number === n);
+    return found ? Promise.resolve(found) : Promise.reject(new Error("not loaded"));
+  };
+  return (
+    <ProductPageView design={msg.doc} styleId={msg.styleId} data={page.data} doc={page.doc}
+      sampleRefs={sampleRefsOf(page.doc, page.data.product.chapters)} loadSample={load} openFirstSample />
   );
 }
 

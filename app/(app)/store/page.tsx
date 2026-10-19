@@ -729,8 +729,6 @@ function ProductRow({ token, product, slug, published, first, last, onChange }: 
 }) {
   const [price, setPrice] = useState((product.priceCents / 100).toFixed(2));
   const [open, setOpen] = useState(false);
-  const [description, setDescription] = useState(product.description ?? "");
-  const [highlights, setHighlights] = useState(product.highlights ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -781,8 +779,9 @@ function ProductRow({ token, product, slug, published, first, last, onChange }: 
           onClick={() => cents !== null && run(() => storeApi.updateProduct(token, product.id, { priceCents: cents }))}>
           Save price
         </Button>
+        <ButtonLink href={`/store/products/${product.id}/design`} variant="secondary">Design page</ButtonLink>
         <Button variant="ghost" disabled={busy} onClick={() => setOpen(!open)} aria-expanded={open}>
-          {open ? "Close" : "Edit page & files"}
+          {open ? "Close" : "Files & cover"}
         </Button>
         <Button variant="ghost" disabled={busy || (!product.active && !product.deliverable)}
           onClick={() => run(() => storeApi.updateProduct(token, product.id, { active: !product.active }))}>
@@ -793,21 +792,11 @@ function ProductRow({ token, product, slug, published, first, last, onChange }: 
         <div className="mt-4 flex flex-col gap-4 rounded-xl border border-hairline bg-surface-2 p-4">
           <ProductFiles token={token} product={product} onChange={onChange} />
           <ProductCoverPicker token={token} product={product} onChange={onChange} />
-          <TextAreaField label="Description" name={`desc-${product.id}`} value={description} maxLength={2000}
-            hint="Shown under the title. Pre-filled from your book." onChange={(e) => setDescription(e.target.value)} />
-          <TextAreaField label="What readers will be able to do" name={`hl-${product.id}`} value={highlights}
-            maxLength={1500} hint="One point per line. Shown as a list on the ebook page."
-            placeholder={"Start and keep a healthy starter\nShape a loaf that opens up in a home oven"}
-            onChange={(e) => setHighlights(e.target.value)} />
-          <div className="flex flex-wrap items-center gap-3">
-            <Button loading={busy}
-              onClick={() => run(() => storeApi.updateProduct(token, product.id, { description, highlights }))}>
-              Save page
-            </Button>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-muted">Title, description, free preview and the after-purchase page:</span>
+            <Link href={`/store/products/${product.id}/design`} className="font-semibold text-accent hover:underline">Design page</Link>
             {published && product.active && (
-              <Link href={`/store/${slug}/${product.id}`} className="text-sm font-semibold text-accent hover:underline">
-                View page
-              </Link>
+              <Link href={`/store/${slug}/${product.id}`} className="font-semibold text-accent hover:underline">View page</Link>
             )}
           </div>
         </div>

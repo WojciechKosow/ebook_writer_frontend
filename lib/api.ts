@@ -27,6 +27,7 @@ import type {
   StoreCheckoutResponse,
   StoreDashboard,
   StoreOrderStatusResponse,
+  SampleChapter,
   SubscriptionResponse,
   User,
 } from "./types";
@@ -663,9 +664,21 @@ export const storeApi = {
   updateProduct(
     token: string,
     productId: string,
-    input: { title?: string; description?: string; highlights?: string; priceCents?: number; active?: boolean },
+    input: {
+      title?: string;
+      description?: string;
+      highlights?: string;
+      priceCents?: number;
+      active?: boolean;
+      /** The page design (JSON); "" resets it. */
+      pageSettings?: string;
+    },
   ) {
     return request<StoreDashboard>(`/api/store/products/${productId}`, { method: "PATCH", body: input, token });
+  },
+  /** Any chapter of the author's ebook as the free preview shows it (for the page editor). */
+  sample(token: string, productId: string, chapter: number) {
+    return request<SampleChapter>(`/api/store/products/${productId}/preview/${chapter}`, { token });
   },
   /** Add a downloadable file (PDF, EPUB or ZIP) to a product. */
   uploadProductFile(token: string, productId: string, file: File, onProgress?: (percent: number) => void) {
@@ -731,6 +744,12 @@ export const publicStoreApi = {
    */
   checkout(productId: string, token?: string | null) {
     return request<StoreCheckoutResponse>("/api/public/checkout", { method: "POST", body: { productId }, token });
+  },
+  /** A chapter the author offers as a free preview. */
+  sample(slug: string, productId: string, chapter: number) {
+    return request<SampleChapter>(
+      `/api/public/stores/${encodeURIComponent(slug)}/products/${encodeURIComponent(productId)}/preview/${chapter}`,
+    );
   },
   order(orderId: string) {
     return request<StoreOrderStatusResponse>(`/api/public/orders/${encodeURIComponent(orderId)}`);
