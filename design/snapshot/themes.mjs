@@ -4,6 +4,7 @@
 //
 //   npx next build && npx next start -p 3100
 //   NODE_PATH=$(npm root -g) node design/snapshot/themes.mjs literary   # BASE=http://localhost:3100
+//   BOOKS=1 node design/snapshot/themes.mjs literary store   # a store with 1–5 books (default 3)
 //
 // Each page is saved whole (<id>.png) and cut into parts (parts/<id>-NN.png).
 //
@@ -93,7 +94,29 @@ const products = [
     language: "en",
     coverUrl: "/covers/letters.png",
   },
-];
+  {
+    id: "p-notebook",
+    title: "A Notebook for October",
+    subtitle: "Prompts for slow evenings",
+    description: "Thirty-one short prompts, one for every evening of the month.",
+    priceCents: 700,
+    currency: "usd",
+    pageCount: 40,
+    language: "en",
+    coverUrl: "/covers/salt.png",
+  },
+  {
+    id: "p-rooms",
+    title: "Rooms",
+    subtitle: "Poems",
+    description: "Poems about the rooms we leave behind.",
+    priceCents: 900,
+    currency: "usd",
+    pageCount: 48,
+    language: "en",
+    coverUrl: "/covers/evening.png",
+  },
+].slice(0, Number(process.env.BOOKS) || 3);
 
 const chapters = [
   "The hour after work",

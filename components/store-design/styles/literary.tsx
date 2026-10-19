@@ -91,13 +91,14 @@ export function LiteraryStyle({ t, ctx, href }: StyleProps) {
         {products.length === 0 ? (
           <p className={s.small}>No books for sale yet.</p>
         ) : (
-          <div className={s.books}>
+          // One book gets a wide card, two or four a pair of columns, the rest a shelf of three.
+          <div className={`${s.books} ${products.length === 1 ? s.booksOne : products.length === 2 || products.length === 4 ? s.booksTwo : ""}`}>
             {products.map((p, i) => (
               <SLink key={p.id} to={href(p.id)} className={`${s.bookCard} ${s.lift}`}>
                 <div className={`${s.stage} ${s.bookStage}`}>
                   <div className={`${s.book} ${s.bookMove}`}><Cover product={p} className={s.cover} fallbackClassName={s.coverFallback} /></div>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className={s.bookInfo}>
                   <div className={s.bookTop}>
                     <h3 className={s.bookTitle}>{p.title}</h3>
                     <span className={s.bookPrice}>{ctx.price(p)}</span>
@@ -107,6 +108,7 @@ export function LiteraryStyle({ t, ctx, href }: StyleProps) {
                     {i === 0 && tag && products.length > 1 && <span className={s.tag}>{tag}</span>}
                     {[pages(p), p.language?.toUpperCase()].filter(Boolean).join(" · ")}
                   </div>
+                  {products.length === 1 && <span className={`${s.btn} ${s.bookBtn}`}>See the book →</span>}
                 </div>
               </SLink>
             ))}
