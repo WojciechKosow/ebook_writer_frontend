@@ -86,6 +86,23 @@
 .bookDesc{margin:0;font-family:var(--sd-hanken),system-ui,sans-serif;font-size:15px;line-height:1.55;color:var(--soft);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .bookMeta{margin-top:4px;font-family:var(--sd-hanken),system-ui,sans-serif;font-size:13px;color:var(--muted)}
 .bookMeta .tag{margin-right:8px}
+.bookInfo{display:flex;flex-direction:column;gap:8px}
+.bookBtn{display:none}
+/* two (or four) books: a pair of wider columns */
+.booksTwo{grid-template-columns:repeat(2,minmax(0,1fr));gap:64px 40px}
+.booksTwo .bookStage{aspect-ratio:4/3}
+.booksTwo .bookStage .book{width:36%}
+/* one book: cover and details side by side */
+.booksOne{grid-template-columns:minmax(0,1fr)}
+.booksOne .bookCard{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:clamp(32px,5vw,72px)}
+.booksOne .bookStage{aspect-ratio:5/4}
+.booksOne .bookStage .book{width:42%}
+.booksOne .bookInfo{gap:14px;max-width:520px}
+.booksOne .bookTop{flex-direction:column;gap:14px}
+.booksOne .bookTitle{font-size:clamp(30px,3vw,40px);line-height:1.1;letter-spacing:-.02em}
+.booksOne .bookPrice{order:3;font-size:32px}
+.booksOne .bookDesc{font-size:16px;-webkit-line-clamp:6}
+.booksOne .bookBtn{display:inline-flex;align-self:flex-start;margin-top:10px}
 
 /* store: read a page */
 .band{background:var(--stage)}
@@ -208,6 +225,7 @@ button.tocRow:hover{background:var(--paper)}
 @media (max-width:760px){
   .nav,.hideM{display:none !important}
   .steps,.books{grid-template-columns:minmax(0,1fr)}
+  .booksOne .bookCard{grid-template-columns:minmax(0,1fr)}
   .steps li{padding:22px 0}
   .steps li+li{border-top:1px solid var(--line)}
   .leaf{min-height:0}
