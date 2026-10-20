@@ -1,10 +1,17 @@
 "use client";
 
-import { itm, lst, txt } from "@/lib/store-design/core";
-import { Cover, CustomCss, Photo, Rich, SLink, socialLinks, Unavailable, YEAR, initials, pagesLabel, type StyleProps } from "../kit";
+import { Fragment, useEffect, useState } from "react";
+import type { PublicStoreProduct, StoreProfile } from "@/lib/types";
+import { itm, lst, txt, type Ctx, type Item, type ResolvedSection } from "@/lib/store-design/core";
+import { Cover, CustomCss, Photo, Rich, SLink, socialLinks, Unavailable, YEAR, initials, type StyleProps } from "../kit";
 import s from "./code.module.css";
 
-const C = { k: "#C4A7FF", t: "#8AB4FF", s: "#A8E3B5", a: "#F5C88A", c: "#5B6573", p: "#D7DEE7" };
+type Palette = { k: string; t: string; a: string; s: string; c: string; p: string };
+/** The readable listing in "inside a chapter". */
+const BRIGHT: Palette = { k: "#8EA9D8", t: "#B5C0CC", a: "#E3B873", s: "#A8C7A0", c: "#5C6672", p: "#D5DAE0" };
+/** The faded code behind the hero book. */
+const FADED: Palette = { k: "#4B5D80", t: "#5B6572", a: "#776745", s: "#4F6650", c: "#353C46", p: "#353D47" };
+
 const KEYWORDS = new Set(
   ("abstract async await break case catch class const continue def default do else enum export extends false final finally for from " +
     "func function if implements import in interface let new nil none null override package private protected public return self " +
@@ -13,344 +20,567 @@ const KEYWORDS = new Set(
 );
 
 /** A tiny, language-agnostic highlighter: keywords, Types, @annotations, strings, numbers, comments. */
-function highlight(line: string): { t: string; c: string }[] {
+function highlight(line: string, c: Palette) {
   const out: { t: string; c: string }[] = [];
   const re = /(\/\/.*$|#(?![\w-]*\()(?=\s|$).*$|--\s.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`)|(@[A-Za-z_]\w*)|(\b\d[\d_.]*\b)|([A-Za-z_]\w*)|(\s+)|([^\sA-Za-z_\d"'`@]+)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(line))) {
-    if (m[1]) out.push({ t: m[1], c: C.c });
-    else if (m[2]) out.push({ t: m[2], c: C.s });
-    else if (m[3]) out.push({ t: m[3], c: C.a });
-    else if (m[4]) out.push({ t: m[4], c: C.a });
-    else if (m[5]) out.push({ t: m[5], c: KEYWORDS.has(m[5].toLowerCase()) && m[5] === m[5].toLowerCase() ? C.k : /^[A-Z]/.test(m[5]) ? C.t : C.p });
-    else out.push({ t: m[0], c: m[7] ? "#8B95A3" : C.p });
+    if (m[1]) out.push({ t: m[1], c: c.c });
+    else if (m[2]) out.push({ t: m[2], c: c.s });
+    else if (m[3]) out.push({ t: m[3], c: c.a });
+    else if (m[4]) out.push({ t: m[4], c: c.a });
+    else if (m[5]) out.push({ t: m[5], c: KEYWORDS.has(m[5]) ? c.k : /^[A-Z]/.test(m[5]) ? c.t : c.p });
+    else out.push({ t: m[0], c: c.p });
   }
   return out;
 }
 
-/** Sidebar lines: "  " = indented file; the first indented line is the open one. */
-function tree(lines: string[]) {
-  let activeDone = false;
-  return lines.map((raw, i) => {
-    const indented = /^\s{2,}/.test(raw);
-    const nextIndented = !indented && /^\s{2,}/.test(lines[i + 1] ?? "");
-    const active = indented && !activeDone;
-    if (active) activeDone = true;
-    return { name: raw.trim(), indented, open: nextIndented, active };
-  });
+function Hl({ line, palette }: { line: string; palette: Palette }) {
+  return <>{highlight(line, palette).map((tk, j) => <span key={j} style={{ color: tk.c }}>{tk.t}</span>)}</>;
 }
 
-/** Code — concept 2: dark, technical, an editor window with the author's own code. */
+/** "3-5, 9" → {3, 4, 5, 9}. */
+function lineSet(spec: string | undefined): Set<number> {
+  const out = new Set<number>();
+  for (const part of (spec ?? "").split(/[,\s]+/)) {
+    const m = part.match(/^(\d+)(?:[-–](\d+))?$/);
+    if (!m) continue;
+    const a = Number(m[1]);
+    const b = Math.min(Number(m[2] ?? m[1]), a + 200);
+    for (let i = a; i <= b; i++) out.add(i);
+  }
+  return out;
+}
+
+/** Text with `backticks` shown as code. */
+function Ticks({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(`[^`\n]+`)/g).map((part, i) =>
+        /^`[^`]+`$/.test(part) ? <code key={i} className={s.tick}>{part.slice(1, -1)}</code> : <Fragment key={i}>{part}</Fragment>,
+      )}
+    </>
+  );
+}
+
+/** Code — concept 2: near-black, Geist, and a chapter explained line by line. */
 export function CodeStyle({ t, ctx, href }: StyleProps) {
   const S = t.sections;
   const { store, products, featured } = ctx;
-  const rest = products.slice(1);
   const hero = S.hero;
-  const ed = S.editor;
-  const codeLines = txt(ed, "code").split("\n");
-  const firstAdded = codeLines.findIndex((l) => l.startsWith("+"));
-  const stream = (txt(ed, "code") + "\n\n" + txt(S.build, "shipCode") + "\n\n").repeat(4);
   const book = featured ? href(featured.id) : "#books";
+  const price = featured ? ctx.price(featured) : "";
+  const notes = itm(S.inside, "notes").filter((x) => x.text?.trim());
+  const faq = itm(S.faq, "items").filter((x) => x.q?.trim());
+  const fileRows = itm(S.files, "rows").filter((x) => x.name?.trim());
+  const tree = lst(S.files, "tree");
+  const glance = itm(S.glance, "items").filter((x) => x.value?.trim() || x.label?.trim());
+  const stack = lst(S.glance, "stack");
+  const showGlance = S.glance.enabled && (glance.length > 0 || stack.length > 0);
+  const showAbout = S.about.enabled && (!!txt(S.about, "quote") || !!txt(S.about, "text") || !!store.photoUrl);
+  const showFaq = S.faq.enabled && faq.length > 0;
+  const motion = t.decor !== "none";
+
+  // Numbered section labels follow the sections that are shown.
+  const order = [
+    S.inside.enabled && "inside",
+    S.files.enabled && (fileRows.length > 0 || tree.length > 0) && "files",
+    "books",
+    showAbout && "about",
+    showFaq && "faq",
+  ].filter((x): x is string => !!x);
+  const num = (id: string) => nn(order.indexOf(id) + 1);
 
   return (
-    <div className={`${s.root} store-page store-code`} style={{ "--accent": t.accent } as React.CSSProperties}>
+    <div className={`${s.root} ${motion ? s.motion : ""} store-page store-code`} style={{ "--accent": t.accent } as React.CSSProperties}>
       <CustomCss t={t} />
-      {t.decor === "beams" && (
-        <div aria-hidden>
-          <div className={s.spot} />
-          <div className={s.floor} />
-          {["12%", "31%", "69%", "88%"].map((l, i) => <div key={l} className={s.beam} style={{ left: l, animationDelay: `${[0, 2.4, 1.1, 3.6][i]}s` }} />)}
-        </div>
-      )}
-      {t.decor === "stream" && (
-        <div aria-hidden>
-          <div className={s.spot} />
-          <div className={s.stream} style={{ left: "2%" }}><pre>{stream}</pre></div>
-          <div className={s.stream} style={{ right: "1%" }}><pre style={{ animationDuration: "90s", animationDirection: "reverse" }}>{stream.split("\n").reverse().join("\n")}</pre></div>
-        </div>
-      )}
-
       <header className={s.header}>
-        <div className={s.headerIn}>
-          <a href="#top" className={s.brand}>
-            {store.logoUrl ? <Photo url={store.logoUrl} alt="" className={s.logo} /> : <span className={s.logo}>{initials(store.name)}</span>}
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{store.name}</span>
-          </a>
+        <div className={`${s.wrap} ${s.headerIn}`}>
+          <a href="#top" className={s.brand}><Brand store={store} /></a>
           <nav className={s.nav} aria-label="Store">
-            <a href="#books">Books</a>
-            {S.build.enabled && <a href="#build">What you build</a>}
-            {S.contents.enabled && itm(S.contents, "items").length > 0 && <a href="#inside">Contents</a>}
-            {S.faq.enabled && <a href="#faq">FAQ</a>}
+            {order.includes("inside") && <a className={s.navLink} href="#inside">{txt(S.inside, "eyebrow") || "Inside"}</a>}
+            {order.includes("files") && <a className={s.navLink} href="#download">{txt(S.files, "eyebrow") || "What you get"}</a>}
+            <a className={s.navLink} href="#books">Books</a>
+            {showFaq && <a className={s.navLink} href="#faq">FAQ</a>}
           </nav>
-          <SLink to={book} className={s.headBtn}>Get the book</SLink>
+          {featured && <BuyButton to={book} label={txt(hero, "primary") || "Get the book"} price={price} small />}
         </div>
+        <div aria-hidden className={s.progress} />
       </header>
-      <Unavailable ctx={ctx} className={s.notice} />
+      <div className={s.wrap}><Unavailable ctx={ctx} className={s.notice} /></div>
 
-      <section id="top" data-section="hero" className={s.wrap} style={{ paddingTop: 110, textAlign: "center" }}>
-        {txt(hero, "badge") && (
-          <a href="#books" className={s.pill}>
-            <span className={`${s.mono} ${s.pillTag}`}>{txt(hero, "badgeTag")}</span>{txt(hero, "badge")}<span style={{ color: "var(--dimmer)" }}>→</span>
-          </a>
-        )}
-        <h1 className={`${s.h1} ${s.h}`}><Rich text={txt(hero, "headline")} em={s.em} /></h1>
-        {txt(hero, "intro") && <p className={s.lead}>{txt(hero, "intro")}</p>}
-        <div className={s.ctas}>
-          {txt(hero, "primary") && <SLink to={book} className={s.btn}>{txt(hero, "primary")}</SLink>}
-          {txt(hero, "secondary") && <a href={S.contents.enabled ? "#inside" : "#books"} className={s.ghost}>{txt(hero, "secondary")}</a>}
-        </div>
-
-        {ed.enabled && (
-          <div data-section="editor" style={{ position: "relative", margin: "84px auto 0", maxWidth: 1120, textAlign: "left" }}>
-            <div aria-hidden style={{ position: "absolute", inset: "-1px -1px auto -1px", height: 1, background: "linear-gradient(90deg, transparent, var(--mid), transparent)", zIndex: 2 }} />
-            <div className={s.win}>
-              <div className={s.titlebar}>
-                <div className={s.dots}><span /><span /><span /></div>
-                <div className={s.mono} style={{ flex: 1, textAlign: "center", fontSize: 12, color: "var(--dimmer)" }}>{txt(ed, "window")}</div>
-              </div>
-              <div className={s.ide}>
-                <div className={s.side}>
-                  <div className={s.mono} style={{ padding: "0 8px 10px", fontSize: 10.5, letterSpacing: ".12em", color: "var(--dimmer)" }}>CHAPTERS</div>
-                  {tree(lst(ed, "tree")).map((n, i) => (
-                    <div key={i} className={`${s.mono} ${s.node}`} style={{ paddingLeft: n.indented ? 28 : 8, background: n.active ? "rgba(255,255,255,.06)" : "transparent", color: n.active ? "#fff" : n.indented || n.open ? "var(--text)" : "var(--dim)" }}>
-                      <span style={{ width: 10, fontSize: 10, color: "var(--dimmer)" }}>{n.indented ? "·" : n.open ? "⌄" : "›"}</span>{n.name}
-                    </div>
-                  ))}
-                </div>
-                <div style={{ minWidth: 0, display: "flex", flexDirection: "column" }}>
-                  <div className={s.tabs}>
-                    {lst(ed, "tabs").map((tab, i) => <div key={i} className={`${s.mono} ${s.tab} ${i === 0 ? s.tabOn : ""}`}>{tab}</div>)}
-                  </div>
-                  <div className={s.codeArea}>
-                    {codeLines.map((raw, i) => {
-                      const added = raw.startsWith("+");
-                      const line = added ? raw.slice(1).replace(/^ /, "") : raw;
-                      return (
-                        <div key={i} className={`${s.mono} ${s.ln} ${added ? s.add : ""}`}>
-                          <span>{i + 1}</span><span>{added ? "+" : " "}</span>
-                          <span>{highlight(line).map((tk, j) => <span key={j} style={{ color: tk.c }}>{tk.t}</span>)}</span>
-                        </div>
-                      );
-                    })}
-                    {txt(ed, "callout") && firstAdded >= 0 && (
-                      <div className={s.callout} style={{ top: 16 + firstAdded * 25 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)" }} />{txt(ed, "callout")}</div>
-                    )}
-                  </div>
-                  {txt(ed, "terminal") && (
-                    <div className={s.term}>
-                      <div className={`${s.mono} ${s.termTabs}`}><span>TERMINAL</span><span>PROBLEMS</span><span>TESTS</span></div>
-                      <div className={`${s.mono} ${s.termBody}`}>
-                        {txt(ed, "terminal").split("\n").map((l, i) => (
-                          <div key={i}>
-                            {l.startsWith("$") ? <><span style={{ color: "var(--accent)" }}>→</span> <span style={{ color: "var(--white)" }}>{l.replace(/^\$\s?/, "")}</span></>
-                              : <span style={{ color: /success|passed|ok\b|✓/i.test(l) ? "#A8E3B5" : undefined }}>{l}</span>}
-                          </div>
-                        ))}
-                        <div><span style={{ color: "var(--accent)" }}>→</span> <span className={s.caret} /></div>
-                      </div>
-                    </div>
-                  )}
-                  <div className={`${s.mono} ${s.status}`}><span><span style={{ color: "var(--accent)" }}>●</span> {txt(ed, "statusLeft")}</span><span className={s.hideM}>{txt(ed, "statusRight")}</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {S.stack.enabled && lst(S.stack, "items").length > 0 && (
-        <section data-section="stack" className={s.wrap} style={{ paddingTop: 72 }}>
-          <div className={`${s.mono} ${s.stack}`}>
-            <span style={{ color: "#3A414B" }}>{txt(S.stack, "label")}</span>
-            {lst(S.stack, "items").map((x, i) => <span key={i}>{x}</span>)}
-          </div>
-        </section>
-      )}
-
-      {S.build.enabled && (
-        <section id="build" data-section="build" className={s.wrap} style={{ paddingTop: 150 }}>
-          <div className={s.eyebrow}>{txt(S.build, "eyebrow")}</div>
-          <h2 className={`${s.h2} ${s.h}`} style={{ maxWidth: 680 }}><Rich text={txt(S.build, "title")} em={s.em} /></h2>
-          <div className={s.bento}>
-            <div className={`${s.panel} ${s.bcard} ${s.span2}`} style={{ minHeight: 300, display: "flex", flexDirection: "column" }}>
-              <div className={s.bTitle}>{txt(S.build, "flowTitle")}</div>
-              <div className={s.bText}>{txt(S.build, "flowText")}</div>
-              <div className={s.flow}>
-                {lst(S.build, "flow").map((n, i, a) => (
-                  <span key={i} style={{ display: "contents" }}>
-                    <div className={`${s.mono} ${s.flowNode} ${i === 1 ? s.flowOn : ""}`}>{n}</div>
-                    {i < a.length - 1 && <div className={s.flowLine} />}
-                  </span>
-                ))}
-              </div>
-              <div className={s.mono} style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 24, fontSize: 11.5, color: "var(--dim)" }}>
-                {lst(S.build, "chips").map((c, i) => <span key={i} className={s.tag}>{c}</span>)}
-              </div>
-            </div>
-            <div className={`${s.panel} ${s.bcard}`} style={{ minHeight: 300 }}>
-              <div className={s.bTitle}>{txt(S.build, "commitsTitle")}</div>
-              <div className={s.bText}>{txt(S.build, "commitsText")}</div>
-              <div style={{ marginTop: 22 }}>
-                {itm(S.build, "commits").map((c, i) => (
-                  <div key={i} className={`${s.mono} ${s.commit}`}>
-                    <span style={{ width: 7, height: 7, borderRadius: "50%", border: `1.5px solid ${i === 0 ? "var(--accent)" : "var(--dimmer)"}`, flexShrink: 0 }} />
-                    <span style={{ color: "var(--dimmer)" }}>{c.h}</span>
-                    <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.m}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className={`${s.panel} ${s.bcard}`}>
-              <div className={s.bTitle}>{txt(S.build, "testsTitle")}</div>
-              <div className={s.bText}>{txt(S.build, "testsText")}</div>
-              <div aria-hidden className={s.tests}>{Array.from({ length: 42 }, (_, i) => <span key={i} style={{ opacity: 0.35 + ((i * 37) % 10) / 16 }} />)}</div>
-              <div className={s.mono} style={{ marginTop: 14, fontSize: 12, color: "var(--accent)" }}>{txt(S.build, "testsLabel")}</div>
-            </div>
-            <div className={`${s.panel} ${s.bcard}`}>
-              <div className={s.bTitle}>{txt(S.build, "shipTitle")}</div>
-              <div className={s.bText}>{txt(S.build, "shipText")}</div>
-              <pre className={`${s.mono} ${s.pre}`}>
-                {txt(S.build, "shipCode").split("\n").map((l, i) => <div key={i}>{highlight(l).map((tk, j) => <span key={j} style={{ color: tk.c }}>{tk.t}</span>)}</div>)}
-              </pre>
-            </div>
-            <div className={`${s.panel} ${s.bcard}`}>
-              <div className={s.bTitle}>{txt(S.build, "noteTitle")}</div>
-              <div className={s.bText}>{txt(S.build, "noteText")}</div>
-              <div style={{ marginTop: 22, borderRadius: 10, border: "1px solid var(--line)", background: "#0A0C0F", padding: "14px 16px" }}>
-                <div className={s.mono} style={{ fontSize: 12, color: "#F5C88A" }}>{txt(S.build, "noteCode")}</div>
-                <div style={{ marginTop: 10, paddingLeft: 12, boxShadow: "inset 2px 0 0 var(--accent)", fontSize: 13, lineHeight: 1.5, color: "var(--dim)" }}>{txt(S.build, "noteBody")}</div>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <section id="books" data-section="books" className={s.wrap} style={{ paddingTop: 160 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 24, flexWrap: "wrap" }}>
-          <div>
-            <div className={s.eyebrow}>{txt(S.books, "eyebrow")}</div>
-            <h2 className={`${s.h2} ${s.h}`}><Rich text={txt(S.books, "title")} em={s.em} /></h2>
-          </div>
-          <div className={s.mono} style={{ fontSize: 12, color: "var(--dimmer)" }}>{products.length} {products.length === 1 ? "book" : "books"} · PDF · USD</div>
-        </div>
-        {!featured ? <p style={{ marginTop: 32, color: "var(--dim)" }}>No books for sale yet.</p> : (
-          <SLink to={href(featured.id)} className={`${s.feat} ${s.ring} ${s.cardHover}`}>
-            <div className={s.featArt}>
-              <div aria-hidden className={s.grid} />
-              <div className={s.book} style={{ width: 236 }}>
-                <div className={s.edge} />
-                <Cover product={featured} className={s.cover} fallbackClassName={s.coverFallback} />
-              </div>
-            </div>
-            <div className={s.featBody}>
-              <div className={`${s.mono} ${s.chips}`}>
-                {rest.length > 0 && <span className={s.chipOn}>Start here</span>}
-                <span>{pagesLabel(featured)}</span>
-                {ctx.chapters.length > 0 && <span>{ctx.chapters.length} chapters</span>}
-              </div>
-              <h3 style={{ margin: "22px 0 0", fontSize: 34, lineHeight: 1.1, fontWeight: 600, letterSpacing: "-.03em", color: "#fff" }}>{featured.title}</h3>
-              {(featured.description || featured.subtitle) && <p style={{ margin: "14px 0 0", fontSize: 16, lineHeight: 1.65, color: "var(--dim)", maxWidth: 520 }}>{featured.description || featured.subtitle}</p>}
-              <div className={s.checks}>
-                {lst(S.books, "bullets").map((b, i) => (
-                  <div key={i}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden><path d="M3 8.5l3 3 7-7" /></svg>{b}</div>
-                ))}
-              </div>
-              <div style={{ flex: 1 }} />
-              <div className={s.priceRow}>
-                <div><span style={{ fontSize: 34, fontWeight: 600, letterSpacing: "-.03em", color: "#fff" }}>{ctx.price(featured)}</span><span className={s.mono} style={{ marginLeft: 10, fontSize: 12, color: "var(--dimmer)" }}>one-time</span></div>
-                <span className={s.btn} style={{ padding: "13px 20px" }}>{txt(S.books, "button")}</span>
-              </div>
-            </div>
-          </SLink>
-        )}
-        {rest.length > 0 && (
-          <div className={s.two}>
-            {rest.map((p) => (
-              <SLink key={p.id} to={href(p.id)} className={`${s.panel} ${s.cardHover} ${s.small}`}>
-                <div className={s.book} style={{ width: 120, flexShrink: 0 }}><Cover product={p} className={s.cover} fallbackClassName={s.coverFallback} /></div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div className={s.mono} style={{ fontSize: 11.5, color: "var(--dimmer)" }}>{pagesLabel(p)}</div>
-                  <h3 style={{ margin: "8px 0 0", fontSize: 21, fontWeight: 600, letterSpacing: "-.02em", color: "#fff" }}>{p.title}</h3>
-                  {(p.description || p.subtitle) && <p style={{ margin: "8px 0 0", fontSize: 14.5, lineHeight: 1.6, color: "var(--dim)" }}>{p.description || p.subtitle}</p>}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}><span style={{ fontSize: 22, fontWeight: 600, color: "#fff" }}>{ctx.price(p)}</span><span style={{ fontSize: 14 }}>View →</span></div>
-                </div>
+      <section id="top" data-section="hero" className={s.heroBand}>
+        <div aria-hidden className={`${s.dots} ${s.dotsHero}`} />
+        <div className={`${s.wrap} ${s.hero}`}>
+          <div className={s.heroText}>
+            {txt(hero, "badge") && (
+              <SLink to={book} className={`${s.pill} ${s.ghostHover} ${s.rise}`}>
+                {txt(hero, "badgeTag") && <span className={s.pillTag}><span className={s.pulse} />{txt(hero, "badgeTag")}</span>}
+                {txt(hero, "badge")}<span className={s.arrow} aria-hidden>→</span>
               </SLink>
-            ))}
+            )}
+            <h1 className={`${s.h1} ${s.rise}`} style={{ animationDelay: ".08s" }}><Rich text={txt(hero, "headline")} em={s.em} /></h1>
+            {txt(hero, "intro") && <p className={`${s.lead} ${s.rise}`} style={{ animationDelay: ".16s" }}>{txt(hero, "intro")}</p>}
+            <div className={`${s.ctas} ${s.rise}`} style={{ animationDelay: ".24s" }}>
+              {txt(hero, "primary") && <BuyButton to={book} label={txt(hero, "primary")} price={price} />}
+              {txt(hero, "secondary") && (
+                <a href={order.includes("inside") ? "#inside" : "#books"} className={s.ghost}><Rich text={txt(hero, "secondary")} em={s.em} /></a>
+              )}
+            </div>
+            <div className={`${s.byline} ${s.rise}`} style={{ animationDelay: ".32s" }}>
+              <Avatar store={store} who={ctx.who} />
+              <div>Written by <span className={s.white}>{ctx.who}</span>{txt(hero, "byline") && <><br />{txt(hero, "byline")}</>}</div>
+            </div>
           </div>
-        )}
+
+          {featured && (
+            <div className={s.heroArt}>
+              {motion && <HeroCode tabs={lst(hero, "tabs")} code={txt(hero, "code")} status={lst(hero, "status")} />}
+              <div className={`${s.heroBookWrap} ${s.rise}`} style={{ animationDelay: ".2s" }}>
+                <div aria-hidden className={s.bookShadow} />
+                <div className={s.float}>
+                  <SLink to={book} className={s.heroBook} label={`${featured.title} — view book`}>
+                    <div aria-hidden className={s.edge} />
+                    <BookCover product={featured} who={ctx.who} big />
+                    <div aria-hidden className={s.sheen} />
+                  </SLink>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
-      {S.contents.enabled && itm(S.contents, "items").length > 0 && (
-        <section id="inside" data-section="contents" className={s.wrap} style={{ paddingTop: 160 }}>
-          <div className={s.toc}>
-            <div>
-              <div className={s.eyebrow}>{txt(S.contents, "eyebrow")}</div>
-              <h2 className={`${s.h2} ${s.h}`} style={{ fontSize: 40 }}><Rich text={txt(S.contents, "title")} em={s.em} /></h2>
-              {txt(S.contents, "text") && <p style={{ margin: "16px 0 0", fontSize: 15, lineHeight: 1.65, color: "var(--dim)" }}>{txt(S.contents, "text")}</p>}
+      {showGlance && (
+        <section data-section="glance" aria-label="At a glance" className={s.glance}>
+          {glance.length > 0 && (
+            <div className={s.wrap}>
+              <div className={s.stats} style={{ "--n": glance.length } as React.CSSProperties}>
+                {glance.map((x, i) => <div key={i}><div className={s.statN}>{x.value}</div><div className={s.statL}>{x.label}</div></div>)}
+              </div>
             </div>
-            <div style={{ borderTop: "1px solid var(--line)" }}>
-              {itm(S.contents, "items").map((c, i) => (
-                <div key={i} className={s.tocRow}>
-                  <span className={s.mono} style={{ fontSize: 13, color: "var(--accent)" }}>{c.n}</span>
-                  <div><div style={{ fontSize: 17, fontWeight: 500, color: "var(--white)" }}>{c.t}</div>{c.d && <div style={{ marginTop: 4, fontSize: 14, color: "var(--dim)" }}>{c.d}</div>}</div>
-                  <span className={s.mono} style={{ fontSize: 12, color: "var(--dimmer)" }}>{c.p}</span>
+          )}
+          {stack.length > 0 && (
+            <div className={`${s.wrap} ${s.stack}`} style={glance.length ? undefined : { borderTop: 0 }}>
+              {txt(S.glance, "stackLabel") && <><span>{txt(S.glance, "stackLabel")}</span><span className={s.sep}>/</span></>}
+              {stack.map((x, i) => <Fragment key={i}>{i > 0 && <span className={s.sep}>·</span>}<span className={s.stackItem}>{x}</span></Fragment>)}
+            </div>
+          )}
+        </section>
+      )}
+
+      {order.includes("inside") && (
+        <section id="inside" data-section="inside" className={`${s.wrap} ${s.section}`}>
+          <Eyebrow n={num("inside")} label={txt(S.inside, "eyebrow")} />
+          <div className={`${s.secHead} ${s.reveal}`}>
+            <h2 className={s.h2}><Rich text={txt(S.inside, "title")} em={s.em} /></h2>
+            {txt(S.inside, "text") && <p className={s.secText}>{txt(S.inside, "text")}</p>}
+          </div>
+          <Chapter sec={S.inside} notes={notes} />
+          {itm(S.inside, "cards").length > 0 && (
+            <div className={`${s.cards} ${s.reveal}`}>
+              {itm(S.inside, "cards").map((c, i) => (
+                <div key={i}>
+                  {c.cmd && <div className={s.cmd}>{c.cmd}</div>}
+                  <div className={s.cardT}>{c.title}</div>
+                  {c.text && <div className={s.cardD}>{c.text}</div>}
                 </div>
               ))}
             </div>
-          </div>
+          )}
         </section>
       )}
 
-      {S.about.enabled && (txt(S.about, "text") || store.photoUrl) && (
-        <section id="about" data-section="about" className={s.wrap} style={{ paddingTop: 160 }}>
-          <div className={`${s.panel} ${s.about}`}>
-            <Photo url={store.photoUrl} alt={`Photo of ${ctx.who}`} className={s.avatar} />
-            <div style={{ flex: "1 1 420px", minWidth: 0 }}>
-              <div className={s.eyebrow}>{txt(S.about, "eyebrow")}</div>
-              <div style={{ marginTop: 10, fontSize: 26, fontWeight: 600, letterSpacing: "-.02em", color: "#fff" }}>{txt(S.about, "title")}</div>
-              <p style={{ margin: "10px 0 0", fontSize: 16, lineHeight: 1.65, color: "var(--dim)", maxWidth: 640, whiteSpace: "pre-line" }}>{txt(S.about, "text")}</p>
+      {order.includes("files") && (
+        <section id="download" data-section="files" className={s.bandAlt}>
+          <div className={`${s.wrap} ${s.section}`}>
+            <Eyebrow n={num("files")} label={txt(S.files, "eyebrow")} />
+            <div className={s.split}>
+              <div className={`${s.splitText} ${s.reveal}`}>
+                <h2 className={s.h2}><Rich text={txt(S.files, "title")} em={s.em} /></h2>
+                {txt(S.files, "text") && <p className={s.secText}>{txt(S.files, "text")}</p>}
+                {fileRows.length > 0 && (
+                  <ul className={s.fileList}>
+                    {fileRows.map((r, i) => (
+                      <li key={i}><span className={s.ext}>{r.ext}</span><span className={s.fileName}>{r.name}</span><span className={s.size}>{r.size}</span></li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {tree.length > 0 && <TreeTerminal window={txt(S.files, "window")} root={txt(S.files, "root")} lines={tree} />}
             </div>
-            <div className={s.mono} style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 13 }}>
-              {socialLinks(ctx).map((l) => <SLink key={l.label} to={l.href} className={s.ghost} style={{ padding: "9px 14px", fontSize: 13 }}>{l.label}{l.href.startsWith("http") ? " ↗" : ""}</SLink>)}
+          </div>
+        </section>
+      )}
+
+      <section id="books" data-section="books" className={s.ruled}>
+        <div className={`${s.wrap} ${s.section}`}>
+          <Eyebrow n={num("books")} label={txt(S.books, "eyebrow")} note={txt(S.books, "note")} />
+          <h2 className={`${s.h2} ${s.reveal}`} style={{ marginBottom: 48 }}><Rich text={txt(S.books, "title")} em={s.em} /></h2>
+          {products.length === 0 ? (
+            <p className={s.secText}>No books for sale yet.</p>
+          ) : (
+            // One book gets a wide card, two or four a pair of columns, the rest rows of three.
+            <div className={`${s.books} ${products.length === 1 ? s.booksOne : products.length === 2 || products.length === 4 ? s.booksTwo : ""}`}>
+              {products.map((p, i) => (
+                <BookCard key={p.id} p={p} ctx={ctx} to={href(p.id)} chapters={i === 0 ? ctx.chapters.length : 0}
+                  tag={i === 0 && products.length > 1 ? txt(S.books, "tag") : ""} button={txt(S.books, "button")} />
+              ))}
             </div>
-          </div>
-        </section>
-      )}
-
-      {S.faq.enabled && itm(S.faq, "items").length > 0 && (
-        <section id="faq" data-section="faq" className={s.wrap} style={{ paddingTop: 160 }}>
-          <div className={s.eyebrow}>{txt(S.faq, "eyebrow")}</div>
-          <h2 className={`${s.h2} ${s.h}`} style={{ fontSize: 40, marginBottom: 40 }}>{txt(S.faq, "title")}</h2>
-          <div className={s.faq}>
-            {itm(S.faq, "items").map((q, i) => (
-              <div key={i}><div style={{ fontSize: 16, fontWeight: 500, color: "var(--white)" }}>{q.q}</div><p style={{ margin: "8px 0 0", fontSize: 14.5, lineHeight: 1.65, color: "var(--dim)" }}>{q.a}</p></div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {S.closing.enabled ? (
-        <section data-section="closing" className={s.wrap} style={{ paddingTop: 160, paddingBottom: 140, textAlign: "center" }}>
-          <div aria-hidden className={s.glow} />
-          <h2 className={`${s.h2} ${s.h}`} style={{ position: "relative", margin: "0 auto", maxWidth: 760, fontSize: 56, lineHeight: 1.04 }}><Rich text={txt(S.closing, "title")} em={s.em} /></h2>
-          <div className={s.ctas} style={{ position: "relative", marginTop: 36 }}>
-            {txt(S.closing, "primary") && <SLink to={book} className={s.btn}>{txt(S.closing, "primary")}</SLink>}
-            {txt(S.closing, "secondary") && <a href="#books" className={s.ghost}>{txt(S.closing, "secondary")}</a>}
-          </div>
-          {txt(S.closing, "fine") && <div className={s.mono} style={{ position: "relative", marginTop: 22, fontSize: 12, color: "var(--dimmer)" }}>{txt(S.closing, "fine")}</div>}
-        </section>
-      ) : <div style={{ height: 120 }} />}
-
-      <footer className={s.footer}>
-        <div className={s.footIn}>
-          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-            <span>© {YEAR} {store.name}</span>
-            <SLink to={`/store/${store.slug}/terms`}>Terms of sale</SLink>
-            {store.contactEmail && <a href={`mailto:${store.contactEmail}`}>Contact</a>}
-          </div>
-          <SLink to="/" className={s.made}><span style={{ fontFamily: "Georgia, serif", fontStyle: "italic" }}>S</span>Made with Scrivetta</SLink>
+          )}
         </div>
-      </footer>
+      </section>
+
+      {showAbout && (
+        <section id="about" data-section="about" className={s.ruled}>
+          <div className={`${s.wrap} ${s.section}`}>
+            <Eyebrow n={num("about")} label={txt(S.about, "eyebrow")} />
+            <div className={`${s.author} ${s.reveal}`}>
+              <div className={s.authorSide}>
+                <div className={s.portrait}>
+                  {store.photoUrl ? <Photo url={store.photoUrl} alt={`Photo of ${ctx.who}`} className={s.portraitImg} /> : <span className={s.portraitInit}>{initials(ctx.who)}</span>}
+                </div>
+                <div className={s.gitName}>$ git config user.name<br /><span className={s.white}>{ctx.who}</span></div>
+              </div>
+              <div className={s.authorMain}>
+                {txt(S.about, "quote") && <p className={s.quote}><Rich text={txt(S.about, "quote")} em={s.em} /></p>}
+                {txt(S.about, "text") && <p className={s.secText} style={{ whiteSpace: "pre-line" }}>{txt(S.about, "text")}</p>}
+                {socialLinks(ctx).length > 0 && (
+                  <div className={s.socials}>
+                    {socialLinks(ctx).map((l) => (
+                      <SLink key={l.kind} to={l.href} className={`${s.social} ${s.ghostHover}`}>
+                        {l.label.toLowerCase()}{l.href.startsWith("http") && <span className={s.arrow} aria-hidden>↗</span>}
+                      </SLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {showFaq && (
+        <section id="faq" data-section="faq" className={`${s.ruled} ${s.bandAlt}`}>
+          <div className={`${s.wrap} ${s.section}`}>
+            <Eyebrow n={num("faq")} label={txt(S.faq, "eyebrow")} />
+            <div className={s.split}>
+              <div className={`${s.faqSide} ${s.reveal}`}>
+                <h2 className={s.h2}>{txt(S.faq, "title")}</h2>
+                {store.contactEmail && <p className={s.secText}>Anything else? Write to <a className={s.mail} href={`mailto:${store.contactEmail}`}>{store.contactEmail}</a></p>}
+              </div>
+              <Faq items={faq} />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {S.closing.enabled && (
+        <section data-section="closing" className={`${s.ruled} ${s.closingBand}`}>
+          <div aria-hidden className={`${s.dots} ${s.dotsClosing}`} />
+          <div className={`${s.wrap} ${s.closing}`}>
+            <div className={`${s.closingText} ${s.reveal}`}>
+              <h2 className={s.closingTitle}><Rich text={txt(S.closing, "title")} em={s.em} /></h2>
+              {((featured && txt(S.closing, "primary")) || txt(S.closing, "secondary")) && (
+                <div className={s.ctas}>
+                  {featured && txt(S.closing, "primary") && <BuyButton to={book} label={txt(S.closing, "primary")} price={price} />}
+                  {txt(S.closing, "secondary") && <a href="#books" className={s.ghost}>{txt(S.closing, "secondary")}</a>}
+                </div>
+              )}
+              {lst(S.closing, "fine").length > 0 && <div className={s.fine}>{lst(S.closing, "fine").map((x, i) => <span key={i}>{x}</span>)}</div>}
+            </div>
+            {txt(S.closing, "terminal").trim() && <ShipTerminal window={txt(S.closing, "window")} code={txt(S.closing, "terminal")} />}
+          </div>
+        </section>
+      )}
+
+      <Footer store={store} products={products} href={href} text={txt(S.footer, "text")} faq={showFaq} />
     </div>
+  );
+}
+
+// ---- Pieces --------------------------------------------------------------------
+
+const nn = (n: number) => String(n).padStart(2, "0");
+
+function Brand({ store }: { store: StoreProfile }) {
+  return (
+    <>
+      {store.logoUrl ? <Photo url={store.logoUrl} alt="" className={s.mark} /> : <span className={s.mark}>{initials(store.name)}</span>}
+      <span className={s.brandName}>{store.name}</span>
+    </>
+  );
+}
+
+function Avatar({ store, who }: { store: StoreProfile; who: string }) {
+  return store.photoUrl
+    ? <Photo url={store.photoUrl} alt="" className={s.avatar} />
+    : <span className={s.avatar}>{initials(who)}</span>;
+}
+
+function BuyButton({ to, label, price, small }: { to: string; label: string; price: string; small?: boolean }) {
+  return (
+    <SLink to={to} className={`${s.btn} ${small ? s.btnSm : ""}`}>
+      {label}{price && <span className={s.chip}>{price}</span>}
+    </SLink>
+  );
+}
+
+function Eyebrow({ n, label, note }: { n: string; label: string; note?: string }) {
+  return (
+    <div className={`${s.eyebrow} ${s.reveal}`}>
+      <span className={s.accentText}>{n}</span>{label && <span>{label}</span>}<span className={s.rule} />{note && <span>{note}</span>}
+    </div>
+  );
+}
+
+/** The faded editor behind the hero book: decoration only, never scrolls. */
+function HeroCode({ tabs, code, status }: { tabs: string[]; code: string; status: string[] }) {
+  const lines = code.split("\n").slice(0, 24);
+  const lastAdded = lines.reduce((at, l, i) => (l.startsWith("+") ? i : at), -1);
+  // The highlight band steps through the first run of added lines (up to five), then starts over.
+  const from = lines.findIndex((l) => l.startsWith("+"));
+  let run = 0;
+  while (from >= 0 && run < 5 && lines[from + run]?.startsWith("+")) run++;
+  return (
+    <div aria-hidden className={s.heroCode}>
+      {tabs.length > 0 && (
+        <div className={s.heroTabs}>{tabs.slice(0, 4).map((x, i) => <span key={i} className={i === 0 ? s.heroTabOn : ""}>{x}</span>)}</div>
+      )}
+      <div className={s.heroLines}>
+        {run > 0 && <div className={s.band} style={{ top: 20 + from * 28 }} data-steps={run} />}
+        {lines.map((raw, i) => {
+          const plus = raw.startsWith("+");
+          const line = plus ? raw.slice(1).replace(/^ /, "") : raw;
+          return (
+            <div key={i} className={s.cl}>
+              <span className={s.ln}>{i + 1}</span>
+              <span className={s.gm}>{plus ? "+" : ""}</span>
+              {i === lastAdded ? (
+                <span>{line.match(/^\s*/)![0]}<span className={s.type} style={{ "--chars": line.trim().length } as React.CSSProperties}>{line.trim()}</span><span className={s.caret} /></span>
+              ) : (
+                <span><Hl line={line} palette={FADED} /></span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {status.length > 0 && (
+        <div className={s.heroStatus}>{status.map((x, i) => <span key={i} className={i === status.length - 1 ? s.statusOn : ""}>{x}</span>)}</div>
+      )}
+    </div>
+  );
+}
+
+/** A cover: the ebook's own image, or a typographic one in the style. */
+function BookCover({ product, who, big }: { product: Pick<PublicStoreProduct, "coverUrl" | "title">; who?: string; big?: boolean }) {
+  return (
+    <div className={`${s.cover} ${big ? s.coverBig : ""}`}>
+      <Cover product={product} className={s.coverImg} fallbackClassName={s.coverFallback} />
+      {!product.coverUrl && (
+        <div aria-hidden className={s.coverArt}>
+          {big && who && <div className={s.coverWho}>{who}</div>}
+          <div className={s.coverCmd}>$ open book<br /><span className={s.accentText}>ready</span></div>
+          <div className={s.coverFoot}><div className={s.coverBar} /><div className={s.coverTitle}>{product.title}</div></div>
+        </div>
+      )}
+      <div aria-hidden className={s.spine} />
+    </div>
+  );
+}
+
+/** "Inside a chapter": a page with notes, and the code they explain. Notes take turns; hover or click picks one. */
+function Chapter({ sec, notes }: { sec: ResolvedSection; notes: Item[] }) {
+  const [step, setStep] = useState(0);
+  const [manual, setManual] = useState(false);
+  const count = notes.length;
+  useEffect(() => {
+    if (manual || count < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => setStep((x) => (x + 1) % count), 5200);
+    return () => clearInterval(id);
+  }, [manual, count]);
+  const on = count ? step % count : -1;
+  const pick = (i: number) => { setStep(i); setManual(true); };
+
+  const sets = notes.map((n) => lineSet(n.lines));
+  const firstOf = sets.map((set) => (set.size ? Math.min(...set) : -1));
+  const lines = txt(sec, "code").split("\n");
+  const anyLines = sets.some((x) => x.size > 0);
+
+  return (
+    <div className={`${s.chapter} ${s.reveal}`}>
+      <div className={s.pagePane}>
+        <div className={s.paneBar}>
+          <span className={s.paneFile}><FileIcon />{txt(sec, "file")}</span><span>{txt(sec, "page")}</span>
+        </div>
+        <div className={s.pageBody}>
+          {txt(sec, "label") && <div className={s.pageLabel}>{txt(sec, "label")}</div>}
+          {txt(sec, "heading") && <h3 className={s.h3}>{txt(sec, "heading")}</h3>}
+          {txt(sec, "pageText") && <p className={s.pageText}>{txt(sec, "pageText")}</p>}
+          {notes.map((n, i) => (
+            <button key={i} type="button" className={`${s.note} ${i === on ? s.noteOn : ""}`} aria-pressed={i === on}
+              onClick={() => pick(i)} onMouseEnter={() => pick(i)} onFocus={() => pick(i)}>
+              <span className={s.noteN}>{i + 1}</span>
+              <span className={s.noteText}><Ticks text={n.text} /></span>
+            </button>
+          ))}
+          {count > 1 && (
+            <div className={s.steps}>
+              {notes.map((_, i) => <span key={i} className={i === on ? s.stepOn : ""} />)}
+              <span className={s.stepLabel}>note {on + 1} of {count}</span>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className={s.codePane}>
+        <div className={`${s.paneBar} ${s.paneBarCode}`}>
+          <span className={s.paneFile}><span className={s.fileDot} />{txt(sec, "codeFile")}</span><span className={s.panePath}>{txt(sec, "codePath")}</span>
+        </div>
+        <div className={`${s.listing} ${s.noBar}`}>
+          {lines.map((line, i) => {
+            const n = i + 1;
+            const hit = on >= 0 && sets[on]?.has(n);
+            const mark = firstOf.indexOf(n);
+            return (
+              <div key={i} className={`${s.row} ${hit ? s.rowOn : ""} ${anyLines && !hit ? s.rowDim : ""}`}>
+                <span className={`${s.rowN} ${sets.some((x) => x.has(n)) ? s.rowNMarked : ""}`}>{n}</span>
+                <span><Hl line={line} palette={BRIGHT} /></span>
+                {mark >= 0 && <span className={s.rowMark}>{mark + 1}</span>}
+              </div>
+            );
+          })}
+        </div>
+        {txt(sec, "test") && (
+          <div className={s.testBar}><span className={s.accentText}>✓</span><span>{txt(sec, "test")}</span><span className={s.muted}>{txt(sec, "testResult")}</span></div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TreeTerminal({ window: title, root, lines }: { window: string; root: string; lines: string[] }) {
+  const rows = lines.map((raw) => {
+    const hi = raw.startsWith(">");
+    const body = hi ? raw.slice(1).replace(/^ /, "") : raw;
+    const at = body.indexOf("#");
+    return { hi, name: (at >= 0 ? body.slice(0, at) : body).replace(/\s+$/, ""), pad: at >= 0 ? body.slice(0, at).match(/\s*$/)![0] : "", note: at >= 0 ? body.slice(at) : "" };
+  });
+  const dirs = rows.filter((r) => r.name.endsWith("/")).length;
+  const files = rows.length - dirs;
+  return (
+    <div className={`${s.term} ${s.reveal}`}>
+      <TermBar title={title} />
+      <div className={`${s.termBody} ${s.noBar}`}>
+        <div><span className={s.accentText}>~</span> <span className={s.muted}>$</span> tree {root.replace(/\/$/, "")} -L 1</div>
+        <div className={s.white}>{root}</div>
+        {rows.map((r, i) => (
+          <div key={i} className={r.hi ? s.treeOn : ""}>
+            <span className={s.treeGlyph}>{i === rows.length - 1 ? "└── " : "├── "}</span>
+            <span className={r.hi ? s.bright : ""}>{r.name}</span>{r.pad || (r.note ? "  " : "")}
+            {r.note && <span className={r.hi ? s.accentText : s.comment}>{r.note}</span>}
+          </div>
+        ))}
+        <div className={s.treeSum}>{dirs} {dirs === 1 ? "directory" : "directories"}, {files} {files === 1 ? "file" : "files"}</div>
+      </div>
+    </div>
+  );
+}
+
+function ShipTerminal({ window: title, code }: { window: string; code: string }) {
+  const lines = code.split("\n");
+  return (
+    <div className={s.term}>
+      <TermBar title={title} />
+      <div className={`${s.termBody} ${s.noBar}`}>
+        {lines.map((l, i) => (
+          <div key={i} className={s.termLine} style={{ "--i": i } as React.CSSProperties}>
+            {l.startsWith("$") ? <><span className={s.muted}>$</span>{l.slice(1)}</> : <span className={/success|passed|✓/i.test(l) ? s.accentText : undefined}>{l}</span>}
+          </div>
+        ))}
+        <div className={s.termLine} style={{ "--i": lines.length } as React.CSSProperties}><span className={s.muted}>$</span> <span className={s.caret} /></div>
+      </div>
+    </div>
+  );
+}
+
+function TermBar({ title }: { title: string }) {
+  return <div className={s.termBar}><span /><span /><span />{title && <span className={s.termTitle}>{title}</span>}</div>;
+}
+
+function BookCard({ p, ctx, to, chapters, tag, button }: { p: PublicStoreProduct; ctx: Ctx; to: string; chapters: number; tag: string; button: string }) {
+  const rows = [
+    p.pageCount > 0 ? ["pages", String(p.pageCount)] : null,
+    chapters > 0 ? ["chapters", String(chapters)] : null,
+    p.language ? ["language", p.language.toUpperCase()] : null,
+    ["format", "pdf"],
+  ].filter((x): x is string[] => !!x);
+  return (
+    <SLink to={to} className={`${s.card} ${s.reveal}`}>
+      <div className={s.cardArt}>
+        {tag && <span className={s.cardTag}>{tag}</span>}
+        <div className={s.cardCover}><BookCover product={p} /></div>
+      </div>
+      <div className={s.cardBody}>
+        <h3 className={s.cardTitle}>{p.title}</h3>
+        {(p.description || p.subtitle) && <p className={s.cardDesc}>{p.description || p.subtitle}</p>}
+        <dl className={s.facts}>{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+        <div className={s.cardFoot}><span className={s.cardPrice}>{ctx.price(p)}</span>{button && <span className={s.cardLink}>{button}</span>}</div>
+      </div>
+    </SLink>
+  );
+}
+
+function Faq({ items }: { items: Item[] }) {
+  const [open, setOpen] = useState(0);
+  return (
+    <div className={`${s.faq} ${s.reveal}`}>
+      {items.map((x, i) => (
+        <div key={i} className={s.faqRow}>
+          <button type="button" className={s.faqQ} aria-expanded={open === i} onClick={() => setOpen(open === i ? -1 : i)}>
+            <span>{x.q}</span><span aria-hidden className={s.faqIcon}>+</span>
+          </button>
+          {open === i && x.a && <p className={s.faqA}>{x.a}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Footer({ store, products, href, text, faq }: { store: StoreProfile; products: PublicStoreProduct[]; href: (id: string) => string; text: string; faq: boolean }) {
+  return (
+    <footer className={s.footer}>
+      <div className={`${s.wrap} ${s.footTop}`}>
+        <div className={s.footAbout}>
+          <div className={s.brand}><Brand store={store} /></div>
+          {text && <p>{text}</p>}
+        </div>
+        <div className={s.footCols}>
+          {products.length > 0 && (
+            <div className={s.footCol}>
+              <div className={s.footHead}>books</div>
+              {products.slice(0, 6).map((p) => <SLink key={p.id} to={href(p.id)} className={s.navLink}>{p.title}</SLink>)}
+            </div>
+          )}
+          <div className={s.footCol}>
+            <div className={s.footHead}>store</div>
+            {faq && <a href="#faq" className={s.navLink}>FAQ</a>}
+            <SLink to={`/store/${store.slug}/terms`} className={s.navLink}>Terms of sale</SLink>
+            {store.contactEmail && <a href={`mailto:${store.contactEmail}`} className={s.navLink}>Contact</a>}
+          </div>
+        </div>
+      </div>
+      <div className={`${s.wrap} ${s.footBottom}`}>
+        <span>© {YEAR} {store.name}</span>
+        <SLink to="/" className={`${s.made} ${s.ghostHover}`}><span className={s.madeS}>S</span>Made with Scrivetta</SLink>
+      </div>
+    </footer>
+  );
+}
+
+function FileIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5" />
+    </svg>
   );
 }
