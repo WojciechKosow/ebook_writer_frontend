@@ -138,9 +138,53 @@ const SAMPLES = {
       postgres: { bg: "#F1F5F9", fg: "#0F172A", accent: "#2563EB", title: "PostgreSQL for<br>Backend Devs", sub: "Indexes, locks, migrations" },
     },
   },
+  guide: {
+    slug: "ola-mazur",
+    store: {
+      name: "Quiet Work",
+      headline: "Practical guides for *calmer, focused* work.",
+      description:
+        "I coach small teams on how to plan their weeks. These guides are the methods we use, written down: short, practical, with templates you can use on Monday morning.\n\nNo productivity theatre — just fewer, better hours.",
+      authorName: "Ola Mazur",
+      contactEmail: "ola@quietwork.co",
+      instagramUrl: "https://instagram.com/quietwork.co",
+      tiktokUrl: null,
+      websiteUrl: "https://quietwork.co",
+    },
+    products: [
+      product("p-quiet", "The Quiet Productivity Method", "Build calm, focused routines that last",
+        "A practical guide for busy professionals who want to get more done with less stress — one routine at a time, with weekly templates.", 1900, 112, "quiet"),
+      product("p-week", "Plan a Week in 30 Minutes", "A Friday ritual for the week ahead", "One planning session, three lists and a calendar that finally tells the truth.", 900, 46, "week"),
+      product("p-no", "Saying No at Work", "Scripts for protecting your time", "Twenty-four short scripts for meetings, requests and deadlines — polite, clear and kind.", 1200, 64, "no"),
+      product("p-meet", "Fewer Meetings", "A guide for team leads", "Cut a third of your team's meetings without losing what they were for.", 1500, 88, "week"),
+      product("p-mornings", "Better Mornings", "A 14-day plan", "Fourteen small changes to start the day on purpose.", 700, 38, "no"),
+    ],
+    chapters: [
+      "Why habits beat motivation", "The anatomy of a routine", "Designing your morning", "Deep work blocks", "Managing energy, not time", "The weekly review",
+      "Email in two sittings", "Meetings with a purpose", "Recovering from setbacks", "Working with a team", "Making it stick for good",
+    ],
+    highlights: ["Plan your week in 30 minutes, every Friday", "Protect two deep-work blocks a day", "Finish the workday with an empty head"],
+    included: [
+      file({ sizeBytes: 3_100_000 }),
+      file({ id: "f-epub", format: "EPUB", sizeBytes: 1_200_000, label: "For e-readers", note: "EPUB — for Kindle, Kobo or Apple Books" }),
+      file({ id: "f-templates", format: "ZIP", sizeBytes: 2_600_000, label: "Planning templates", note: "Weekly planner and review sheets (PDF, Notion)" }),
+      file({ id: "f-workbook", format: "PDF", sizeBytes: 800_000, label: "Workbook", note: "Exercises for every chapter", accountOnly: true }),
+    ],
+    sampleHtml:
+      "<p>Motivation is a feeling. Habits are a system. This chapter is about building the second, so you can stop waiting for the first.</p>" +
+      "<h3>The three-list week</h3><p>Every Friday, write three lists:</p>" +
+      "<ul><li><strong>Today</strong> — at most three items, one of them a deep-work block.</li><li><strong>This week</strong> — anything with a date.</li><li><strong>Later</strong> — everything else, read only on Fridays.</li></ul>" +
+      "<p>That's it. The rest of the book is about keeping these lists honest.</p>",
+    covers: {
+      look: "minimal",
+      quiet: { bg: "#F5F4F0", fg: "#111111", accent: "#E4572E", title: "The Quiet<br>Productivity<br>Method", sub: "Calm, focused routines" },
+      week: { bg: "#1F3B2D", fg: "#F2F1EC", accent: "#B7D36B", title: "Plan a Week<br>in 30 Minutes", sub: "A Friday ritual" },
+      no: { bg: "#E9E4F5", fg: "#1D1A33", accent: "#5B4BDB", title: "Saying No<br>at Work", sub: "Scripts for your time" },
+    },
+  },
 };
 
-const SAMPLE = SAMPLES[style === "code" ? "tech" : "books"];
+const SAMPLE = SAMPLES[{ code: "tech", minimal: "guide" }[style] ?? "books"];
 const SLUG = SAMPLE.slug;
 const store = { slug: SLUG, ...SAMPLE.store, logoUrl: null, photoUrl: null, purchasable: true, unavailableReason: null };
 const products = SAMPLE.products.slice(0, Number(process.env.BOOKS) || 3);
@@ -149,6 +193,24 @@ const included = SAMPLE.included;
 
 // Every optional section on, with the sample copy filled in.
 const fullTheme = {
+  minimal: {
+    sections: {
+      spread: {
+        enabled: true,
+        leftTitle: "The three-list week",
+        leftText: "Every Friday, write three lists. Today holds at most three items, and one of them is a deep-work block. This week holds anything with a date. Later holds everything else — and you only read it on Fridays.",
+      },
+      changes: {
+        enabled: true,
+        items: [
+          { title: "A planned week", text: "Thirty minutes on Friday instead of an anxious Monday." },
+          { title: "Two deep blocks a day", text: "Protected time for the work that matters." },
+          { title: "Half the email time", text: "Two sittings a day, nothing in between." },
+          { title: "An empty head at 6 p.m.", text: "A shutdown routine that actually ends the day." },
+        ],
+      },
+    },
+  },
   literary: {
     sections: {
       read: {
@@ -209,7 +271,13 @@ async function renderCovers(browser) {
   const out = {};
   const { look, ...specs } = SAMPLE.covers;
   for (const [id, c] of Object.entries(specs)) {
-    await page.setContent(look === "tech" ? `<!doctype html><html><body style="margin:0">
+    await page.setContent(look === "minimal" ? `<!doctype html><html><body style="margin:0">
+      <div style="width:600px;height:900px;background:${c.bg};color:${c.fg};font-family:system-ui,Helvetica,sans-serif;box-sizing:border-box;padding:64px 56px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;font-size:17px;letter-spacing:.04em"><span>${store.authorName}</span><span>A guide</span></div>
+        <div style="margin-top:20px;height:1px;background:${c.fg};opacity:.5"></div>
+        <div style="margin-top:110px;font-weight:600;font-size:72px;line-height:.98;letter-spacing:-.045em">${c.title}</div>
+        <div style="margin-top:auto;display:flex;align-items:center;gap:16px;font-size:20px"><span style="width:18px;height:18px;border-radius:50%;background:${c.accent}"></span>${c.sub}</div>
+      </div></body></html>` : look === "tech" ? `<!doctype html><html><body style="margin:0">
       <div style="width:600px;height:900px;background:${c.bg};color:${c.fg};font-family:ui-monospace,Menlo,monospace;box-sizing:border-box;padding:64px 56px;display:flex;flex-direction:column;position:relative;overflow:hidden;
         background-image:linear-gradient(${c.fg}10 1px,transparent 1px),linear-gradient(90deg,${c.fg}10 1px,transparent 1px);background-size:40px 40px">
         <div style="position:relative;font-size:18px;letter-spacing:.2em;text-transform:uppercase;opacity:.7">${store.authorName}</div>
