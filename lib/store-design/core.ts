@@ -28,6 +28,8 @@ export type SectionEdits = { enabled?: boolean } & Record<string, FieldValue | b
 export interface StyleSettings {
   accent?: string;
   decor?: string;
+  /** The style's variant, e.g. Code's programming language. */
+  variant?: string;
   sections?: Record<string, SectionEdits>;
   customCss?: string;
 }
@@ -70,6 +72,8 @@ export interface Ctx extends DesignContext {
   featured: PublicStoreProduct | null;
   price: (p: PublicStoreProduct | null) => string;
   totalPages: number;
+  /** The style variant the author picked (see StyleSchema.variant); defaults can follow it. */
+  variant?: string;
 }
 
 export function makeCtx(c: DesignContext): Ctx {
@@ -119,6 +123,8 @@ export interface StyleSchema {
   swatch: { bg: string; fg: string; accent: string; font: string; sample: string };
   accents: string[];
   decor: { options: { id: string; label: string }[]; def: string } | null;
+  /** A choice that changes the style's sample content (Code's programming language). */
+  variant?: { label: string; hint: string; options: { id: string; label: string }[]; def: string };
   sections: SectionSchema[];
 }
 
@@ -133,6 +139,7 @@ export interface ResolvedStyle {
   id: StyleId;
   accent: string;
   decor: string;
+  variant: string;
   customCss: string;
   sections: Record<string, ResolvedSection>;
 }
@@ -159,11 +166,13 @@ export function resolveSections<C>(
 
 export function resolveStyle(schema: StyleSchema, settings: StyleSettings | undefined, ctx: Ctx): ResolvedStyle {
   const s = settings ?? {};
-  const sections = resolveSections(schema.sections, s.sections, ctx);
+  const variant = schema.variant?.options.some((o) => o.id === s.variant) ? s.variant! : schema.variant?.def ?? "";
+  const sections = resolveSections(schema.sections, s.sections, { ...ctx, variant });
   return {
     id: schema.id,
     accent: isColor(s.accent) ? s.accent! : schema.accents[0],
     decor: schema.decor && schema.decor.options.some((o) => o.id === s.decor) ? s.decor! : schema.decor?.def ?? "",
+    variant,
     customCss: safeCss(s.customCss) ?? "",
     sections,
   };

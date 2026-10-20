@@ -1,4 +1,5 @@
 import type { Ctx, Field, Item, SectionSchema, StyleId, StyleSchema } from "./core";
+import { CODE_SAMPLES, codeSample } from "./code-samples";
 
 /**
  * The styles an author can pick, and every editable piece of each one. Field
@@ -166,42 +167,8 @@ const literary: StyleSchema = {
 
 // ---- Code (concept 2) -------------------------------------------------------------
 
-const HERO_CODE = `package shop.orders;
-
-@Service
-@RequiredArgsConstructor
-public class OrderService {
-
-    private final OrderRepository orders;
-    private final PaymentGateway payments;
-
-    @Transactional
-    public Order checkout(Cart cart, String key) {
-+       if (orders.existsByKey(key)) return orders.findByKey(key);
-+       if (cart.isEmpty()) throw new EmptyCartException();
-+       var order = Order.from(cart, key);
-+       payments.charge(order.total());
-+       return orders.save(order);
-    }
-}`;
-
-const CHAPTER_CODE = `@Transactional
-public Order checkout(Cart cart, String key) {
-    if (orders.existsByKey(key)) {
-        return orders.findByKey(key);
-    }
-    if (cart.isEmpty()) throw new EmptyCartException();
-
-    var order = Order.from(cart, key);
-    payments.charge(order.total());
-    return orders.save(order);
-}`;
-
-const SHIP_TERMINAL = `$ ./mvnw verify
-[INFO] Tests run: 42, Failures: 0
-[INFO] BUILD SUCCESS
-$ docker compose up -d
-Started ShopApplication in 1.84 seconds`;
+/** The sample code, file names and stack for the author's chosen language. */
+const lang = (c: Ctx) => codeSample(c.variant);
 
 /** The chapter the "inside a chapter" panel and the folder listing point at by default. */
 const showcaseChapter = (c: Ctx) => c.chapters[Math.min(4, c.chapters.length - 1)]?.number ?? 5;
@@ -214,6 +181,12 @@ const code: StyleSchema = {
   swatch: { bg: "#090B0E", fg: "#E8EAED", accent: "#6EE7A0", font: "var(--sd-geist), system-ui, sans-serif", sample: "{ }" },
   accents: ["#6EE7A0", "#F2B866", "#8AB4F8", "#C4A7FF"],
   decor: { options: [{ id: "code", label: "Code behind the book" }, { id: "none", label: "None" }], def: "code" },
+  variant: {
+    label: "Code language",
+    hint: "Sets the sample code, file names, tech stack and terminals. Anything you've edited yourself stays as it is.",
+    options: Object.entries(CODE_SAMPLES).map(([id, x]) => ({ id, label: x.label })),
+    def: "java",
+  },
   sections: [
     {
       id: "hero",
@@ -226,10 +199,10 @@ const code: StyleSchema = {
         f.text("primary", "Main button", () => "Get the book", "The price is added next to it."),
         f.text("secondary", "Second button", () => "Look inside", "Wrap words in *asterisks* to soften them."),
         f.text("byline", "Line under your name", () => "", "E.g. what you do or how long you've done it. Leave empty to hide."),
-        f.list("tabs", "Code behind the book — open files", () => ["OrderService.java", "Order.java", "application.yml"],
+        f.list("tabs", "Code behind the book — open files", (c) => lang(c).tabs,
           "Shown when the moving background is on. The first file is the open one."),
-        f.code("code", "Code behind the book", () => HERO_CODE, "Start a line with + to mark it as added; the last added line types itself out."),
-        f.list("status", "Code behind the book — status bar", () => ["Java 21", "UTF-8", "● 42 tests passing"], "The last item takes the accent color."),
+        f.code("code", "Code behind the book", (c) => lang(c).hero, "Start a line with + to mark it as added; the last added line types itself out."),
+        f.list("status", "Code behind the book — status bar", (c) => lang(c).status, "The last item takes the accent color."),
       ],
     },
     {
@@ -245,7 +218,7 @@ const code: StyleSchema = {
             { value: "PDF", label: "instant download" },
           ] as (Item | null)[]).filter((x): x is Item => !!x), { max: 4 }),
         f.text("stackLabel", "Tech stack — label", () => "stack"),
-        f.list("stack", "Tech stack", () => ["Java 21", "Spring Boot 3", "PostgreSQL 16", "Docker", "JUnit 5", "Testcontainers"], "Leave empty to hide the row."),
+        f.list("stack", "Tech stack", (c) => lang(c).stack, "Leave empty to hide the row."),
       ],
     },
     {
@@ -264,18 +237,15 @@ const code: StyleSchema = {
         }),
         f.text("heading", "Page — title", () => "Make checkout safe to retry"),
         f.area("pageText", "Page — text", () => "Networks fail. A customer double-taps “Pay”, a mobile client retries after a timeout — and without protection you charge them twice."),
-        f.items("notes", "Notes", [{ key: "text", label: "Note", multiline: true }, { key: "lines", label: "Code lines it explains (e.g. 3-5)" }], () => [
-          { text: "Take an idempotency key from the client and check it first. Seen it before? Return the original order instead of creating a new one.", lines: "3-5" },
-          { text: "Only then charge. With `@Transactional`, the order and the payment both happen — or neither does.", lines: "9" },
-        ], { max: 4, hint: "Wrap code in `backticks`. The notes take turns; hovering one shows its lines." }),
-        f.text("codeFile", "Code — file name", () => "OrderService.java"),
-        f.text("codePath", "Code — folder", () => "src/main/java/shop/orders"),
-        f.code("code", "Code", () => CHAPTER_CODE),
-        f.text("test", "Test result — name", () => "CheckoutIdempotencyTest", "Leave empty to hide the result line."),
-        f.text("testResult", "Test result — details", () => "3 passed · 0.41s"),
-        f.items("cards", "Cards under the code", [{ key: "title", label: "Title" }, { key: "cmd", label: "Command" }, { key: "text", label: "Text", multiline: true }], () => [
+        f.items("notes", "Notes", [{ key: "text", label: "Note", multiline: true }, { key: "lines", label: "Code lines it explains (e.g. 3-5)" }], (c) => lang(c).notes.map((n) => ({ ...n })), { max: 4, hint: "Wrap code in `backticks`. The notes take turns; hovering one shows its lines." }),
+        f.text("codeFile", "Code — file name", (c) => lang(c).codeFile),
+        f.text("codePath", "Code — folder", (c) => lang(c).codePath),
+        f.code("code", "Code", (c) => lang(c).code),
+        f.text("test", "Test result — name", (c) => lang(c).test, "Leave empty to hide the result line."),
+        f.text("testResult", "Test result — details", (c) => lang(c).testResult),
+        f.items("cards", "Cards under the code", [{ key: "title", label: "Title" }, { key: "cmd", label: "Command" }, { key: "text", label: "Text", multiline: true }], (c) => [
           { cmd: "$ git log --oneline", title: "One commit per chapter", text: "Stuck? Diff your code against the reference." },
-          { cmd: "$ ./mvnw test", title: "Tests in every chapter", text: "Unit and integration tests with Testcontainers." },
+          { cmd: lang(c).testCmd, title: "Tests in every chapter", text: lang(c).testText },
           { cmd: "$ docker compose up", title: "Ends in production", text: "The last chapter ships what you built." },
         ], { max: 4 }),
       ],
@@ -334,7 +304,7 @@ const code: StyleSchema = {
         f.text("secondary", "Second button", (c) => (c.products.length > 1 ? "All books" : "")),
         f.list("fine", "Small print", () => ["instant download", "stripe checkout", "sold directly by the author"]),
         f.text("window", "Terminal — title", (c) => `chapter-${nn(c.chapters.at(-1)?.number ?? 12)} — zsh`),
-        f.code("terminal", "Terminal", () => SHIP_TERMINAL, "Lines starting with $ are commands; a line with SUCCESS takes the accent color. Leave empty to hide."),
+        f.code("terminal", "Terminal", (c) => lang(c).terminal, "Lines starting with $ are commands; a passing line takes the accent color. Leave empty to hide."),
       ],
     },
     {
