@@ -52,11 +52,11 @@ export const PAGE_THEMES: Record<StyleId, PageTheme> = {
     cardRadius: "16px", cardBorder: "1px solid rgba(255,255,255,.08)", cardShadow: "none",
   },
   minimal: {
-    accentText: "accent", dark: false, bg: "#F5F4F0", surface: "#FFFFFF", surface2: "#ECEAE4", ink: "#111111", body: "#3F3D39", muted: "#6E6B65",
-    line: "#E2DFD8", display: "var(--sd-hanken), system-ui, sans-serif", text: "var(--sd-hanken), system-ui, sans-serif",
-    mono: "var(--sd-dm-mono), ui-monospace, monospace", displayWeight: 400, displayCase: "none", displayTracking: "-0.045em",
-    btnBg: "accent", btnFg: "#FFFFFF", btnRadius: "999px", btnBorder: "none", btnShadow: "none",
-    cardRadius: "16px", cardBorder: "1px solid #E2DFD8", cardShadow: "none",
+    accentText: "#111111", dark: false, bg: "#F4F2EE", surface: "#FFFFFF", surface2: "#ECE9E3", ink: "#111111", body: "#3A3835", muted: "#66635E",
+    line: "#D9D5CE", display: "var(--sd-instrument), \"Helvetica Neue\", Arial, sans-serif", text: "var(--sd-instrument), \"Helvetica Neue\", Arial, sans-serif",
+    mono: "var(--sd-instrument), \"Helvetica Neue\", Arial, sans-serif", displayWeight: 500, displayCase: "none", displayTracking: "-0.045em",
+    btnBg: "#111111", btnFg: "#F4F2EE", btnRadius: "999px", btnBorder: "none", btnShadow: "none",
+    cardRadius: "0px", cardBorder: "1px solid #D9D5CE", cardShadow: "none",
   },
   modern: {
     accentText: "accent", dark: true, bg: "#0B0B0E", surface: "#131318", surface2: "#1A1A21", ink: "#FFFFFF", body: "#C8C8D2", muted: "#9E9EAA",

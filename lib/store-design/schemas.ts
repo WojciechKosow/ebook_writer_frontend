@@ -23,7 +23,6 @@ const buy = (c: Ctx, verb: "Get" | "Buy" | "Start with", sep = "—", fallback =
   const what = short ? `${verb} ${c.featured.title}` : verb === "Start with" ? "Start reading" : `${verb} the book`;
   return `${what} ${sep} ${c.price(c.featured)}`;
 };
-const startCta = (c: Ctx) => buy(c, "Start with", "—", "See the ebooks");
 
 function firstParagraph(s: string | null): string {
   if (!s) return "";
@@ -348,24 +347,27 @@ const code: StyleSchema = {
 
 // ---- Minimal (concept 3) ------------------------------------------------------------
 
+const NUMBER_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+
 const minimal: StyleSchema = {
   id: "minimal",
   name: "Minimal",
   tagline: "Off-white, big type, thin rules and lots of air. For guides and non-fiction.",
-  swatch: { bg: "#F5F4F0", fg: "#111111", accent: "#111111", font: "var(--sd-hanken), system-ui, sans-serif", sample: "Aa" },
-  accents: ["#111111", "#2F4BD8", "#C2410C", "#1F5E46"],
-  decor: { options: [{ id: "none", label: "None" }, { id: "grid", label: "Grid lines" }], def: "none" },
+  swatch: { bg: "#F4F2EE", fg: "#111111", accent: "#E5482D", font: "var(--sd-instrument), system-ui, sans-serif", sample: "Aa" },
+  accents: ["#E5482D", "#F2C230", "#B9C7A5", "#C9BFF0"],
+  decor: null,
   sections: [
     {
       id: "hero",
       label: "Hero",
       fields: [
-        f.text("kicker", "Small line above", (c) => `${c.who} — Ebooks`),
-        f.area("headline", "Headline", headline, HL),
+        f.text("kicker", "Small line above", (c) => `(${c.who} — Ebooks)`),
+        f.text("note", "Small line on the right", () => "", "E.g. what you write. Leave empty to hide."),
+        f.area("headline", "Headline", headline, "Each line slides in on its own. Wrap words in *asterisks* to soften them (shown in grey)."),
         f.area("intro", "Intro", intro),
-        f.text("primary", "Main button", startCta),
-        f.text("secondary", "Second link", () => "All ebooks"),
-        f.text("caption", "Caption under the cover", (c) => (c.featured ? `Fig. 01 — ${c.featured.title}${c.featured.pageCount ? `, ${c.featured.pageCount} pp.` : ""}` : "")),
+        f.text("primary", "Main button", (c) => buy(c, "Start with", "—", "See the ebooks"), "Leave empty to hide."),
+        f.text("secondary", "Second link", (c) => (c.products.length > 1 ? "All ebooks" : ""), "Leave empty to hide."),
+        f.text("button", "Button under the featured ebook", () => "Buy now"),
       ],
     },
     {
@@ -373,12 +375,15 @@ const minimal: StyleSchema = {
       label: "Facts row",
       optional: true,
       fields: [
-        f.items("items", "Facts", [{ key: "value", label: "Value" }, { key: "label", label: "Label" }], (c) => [
-          { value: String(c.products.length), label: c.products.length === 1 ? "title" : "titles" },
-          { value: String(c.totalPages || "—"), label: "pages in total" },
-          { value: "PDF", label: "by email, instantly" },
-          { value: "0", label: "accounts needed" },
-        ], { max: 4 }),
+        f.items("items", "Facts", [{ key: "value", label: "Value" }, { key: "label", label: "Label" }], (c) => {
+          const cheapest = c.products.reduce<typeof c.featured>((m, p) => (!m || p.priceCents < m.priceCents ? p : m), null);
+          return [
+            { value: String(c.products.length), label: c.products.length === 1 ? "title" : "titles" },
+            { value: String(c.totalPages || "—"), label: "pages in total" },
+            { value: cheapest ? c.price(cheapest) : "—", label: c.products.length > 1 ? "starting price" : "one payment" },
+            { value: "PDF", label: "on screen and by email" },
+          ];
+        }, { max: 4 }),
       ],
     },
     {
@@ -387,19 +392,22 @@ const minimal: StyleSchema = {
       optional: true,
       offByDefault: true,
       fields: [
-        f.text("eyebrow", "Small label", () => "(A look inside)"),
-        f.text("title", "Title", () => "Pages you’ll actually use."),
+        f.text("eyebrow", "Small label", () => "A look inside"),
+        f.text("title", "Title", () => "Pages you’ll actually use.", HL),
         f.area("text", "Text", () => "Every chapter ends with something to do, not something to think about."),
+        f.text("link", "Link", (c) => (c.featured ? "See the book" : ""), "Leads to the first ebook. Leave empty to hide."),
         f.text("leftLabel", "Left page — running head", (c) => (c.chapters[0] ? `Chapter ${String(c.chapters[0].number).padStart(2, "0")} — ${c.chapters[0].title}` : "Chapter 01")),
         f.text("leftTitle", "Left page — title", () => "[A section title]"),
-        f.area("leftText", "Left page — text", () => "Paste a short passage from the book here — a paragraph that shows how you explain things."),
+        f.area("leftText", "Left page — text", () => "Paste a short passage from the book here — a paragraph that shows how you explain things.", "Wrap words in *asterisks* to set them in bold."),
+        f.text("leftPage", "Left page — number", () => "34"),
         f.text("rightLabel", "Right page — running head", (c) => c.featured?.title ?? ""),
         f.items("rows", "Right page — table", [{ key: "k", label: "Left column" }, { key: "v", label: "Right column" }], () => [
           { k: "Today", v: "Max. 3 items. One is the deep block." },
           { k: "This week", v: "What has a date. Checked each morning." },
           { k: "Later", v: "Everything else. Read on Fridays only." },
         ], { max: 6 }),
-        f.area("tip", "Right page — tip", () => "Try it — pick one idea from this page and use it today."),
+        f.area("tip", "Right page — tip", () => "*Try it* — pick one idea from this page and use it today.", "Wrap words in *asterisks* to set them in bold."),
+        f.text("rightPage", "Right page — number", () => "35"),
       ],
     },
     {
@@ -408,7 +416,8 @@ const minimal: StyleSchema = {
       optional: true,
       offByDefault: true,
       fields: [
-        f.text("eyebrow", "Small label", () => "(What changes)"),
+        f.text("eyebrow", "Small label", () => "What changes"),
+        f.text("title", "Title", () => "Four weeks from now.", HL),
         f.items("items", "Columns", [{ key: "title", label: "Title" }, { key: "text", label: "Text", multiline: true }], () => [
           { title: "[Result one]", text: "What readers can do after the book." },
           { title: "[Result two]", text: "Something concrete, not a promise." },
@@ -421,10 +430,10 @@ const minimal: StyleSchema = {
       id: "books",
       label: "Ebooks",
       fields: [
-        f.text("eyebrow", "Small label", () => "(Ebooks)"),
-        f.text("button", "Featured ebook — button", () => "Buy now"),
-        f.items("rows", "Featured ebook — highlights", [{ key: "text", label: "Text" }, { key: "ref", label: "Reference (e.g. ch. 03)" }], (c) =>
-          c.chapters.slice(0, 3).map((ch) => ({ text: ch.title, ref: `ch. ${String(ch.number).padStart(2, "0")}` })), { max: 6 }),
+        f.text("eyebrow", "Small label", () => "Ebooks"),
+        f.text("title", "Title", (c) => `${NUMBER_WORDS[c.products.length] ?? c.products.length} short ${c.products.length === 1 ? "book" : "books"}.`, HL),
+        f.text("note", "Small print", () => "PDF · prices in USD"),
+        f.text("tag", "Tag on the first ebook", () => "Start here", "Shown when there's more than one ebook. Leave empty to hide."),
       ],
     },
     {
@@ -432,13 +441,13 @@ const minimal: StyleSchema = {
       label: "About the author",
       optional: true,
       fields: [
-        f.text("eyebrow", "Small label", () => "(About)"),
-        f.area("quote", "Quote", (c) => (c.store.description ? `“${firstParagraph(c.store.description)}”` : "")),
+        f.text("eyebrow", "Small label", () => "About"),
+        f.area("quote", "Quote", (c) => (c.store.description ? `“${firstParagraph(c.store.description)}”` : ""), "Wrap words in *asterisks* to soften them (shown in grey)."),
         f.text("name", "Name", (c) => c.who),
         f.text("role", "Role", () => ""),
       ],
     },
-    faqSection("", "(Help)"),
+    faqSection("Before you buy.", "Help"),
     {
       id: "closing",
       label: "Closing call to action",

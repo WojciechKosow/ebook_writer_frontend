@@ -146,6 +146,7 @@ const included = [
 
 // Every optional section on, with the sample copy filled in.
 const fullTheme = {
+  minimal: { sections: { spread: { enabled: true }, changes: { enabled: true } } },
   literary: {
     sections: {
       read: {
