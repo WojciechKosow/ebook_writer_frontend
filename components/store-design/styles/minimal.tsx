@@ -1,208 +1,332 @@
 "use client";
 
-import { itm, txt } from "@/lib/store-design/core";
-import { Cover, CustomCss, Photo, Rich, SLink, socialLinks, Unavailable, YEAR, type StyleProps } from "../kit";
+import { useEffect, useState } from "react";
+import type { PublicStoreProduct, StoreProfile } from "@/lib/types";
+import { itm, txt, type Ctx, type Item } from "@/lib/store-design/core";
+import { Cover, CustomCss, Photo, Rich, SLink, socialLinks, Unavailable, YEAR, initials, type StyleProps } from "../kit";
 import s from "./minimal.module.css";
 
-/** Minimal — concept 3: off-white, big type, thin rules. */
+/** Stage colors the featured carousel steps through; the first is the accent. */
+const STAGES = [
+  { bg: "", ink: "#111111" },
+  { bg: "#C9D2C0", ink: "#111111" },
+  { bg: "#2B2350", ink: "#F4F2EE" },
+  { bg: "#E4E0D9", ink: "#111111" },
+  { bg: "#1F3D2E", ink: "#E9EDE4" },
+];
+
+const nn = (n: number) => String(n).padStart(2, "0");
+
+/** Minimal — concept 3: off-white, big type, thin rules and a featured shelf that turns. */
 export function MinimalStyle({ t, ctx, href }: StyleProps) {
   const S = t.sections;
   const { store, products, featured } = ctx;
-  const rest = products.slice(1);
   const hero = S.hero;
-  const book = featured ? href(featured.id) : "#books";
+  const book = featured ? href(featured.id) : "#ebooks";
+  const facts = itm(S.facts, "items").filter((x) => x.value?.trim() || x.label?.trim());
+  const changes = itm(S.changes, "items").filter((x) => x.title?.trim());
+  const faq = itm(S.faq, "items").filter((x) => x.q?.trim());
+  const showAbout = S.about.enabled && !!txt(S.about, "quote");
+  const showFaq = S.faq.enabled && faq.length > 0;
+
+  // Numbered section labels follow the sections that are shown.
+  const order = [
+    S.spread.enabled && "spread",
+    S.changes.enabled && changes.length > 0 && "changes",
+    "books",
+    showAbout && "about",
+    showFaq && "faq",
+  ].filter((x): x is string => !!x);
+  const num = (id: string) => `(${nn(order.indexOf(id) + 1)})`;
 
   return (
     <div className={`${s.root} store-page store-minimal`} style={{ "--accent": t.accent } as React.CSSProperties}>
       <CustomCss t={t} />
-      {t.decor === "grid" && (
-        <div aria-hidden className={s.lines}><div className={`${s.wrap} ${s.g12}`}>{Array.from({ length: 12 }, (_, i) => <span key={i} />)}</div></div>
-      )}
-
       <header className={s.header}>
         <div className={`${s.wrap} ${s.headerIn}`}>
-          <a href="#top" className={s.brand}>{store.name}</a>
+          <a href="#top" className={s.brand}><span className={s.dot} />{store.name}</a>
           <nav className={s.nav} aria-label="Store">
-            <a href="#books">Ebooks <span className={s.mono} style={{ fontSize: 11 }}>({products.length})</span></a>
-            {S.spread.enabled && <a href="#inside">Inside</a>}
-            {S.faq.enabled && <a href="#faq">Help</a>}
+            <a className={s.u} href="#ebooks">{txt(S.books, "eyebrow") || "Ebooks"} <span className={s.tab}>({products.length})</span></a>
+            {order.includes("spread") && <a className={s.u} href="#inside">Inside</a>}
+            {showAbout && <a className={s.u} href="#about">About</a>}
+            {showFaq && <a className={s.u} href="#help">{txt(S.faq, "eyebrow") || "Help"}</a>}
           </nav>
+          {featured && <SLink to={book} className={`${s.pill} ${s.pillSm}`}>Start reading <span className={s.faint}>·</span> {ctx.price(featured)}</SLink>}
         </div>
       </header>
-      <Unavailable ctx={ctx} className={s.notice} />
+      <div className={s.wrap}><Unavailable ctx={ctx} className={s.notice} /></div>
 
-      <section id="top" data-section="hero" className={s.wrap} style={{ paddingTop: 120 }}>
-        <div className={s.hero}>
-          <div>
-            <div className={`${s.up} ${s.label}`}>{txt(hero, "kicker")}</div>
-            <h1 className={`${s.h1} ${s.up} ${s.d1}`}><Rich text={txt(hero, "headline")} em={s.em} /></h1>
-          </div>
-          <div className={`${s.up} ${s.d2}`} style={{ paddingBottom: 10 }}>
-            {txt(hero, "intro") && <p className={s.lead}>{txt(hero, "intro")}</p>}
-            <div style={{ display: "flex", gap: 24, alignItems: "center", marginTop: 32, flexWrap: "wrap" }}>
-              {txt(hero, "primary") && <SLink to={book} className={s.btn}>{txt(hero, "primary")}</SLink>}
-              {txt(hero, "secondary") && <a href="#books" className={s.hov} style={{ textDecoration: "none", fontSize: 15, fontWeight: 500 }}>{txt(hero, "secondary")} <span className={s.arr}>→</span></a>}
-            </div>
-          </div>
-        </div>
-        <div className={s.rule} style={{ marginTop: 72 }} />
-        {featured && (
-          <SLink to={href(featured.id)} className={`${s.stage} ${s.hov}`}>
-            <span className={s.cv}><Cover product={featured} className={s.cover} fallbackClassName={s.coverFallback} /></span>
-            {txt(hero, "caption") && <span className={`${s.mono} ${s.caption}`} style={{ left: 24 }}>{txt(hero, "caption")}</span>}
-            <span className={`${s.mono} ${s.caption}`} style={{ right: 24 }}>01 / {String(products.length).padStart(2, "0")}</span>
-          </SLink>
+      <section id="top" data-section="hero" className={`${s.wrap} ${s.hero}`}>
+        {(txt(hero, "kicker") || txt(hero, "note")) && (
+          <div className={`${s.kicker} ${s.fade}`}><span>{txt(hero, "kicker")}</span>{txt(hero, "note") && <span className={s.hideSm}>{txt(hero, "note")}</span>}</div>
         )}
+        <h1 className={s.h1}><Lines text={txt(hero, "headline")} /></h1>
+        <div className={s.heroFoot}>
+          {txt(hero, "intro") && <p className={`${s.lead} ${s.fade}`} style={{ animationDelay: ".35s" }}>{txt(hero, "intro")}</p>}
+          {(txt(hero, "primary") || txt(hero, "secondary")) && (
+            <div className={`${s.ctas} ${s.fade}`} style={{ animationDelay: ".45s" }}>
+              {txt(hero, "primary") && <SLink to={book} className={s.pill}>{txt(hero, "primary")} <span className={s.arrow}>→</span></SLink>}
+              {txt(hero, "secondary") && <a href="#ebooks" className={`${s.u} ${s.strong}`}>{txt(hero, "secondary")}</a>}
+            </div>
+          )}
+        </div>
       </section>
 
-      {S.facts.enabled && itm(S.facts, "items").length > 0 && (
-        <section data-section="facts" className={s.wrap}>
-          <div className={s.facts}>
-            {itm(S.facts, "items").map((f, i) => <div key={i}><div className={s.factV}>{f.value}</div><div className={s.label} style={{ marginTop: 6 }}>{f.label}</div></div>)}
+      {products.length > 0 && <Featured products={products} ctx={ctx} href={href} accent={t.accent} button={txt(hero, "button")} />}
+
+      {S.facts.enabled && facts.length > 0 && (
+        <section data-section="facts" aria-label="At a glance" className={s.wrap}>
+          <div className={s.facts} style={{ "--n": facts.length } as React.CSSProperties}>
+            {facts.map((f, i) => <div key={i}><div className={s.factV}>{f.value}</div><div className={s.factL}>{f.label}</div></div>)}
           </div>
         </section>
       )}
 
-      {S.spread.enabled && (
-        <section id="inside" data-section="spread" className={s.wrap} style={{ paddingTop: 160 }}>
-          <div className={s.two}>
-            <div>
-              <div className={s.label}>{txt(S.spread, "eyebrow")}</div>
-              <h2 className={s.h2}><Rich text={txt(S.spread, "title")} em={s.em} /></h2>
-              <p style={{ margin: "18px 0 0", fontSize: 16, lineHeight: 1.6, color: "var(--muted)", fontWeight: 300, maxWidth: 320 }}>{txt(S.spread, "text")}</p>
+      {order.includes("spread") && (
+        <section id="inside" data-section="spread" className={`${s.wrap} ${s.section} ${s.first}`}>
+          <div className={s.grow} />
+          <div className={s.split}>
+            <div className={`${s.side} ${s.reveal}`}>
+              <div className={s.label}>{num("spread")} {txt(S.spread, "eyebrow")}</div>
+              <h2 className={s.h2}><Rich text={txt(S.spread, "title")} em={s.soft} /></h2>
+              {txt(S.spread, "text") && <p className={s.sideText}>{txt(S.spread, "text")}</p>}
+              {featured && txt(S.spread, "link") && <SLink to={book} className={`${s.u} ${s.strong} ${s.self}`}>{txt(S.spread, "link")} <span className={s.arrow}>→</span></SLink>}
             </div>
-            <div className={s.spread}>
-              <div className={s.leaf}>
-                <div className={s.mono} style={{ fontSize: 10.5, color: "var(--muted)" }}>{txt(S.spread, "leftLabel")}</div>
-                <div style={{ marginTop: 44, fontSize: 28, fontWeight: 500, letterSpacing: "-.03em" }}>{txt(S.spread, "leftTitle")}</div>
-                <p style={{ margin: "18px 0 0", fontSize: 15, lineHeight: 1.75, color: "var(--body)", fontWeight: 300, flex: 1, whiteSpace: "pre-line" }}>{txt(S.spread, "leftText")}</p>
-                <div className={s.mono} style={{ fontSize: 11, color: "var(--muted)" }}>34</div>
+            <div className={`${s.spread} ${s.reveal}`}>
+              <div className={`${s.leaf} ${s.leafL}`}>
+                <div className={s.runHead}>{txt(S.spread, "leftLabel")}</div>
+                {txt(S.spread, "leftTitle") && <h3 className={s.leafTitle}>{txt(S.spread, "leftTitle")}</h3>}
+                <p className={s.leafText}><Rich text={txt(S.spread, "leftText")} em={s.bold} /></p>
+                <div className={s.folio}>{txt(S.spread, "leftPage")}</div>
               </div>
               <div className={s.leaf}>
-                <div className={s.mono} style={{ fontSize: 10.5, color: "var(--muted)", textAlign: "right" }}>{txt(S.spread, "rightLabel")}</div>
-                <div style={{ marginTop: 44, borderTop: "1px solid #111", flex: 1 }}>
-                  {itm(S.spread, "rows").map((r, i) => <div key={i} className={s.row}><span className={s.mono} style={{ fontSize: 12 }}>{r.k}</span><span style={{ color: "var(--body)" }}>{r.v}</span></div>)}
-                  {txt(S.spread, "tip") && <div className={s.tip}>{txt(S.spread, "tip")}</div>}
-                </div>
-                <div className={s.mono} style={{ fontSize: 11, color: "var(--muted)", textAlign: "right" }}>35</div>
+                <div className={s.runHead} style={{ textAlign: "right" }}>{txt(S.spread, "rightLabel")}</div>
+                {itm(S.spread, "rows").length > 0 && (
+                  <div className={s.table}>
+                    {itm(S.spread, "rows").map((r, i) => <div key={i}><span className={s.tk}>{r.k}</span><span>{r.v}</span></div>)}
+                  </div>
+                )}
+                {txt(S.spread, "tip") && <div className={s.tip}><span className={s.tipDot} /><span><Rich text={txt(S.spread, "tip")} em={s.bold} /></span></div>}
+                <div className={s.folio} style={{ textAlign: "right" }}>{txt(S.spread, "rightPage")}</div>
               </div>
             </div>
           </div>
         </section>
       )}
 
-      {S.changes.enabled && itm(S.changes, "items").length > 0 && (
-        <section data-section="changes" className={s.wrap} style={{ paddingTop: 160 }}>
-          <div className={s.label}>{txt(S.changes, "eyebrow")}</div>
-          <div className={s.four}>
-            {itm(S.changes, "items").map((c, i) => (
-              <div key={i}>
-                <div className={s.mono} style={{ fontSize: 12 }}>{String(i + 1).padStart(2, "0")}</div>
-                <div style={{ marginTop: 44, fontSize: 22, fontWeight: 500, letterSpacing: "-.02em" }}>{c.title}</div>
-                <p style={{ margin: "10px 0 0", fontSize: 15, lineHeight: 1.6, color: "var(--muted)", fontWeight: 300 }}>{c.text}</p>
-              </div>
+      {order.includes("changes") && (
+        <section data-section="changes" aria-label={txt(S.changes, "eyebrow")} className={`${s.wrap} ${s.section} ${order[0] === "changes" ? s.first : ""}`}>
+          <div className={s.grow} />
+          <div className={`${s.head} ${s.reveal}`}>
+            <div className={s.label}>{num("changes")} {txt(S.changes, "eyebrow")}</div>
+            {txt(S.changes, "title") && <h2 className={s.h2}><Rich text={txt(S.changes, "title")} em={s.soft} /></h2>}
+          </div>
+          <div className={`${s.outcomes} ${s.reveal}`} style={{ "--n": changes.length } as React.CSSProperties}>
+            {changes.map((c, i) => (
+              <div key={i}><span className={s.oN}>{nn(i + 1)}</span><span className={s.oT}>{c.title}</span>{c.text && <span className={s.oD}>{c.text}</span>}</div>
             ))}
           </div>
         </section>
       )}
 
-      <section id="books" data-section="books" className={s.wrap} style={{ paddingTop: 160 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div className={s.label}>{txt(S.books, "eyebrow")}</div><div className={s.label}>PDF · USD</div></div>
-        {!featured ? <p style={{ marginTop: 32, color: "var(--muted)" }}>No ebooks for sale yet.</p> : (
-          <SLink to={href(featured.id)} className={s.hov} style={{ textDecoration: "none", color: "inherit", display: "block", marginTop: 32, borderTop: "1px solid #111" }}>
-            <div className={s.feat}>
-              <div className={s.featStage}><span className={s.cv}><Cover product={featured} className={s.cover} fallbackClassName={s.coverFallback} /></span></div>
-              <div>
-                <div className={s.label}>01{featured.pageCount > 0 ? ` · ${featured.pageCount} pages` : ""}{rest.length > 0 ? " · Start here" : ""}</div>
-                <h3 style={{ margin: "16px 0 0", fontSize: 52, lineHeight: 1, fontWeight: 400, letterSpacing: "-.045em" }}>{featured.title}</h3>
-                {(featured.description || featured.subtitle) && <p style={{ margin: "20px 0 0", fontSize: 18, lineHeight: 1.6, color: "var(--body)", fontWeight: 300, maxWidth: 460 }}>{featured.description || featured.subtitle}</p>}
-                {itm(S.books, "rows").length > 0 && (
-                  <div style={{ marginTop: 28, borderTop: "1px solid var(--line)" }}>
-                    {itm(S.books, "rows").map((r, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 16, padding: "12px 0", borderBottom: "1px solid var(--line)", fontSize: 14.5 }}><span>{r.text}</span><span className={s.mono} style={{ fontSize: 11, color: "var(--muted)" }}>{r.ref}</span></div>
-                    ))}
+      <section id="ebooks" data-section="books" className={`${s.wrap} ${s.section} ${order[0] === "books" ? s.first : ""}`}>
+        <div className={s.grow} />
+        <div className={`${s.head} ${s.headRow} ${s.reveal}`}>
+          <div className={s.headCol}>
+            <div className={s.label}>{num("books")} {txt(S.books, "eyebrow")}</div>
+            <h2 className={s.h2}><Rich text={txt(S.books, "title")} em={s.soft} /></h2>
+          </div>
+          {txt(S.books, "note") && <span className={s.label}>{txt(S.books, "note")}</span>}
+        </div>
+        {products.length === 0 ? <p className={s.sideText}>No ebooks for sale yet.</p> : (
+          <div className={`${s.list} ${s.reveal}`}>
+            {products.map((p, i) => (
+              <SLink key={p.id} to={href(p.id)} className={s.row}>
+                <span className={s.rowN}>{nn(i + 1)}</span>
+                <span className={s.thumb}><Cover product={p} className={s.thumbImg} fallbackClassName={s.thumbFallback} /></span>
+                <div className={s.rowBody}>
+                  <div className={s.rowHead}>
+                    <span className={s.rowTitle}>{p.title}</span>
+                    {i === 0 && products.length > 1 && txt(S.books, "tag") && <span className={s.tag}>{txt(S.books, "tag")}</span>}
                   </div>
-                )}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 32, gap: 16, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 40, fontWeight: 400, letterSpacing: "-.04em" }}>{ctx.price(featured)}</span>
-                  <span className={s.btn} style={{ padding: "15px 26px" }}>{txt(S.books, "button")} <span className={s.arr}>→</span></span>
+                  <div className={s.rowDesc}>{[p.description || p.subtitle, p.pageCount > 0 ? `${p.pageCount} pp.` : null].filter(Boolean).join(" · ")}</div>
                 </div>
-              </div>
-            </div>
-          </SLink>
-        )}
-        {rest.length > 0 && (
-          <div className={s.list}>
-            {rest.map((p, i) => (
-              <SLink key={p.id} to={href(p.id)} className={`${s.item} ${s.hov}`}>
-                <span className={`${s.mono} ${s.num}`} style={{ fontSize: 12, color: "var(--muted)" }}>{String(i + 2).padStart(2, "0")}</span>
-                <span className={s.cv}><Cover product={p} className={s.thumb} fallbackClassName={s.thumbFallback} /></span>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: "-.03em" }}>{p.title}</div>
-                  <div style={{ marginTop: 4, fontSize: 15, color: "var(--muted)", fontWeight: 300 }}>{[p.description || p.subtitle, p.pageCount > 0 ? `${p.pageCount} pp.` : null].filter(Boolean).join(" · ")}</div>
-                </div>
-                <span style={{ fontSize: 22, letterSpacing: "-.02em" }}>{ctx.price(p)}</span>
-                <span className={s.arr} style={{ fontSize: 18 }}>→</span>
+                <span className={s.rowPrice}>{ctx.price(p)}</span>
+                <span aria-hidden className={`${s.roundArrow} ${s.arrow}`}>→</span>
               </SLink>
             ))}
           </div>
         )}
       </section>
 
-      {S.about.enabled && txt(S.about, "quote") && (
-        <section id="about" data-section="about" className={s.wrap} style={{ paddingTop: 160 }}>
-          <div className={s.two} style={{ borderTop: "1px solid #111", paddingTop: 40 }}>
-            <div className={s.label}>{txt(S.about, "eyebrow")}</div>
-            <div>
-              <p style={{ margin: 0, fontSize: 40, lineHeight: 1.18, fontWeight: 400, letterSpacing: "-.035em", whiteSpace: "pre-line" }}>{txt(S.about, "quote")}</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 36, flexWrap: "wrap" }}>
-                <Photo url={store.photoUrl} alt={`Photo of ${ctx.who}`} className={s.avatar} />
-                <div><div style={{ fontSize: 16, fontWeight: 500 }}>{txt(S.about, "name")}</div>{txt(S.about, "role") && <div style={{ fontSize: 14, color: "var(--muted)" }}>{txt(S.about, "role")}</div>}</div>
-                <div style={{ flex: 1 }} />
-                <div style={{ display: "flex", gap: 24, fontSize: 14 }}>{socialLinks(ctx).map((l) => <SLink key={l.label} to={l.href}>{l.label}</SLink>)}</div>
+      {showAbout && (
+        <section id="about" data-section="about" className={`${s.wrap} ${s.section}`}>
+          <div className={s.grow} />
+          <div className={`${s.split} ${s.reveal}`}>
+            <div className={s.side}>
+              <div className={s.label}>{num("about")} {txt(S.about, "eyebrow")}</div>
+              <div className={s.portrait}>
+                {store.photoUrl ? <Photo url={store.photoUrl} alt={`Photo of ${ctx.who}`} className={s.portraitImg} /> : <span className={s.portraitInit}>{initials(ctx.who)}</span>}
+              </div>
+            </div>
+            <div className={s.aboutMain}>
+              <p className={s.quote}><Rich text={txt(S.about, "quote")} em={s.soft} /></p>
+              <div className={s.aboutFoot}>
+                <div><div className={s.aboutName}>{txt(S.about, "name")}</div>{txt(S.about, "role") && <div className={s.aboutRole}>{txt(S.about, "role")}</div>}</div>
+                {socialLinks(ctx).length > 0 && (
+                  <div className={s.socials}>{socialLinks(ctx).map((l) => <SLink key={l.kind} to={l.href} className={s.u}>{l.label}</SLink>)}</div>
+                )}
               </div>
             </div>
           </div>
         </section>
       )}
 
-      {S.faq.enabled && itm(S.faq, "items").length > 0 && (
-        <section id="faq" data-section="faq" className={s.wrap} style={{ paddingTop: 160 }}>
-          <div className={s.two} style={{ borderTop: "1px solid #111", paddingTop: 40 }}>
-            <div>
-              <div className={s.label}>{txt(S.faq, "eyebrow")}</div>
-              {txt(S.faq, "title") && <h2 className={s.h2} style={{ fontSize: 32 }}>{txt(S.faq, "title")}</h2>}
+      {showFaq && (
+        <section id="help" data-section="faq" className={`${s.wrap} ${s.section}`}>
+          <div className={s.grow} />
+          <div className={s.split}>
+            <div className={`${s.side} ${s.reveal}`}>
+              <div className={s.label}>{num("faq")} {txt(S.faq, "eyebrow")}</div>
+              {txt(S.faq, "title") && <h2 className={s.h2}>{txt(S.faq, "title")}</h2>}
             </div>
-            <div>
-              {itm(S.faq, "items").map((q, i) => (
-                <details key={i} open={i === 0} className={s.faqItem}>
-                  <summary>{q.q}<span className={s.plus}>+</span></summary>
-                  <p style={{ margin: "12px 0 0", fontSize: 16, lineHeight: 1.6, color: "var(--muted)", fontWeight: 300, maxWidth: 620 }}>{q.a}</p>
-                </details>
-              ))}
+            <Faq items={faq} />
+          </div>
+        </section>
+      )}
+
+      {S.closing.enabled && (
+        <section data-section="closing" className={s.closing}>
+          <div className={`${s.wrap} ${s.closingIn}`}>
+            <h2 className={`${s.big} ${s.reveal}`}><Rich text={txt(S.closing, "title")} em={s.closingEm} /></h2>
+            <div className={s.closingFoot}>
+              {txt(S.closing, "fine") && <span>{txt(S.closing, "fine")}</span>}
+              {txt(S.closing, "button") && <SLink to={book} className={s.pill}>{txt(S.closing, "button")} <span className={s.arrow}>→</span></SLink>}
             </div>
           </div>
         </section>
       )}
 
-      {S.closing.enabled ? (
-        <section data-section="closing" className={s.wrap} style={{ paddingTop: 200, paddingBottom: 140 }}>
-          <h2 className={s.big}><Rich text={txt(S.closing, "title")} em={s.em} /></h2>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 24, marginTop: 48, paddingTop: 28, borderTop: "1px solid #111", flexWrap: "wrap" }}>
-            <p style={{ margin: 0, maxWidth: 380, fontSize: 16, lineHeight: 1.6, color: "var(--muted)", fontWeight: 300 }}>{txt(S.closing, "fine")}</p>
-            {txt(S.closing, "button") && <SLink to={book} className={s.btn} style={{ padding: "16px 28px" }}>{txt(S.closing, "button")}</SLink>}
-          </div>
-        </section>
-      ) : <div style={{ height: 120 }} />}
-
-      <footer className={`${s.wrap} ${s.footer}`}>
-        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-          <span>© {YEAR} {store.name}</span>
-          <SLink to={`/store/${store.slug}/terms`}>Terms of sale</SLink>
-          {store.contactEmail && <a href={`mailto:${store.contactEmail}`}>Contact</a>}
-        </div>
-        <SLink to="/" className={s.mono} style={{ fontSize: 12 }}>Made with Scrivetta</SLink>
-      </footer>
+      <Footer store={store} />
     </div>
+  );
+}
+
+// ---- Pieces --------------------------------------------------------------------
+
+/** The headline, one sliding line per line of text; a final period takes the accent. */
+function Lines({ text }: { text: string }) {
+  const lines = text.split("\n").filter((l, i, a) => l.trim() || a.length === 1);
+  return (
+    <>
+      {lines.map((line, i) => {
+        const last = i === lines.length - 1 && /\.$/.test(line) && !/\*$/.test(line);
+        return (
+          <span key={i} className={s.lineBox}>
+            <span className={s.line} style={{ animationDelay: `${i * 0.09}s` }}>
+              <Rich text={last ? line.slice(0, -1) : line} em={s.soft} />{last && <span className={s.accentText}>.</span>}
+            </span>
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** The featured shelf: one ebook at a time on a colored stage; turns by itself until someone uses the arrows. */
+function Featured({ products, ctx, href, accent, button }: { products: PublicStoreProduct[]; ctx: Ctx; href: (id: string) => string; accent: string; button: string }) {
+  const shelf = products.slice(0, STAGES.length);
+  const n = shelf.length;
+  const [i, setI] = useState(0);
+  const [manual, setManual] = useState(false);
+  useEffect(() => {
+    if (manual || n < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => setI((x) => (x + 1) % n), 6000);
+    return () => clearInterval(id);
+  }, [manual, n]);
+  const cur = shelf[i % n];
+  const stage = STAGES[i % n];
+  const go = (d: number) => { setI((x) => (x + d + n) % n); setManual(true); };
+
+  return (
+    <section data-section="featured" aria-label="Featured ebook" className={s.wrap}>
+      <div className={`${s.stage} ${s.fade}`} style={{ animationDelay: ".3s", background: stage.bg || accent, color: stage.ink }}>
+        <div className={s.stageTop}>
+          <span>Fig. {nn(i + 1)} — {cur.title}</span>{cur.pageCount > 0 && <span className={s.hideSm}>{cur.pageCount} pp.</span>}
+        </div>
+        <div className={s.stageCenter}>
+          <div className={s.stageBook}>
+            {shelf.map((p, k) => {
+              const d = (k - i + n) % n;
+              const pos = d === 0 ? s.bookOn : d === 1 ? s.bookNext : s.bookPrev;
+              return (
+                <SLink key={p.id} to={href(p.id)} className={`${s.stageCover} ${pos}`} label={p.title}>
+                  <Cover product={p} className={s.coverImg} fallbackClassName={s.coverFallback} />
+                </SLink>
+              );
+            })}
+          </div>
+        </div>
+        {n > 1 && (
+          <div className={s.stageBottom}>
+            <div className={s.counter}>
+              <span>{nn(i + 1)} / {nn(n)}</span>
+              <span className={s.dashes}>{shelf.map((_, k) => <span key={k} className={k === i ? s.dashOn : ""} />)}</span>
+            </div>
+            <div className={s.ctl}>
+              <button type="button" onClick={() => go(-1)} aria-label="Previous ebook"><Chevron d="M15 6l-6 6 6 6" /></button>
+              <button type="button" onClick={() => go(1)} aria-label="Next ebook"><Chevron d="M9 6l6 6-6 6" /></button>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className={s.featBar}>
+        <div className={s.featText}>
+          <div className={s.featTitle}>{cur.title}</div>
+          {(cur.subtitle || cur.description) && <div className={s.featBlurb}>{cur.subtitle || cur.description}</div>}
+        </div>
+        <div className={s.featBuy}>
+          <span className={s.featPrice}>{ctx.price(cur)}</span>
+          {button && <SLink to={href(cur.id)} className={`${s.pill} ${s.pillMd}`}>{button} <span className={s.arrow}>→</span></SLink>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Faq({ items }: { items: Item[] }) {
+  const [open, setOpen] = useState(0);
+  return (
+    <div className={`${s.faq} ${s.reveal}`}>
+      {items.map((x, i) => (
+        <div key={i} className={s.faqRow}>
+          <button type="button" className={s.faqQ} aria-expanded={open === i} onClick={() => setOpen(open === i ? -1 : i)}>
+            <span>{x.q}</span><span aria-hidden className={s.plus}>+</span>
+          </button>
+          {open === i && x.a && <p className={s.faqA}>{x.a}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Footer({ store }: { store: StoreProfile }) {
+  return (
+    <footer className={`${s.wrap} ${s.footer}`}>
+      <div className={s.footLinks}>
+        <span>© {YEAR} {store.name}</span>
+        <SLink to={`/store/${store.slug}/terms`} className={s.u}>Terms of sale</SLink>
+        {store.contactEmail && <a href={`mailto:${store.contactEmail}`} className={s.u}>Contact</a>}
+      </div>
+      <SLink to="/" className={`${s.u} ${s.made}`}><span className={s.madeS}>S</span>Made with Scrivetta</SLink>
+    </footer>
+  );
+}
+
+function Chevron({ d }: { d: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={d} />
+    </svg>
   );
 }
