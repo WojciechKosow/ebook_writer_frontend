@@ -16,7 +16,8 @@ const KEYWORDS = new Set(
   ("abstract async await break case catch class const continue def default do else enum export extends false final finally for from " +
     "func function if implements import in interface let new nil none null override package private protected public return self " +
     "static struct super switch this throw throws true try type val var void while with yield fn pub use mut impl match select where " +
-    "insert update delete create table values into and or not as is lambda elif except raise pass print").split(" "),
+    "insert update delete create table values into and or not as is lambda elif except raise pass print " +
+    "using namespace readonly string int bool record internal sealed val fun when go defer chan range nil ref crate mod").split(" "),
 );
 
 /** A tiny, language-agnostic highlighter: keywords, Types, @annotations, strings, numbers, comments. */
@@ -351,7 +352,8 @@ function HeroCode({ tabs, code, status }: { tabs: string[]; code: string; status
         {run > 0 && <div className={s.band} style={{ top: 20 + from * 28 }} data-steps={run} />}
         {lines.map((raw, i) => {
           const plus = raw.startsWith("+");
-          const line = plus ? raw.slice(1).replace(/^ /, "") : raw;
+          // The + takes the first column of the indent.
+          const line = plus ? ` ${raw.slice(1)}` : raw;
           return (
             <div key={i} className={s.cl}>
               <span className={s.ln}>{i + 1}</span>
@@ -494,7 +496,7 @@ function ShipTerminal({ window: title, code }: { window: string; code: string })
       <div className={`${s.termBody} ${s.noBar}`}>
         {lines.map((l, i) => (
           <div key={i} className={s.termLine} style={{ "--i": i } as React.CSSProperties}>
-            {l.startsWith("$") ? <><span className={s.muted}>$</span>{l.slice(1)}</> : <span className={/success|passed|✓/i.test(l) ? s.accentText : undefined}>{l}</span>}
+            {l.startsWith("$") ? <><span className={s.muted}>$</span>{l.slice(1)}</> : <span className={/success|passed|\bok\b|✓/i.test(l) ? s.accentText : undefined}>{l}</span>}
           </div>
         ))}
         <div className={s.termLine} style={{ "--i": lines.length } as React.CSSProperties}><span className={s.muted}>$</span> <span className={s.caret} /></div>

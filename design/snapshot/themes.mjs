@@ -5,6 +5,7 @@
 //   npx next build && npx next start -p 3100
 //   NODE_PATH=$(npm root -g) node design/snapshot/themes.mjs literary   # BASE=http://localhost:3100
 //   BOOKS=1 node design/snapshot/themes.mjs literary store   # a store with 1–5 books (default 3)
+//   VARIANT=rust node design/snapshot/themes.mjs code store  # a style variant (Code's language)
 //
 // Each page is saved whole (<id>.png) and cut into parts (parts/<id>-NN.png).
 //
@@ -160,7 +161,11 @@ const fullTheme = {
   },
 };
 
-const design = (full) => JSON.stringify({ v: 1, active: style, themes: full && fullTheme[style] ? { [style]: fullTheme[style] } : {} });
+// VARIANT=python picks a style variant (Code's programming language).
+const design = (full) => {
+  const theme = { ...(full ? fullTheme[style] : {}), ...(process.env.VARIANT ? { variant: process.env.VARIANT } : {}) };
+  return JSON.stringify({ v: 1, active: style, themes: Object.keys(theme).length ? { [style]: theme } : {} });
+};
 
 const publicStore = (full) => ({ store, products, themeSettings: design(full), featuredChapters: chapters });
 

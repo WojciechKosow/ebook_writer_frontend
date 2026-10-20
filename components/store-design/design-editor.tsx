@@ -361,6 +361,21 @@ export function DesignEditor({ token, initial }: { token: string; initial: Store
                   <p className="mt-3 text-[13px] text-muted">Used for buttons, links and highlights.</p>
                 </PanelSection>
 
+                {schema.variant && (
+                  <PanelSection title={schema.variant.label}>
+                    <div className="flex flex-wrap gap-2">
+                      {schema.variant.options.map((o) => (
+                        <button key={o.id} type="button" aria-pressed={resolved.variant === o.id}
+                          onClick={() => update((s) => { const n = { ...s }; if (o.id === schema.variant!.def) delete n.variant; else n.variant = o.id; return n; })}
+                          className={`rounded-full border px-3 py-1.5 text-[13px] ${resolved.variant === o.id ? "border-foreground bg-foreground text-background" : "border-hairline-2 text-foreground-2 hover:border-muted"}`}>
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-[13px] leading-relaxed text-muted">{schema.variant.hint}</p>
+                  </PanelSection>
+                )}
+
                 {schema.decor && (
                   <PanelSection>
                     <div className="flex items-center justify-between gap-4">
