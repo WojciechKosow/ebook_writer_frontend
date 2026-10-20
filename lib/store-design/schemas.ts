@@ -30,6 +30,11 @@ function firstParagraph(s: string | null): string {
   return s.split(/\n\s*\n/)[0].trim();
 }
 
+function firstSentence(s: string | null): string {
+  const p = firstParagraph(s);
+  return p.match(/^.+?[.!?](?=\s|$)/)?.[0] ?? p;
+}
+
 const faqDefaults = (c: Ctx): Item[] => [
   {
     q: "How do I get my ebook?",
@@ -44,9 +49,6 @@ const faqDefaults = (c: Ctx): Item[] => [
       : `Reply to your receipt email — you're buying directly from ${c.who}.`,
   },
 ];
-
-const tocDefaults = (c: Ctx): Item[] =>
-  c.chapters.slice(0, 12).map((ch) => ({ n: String(ch.number).padStart(2, "0"), t: ch.title, d: "", p: "" }));
 
 const f = {
   text: (key: string, label: string, def: (c: Ctx) => string, hint?: string): Field => ({ key, label, type: "text", def, hint }),
@@ -70,33 +72,6 @@ const faqSection = (title = "Before you buy", eyebrow = "FAQ"): SectionSchema =>
     f.text("eyebrow", "Small label", () => eyebrow),
     f.text("title", "Title", () => title),
     f.items("items", "Questions", [{ key: "q", label: "Question" }, { key: "a", label: "Answer", multiline: true }], faqDefaults, { max: 10 }),
-  ],
-});
-
-const contentsSection = (eyebrow: string, title: (c: Ctx) => string): SectionSchema => ({
-  id: "contents",
-  label: "Table of contents",
-  optional: true,
-  fields: [
-    f.text("eyebrow", "Small label", () => eyebrow),
-    f.text("title", "Title", title, HL),
-    f.area("text", "Intro", (c) =>
-      c.featured && c.chapters.length
-        ? `${c.chapters.length} chapters${c.featured.pageCount ? `, ${c.featured.pageCount} pages` : ""}.`
-        : "",
-    ),
-    f.items(
-      "items",
-      "Chapters",
-      [
-        { key: "t", label: "Title" },
-        { key: "n", label: "Number" },
-        { key: "d", label: "One-line description" },
-        { key: "p", label: "Pages (e.g. pp. 3–17)" },
-      ],
-      tocDefaults,
-      { max: 16, hint: "Starts from the chapters of your first ebook." },
-    ),
   ],
 });
 
@@ -192,7 +167,9 @@ const literary: StyleSchema = {
 
 // ---- Code (concept 2) -------------------------------------------------------------
 
-const SAMPLE_CODE = `@Service
+const HERO_CODE = `package shop.orders;
+
+@Service
 @RequiredArgsConstructor
 public class OrderService {
 
@@ -200,121 +177,151 @@ public class OrderService {
     private final PaymentGateway payments;
 
     @Transactional
-    public Order checkout(Cart cart) {
+    public Order checkout(Cart cart, String key) {
++       if (orders.existsByKey(key)) return orders.findByKey(key);
 +       if (cart.isEmpty()) throw new EmptyCartException();
-+       var order = Order.from(cart);
++       var order = Order.from(cart, key);
 +       payments.charge(order.total());
-        return orders.save(order);
++       return orders.save(order);
     }
 }`;
 
-const SAMPLE_TERMINAL = `$ ./mvnw test
-[INFO] Tests run: 42, Failures: 0, Errors: 0
-[INFO] BUILD SUCCESS  in 6.2s
-$ ./mvnw spring-boot:run
+const CHAPTER_CODE = `@Transactional
+public Order checkout(Cart cart, String key) {
+    if (orders.existsByKey(key)) {
+        return orders.findByKey(key);
+    }
+    if (cart.isEmpty()) throw new EmptyCartException();
+
+    var order = Order.from(cart, key);
+    payments.charge(order.total());
+    return orders.save(order);
+}`;
+
+const SHIP_TERMINAL = `$ ./mvnw verify
+[INFO] Tests run: 42, Failures: 0
+[INFO] BUILD SUCCESS
+$ docker compose up -d
 Started ShopApplication in 1.84 seconds`;
+
+/** The chapter the "inside a chapter" panel and the folder listing point at by default. */
+const showcaseChapter = (c: Ctx) => c.chapters[Math.min(4, c.chapters.length - 1)]?.number ?? 5;
+const nn = (n: number) => String(n).padStart(2, "0");
 
 const code: StyleSchema = {
   id: "code",
   name: "Code",
-  tagline: "A dark, technical look with a live editor window. For programming and tech books.",
-  swatch: { bg: "#07080A", fg: "#C9D1DC", accent: "#8AB4FF", font: "var(--sd-geist), system-ui, sans-serif", sample: "{ }" },
-  accents: ["#8AB4FF", "#6EE7B7", "#F5C88A", "#C4A7FF"],
-  decor: {
-    options: [
-      { id: "beams", label: "Light beams" },
-      { id: "stream", label: "Code stream" },
-      { id: "none", label: "None" },
-    ],
-    def: "beams",
-  },
+  tagline: "Near-black, Geist and code you can read line by line. For programming and tech books.",
+  swatch: { bg: "#090B0E", fg: "#E8EAED", accent: "#6EE7A0", font: "var(--sd-geist), system-ui, sans-serif", sample: "{ }" },
+  accents: ["#6EE7A0", "#F2B866", "#8AB4F8", "#C4A7FF"],
+  decor: { options: [{ id: "code", label: "Code behind the book" }, { id: "none", label: "None" }], def: "code" },
   sections: [
     {
       id: "hero",
       label: "Hero",
       fields: [
-        f.text("badgeTag", "Badge tag", () => "NEW"),
-        f.text("badge", "Badge text", (c) => c.featured?.title ?? ""),
-        f.area("headline", "Headline", headline, HL),
+        f.text("badgeTag", "Badge tag", () => "New"),
+        f.text("badge", "Badge text", (c) => (c.featured ? `${c.featured.title} is out` : ""), "Leave empty to hide the badge."),
+        f.area("headline", "Headline", headline, "Wrap words in *asterisks* to soften them (shown in grey). A new line starts a new line."),
         f.area("intro", "Intro", intro),
-        f.text("primary", "Main button", (c) => buy(c, "Get")),
-        f.text("secondary", "Second button", () => "See the table of contents"),
+        f.text("primary", "Main button", () => "Get the book", "The price is added next to it."),
+        f.text("secondary", "Second button", () => "Look inside", "Wrap words in *asterisks* to soften them."),
+        f.text("byline", "Line under your name", () => "", "E.g. what you do or how long you've done it. Leave empty to hide."),
+        f.list("tabs", "Code behind the book — open files", () => ["OrderService.java", "Order.java", "application.yml"],
+          "Shown when the moving background is on. The first file is the open one."),
+        f.code("code", "Code behind the book", () => HERO_CODE, "Start a line with + to mark it as added; the last added line types itself out."),
+        f.list("status", "Code behind the book — status bar", () => ["Java 21", "UTF-8", "● 42 tests passing"], "The last item takes the accent color."),
       ],
     },
     {
-      id: "editor",
-      label: "Editor window",
+      id: "glance",
+      label: "At a glance (numbers)",
       optional: true,
       fields: [
-        f.text("window", "Window title", (c) => (c.featured ? `${slugify(c.featured.title)} — chapter-01` : "project — chapter-01")),
-        f.list("tabs", "Open files (first is active)", () => ["OrderService.java", "Order.java", "application.yml"]),
-        f.list("tree", "Sidebar", (c) =>
-          c.chapters.length ? c.chapters.slice(0, 10).map((ch) => `${String(ch.number).padStart(2, "0")}-${slugify(ch.title)}`) : ["01-setup", "02-basics", "03-project"],
-          "One entry per line. Start a line with two spaces to indent it; the first indented line is shown as open."),
-        f.code("code", "Code", () => SAMPLE_CODE, "Start a line with + to mark it as added in this chapter."),
-        f.text("callout", "Callout next to the code", () => "You write these lines in chapter 05"),
-        f.code("terminal", "Terminal", () => SAMPLE_TERMINAL, "Lines starting with $ are shown as commands."),
-        f.text("statusLeft", "Status bar — left", () => "chapter-05 · orders & transactions"),
-        f.text("statusRight", "Status bar — right", () => "Java 21 · Spring Boot 3 · UTF-8"),
+        f.items("items", "Numbers", [{ key: "value", label: "Number" }, { key: "label", label: "Label" }], (c) =>
+          ([
+            c.featured?.pageCount ? { value: String(c.featured.pageCount), label: "pages" } : null,
+            c.chapters.length ? { value: String(c.chapters.length), label: "chapters, one project" } : null,
+            c.products.length > 1 ? { value: String(c.products.length), label: "books" } : null,
+            { value: "PDF", label: "instant download" },
+          ] as (Item | null)[]).filter((x): x is Item => !!x), { max: 4 }),
+        f.text("stackLabel", "Tech stack — label", () => "stack"),
+        f.list("stack", "Tech stack", () => ["Java 21", "Spring Boot 3", "PostgreSQL 16", "Docker", "JUnit 5", "Testcontainers"], "Leave empty to hide the row."),
       ],
     },
     {
-      id: "stack",
-      label: "Tech stack strip",
+      id: "inside",
+      label: "Inside a chapter (notes + code)",
       optional: true,
       fields: [
-        f.text("label", "Label", () => "BUILT ON"),
-        f.list("items", "Technologies", () => ["Java 21", "Spring Boot 3", "PostgreSQL 16", "Docker", "JUnit 5"]),
+        f.text("eyebrow", "Small label", () => "Inside a chapter"),
+        f.text("title", "Title", () => "Explained line by line, *like a good code review.*", HL),
+        f.area("text", "Text", () => "You read why, then write the code. Hover a note to see exactly which lines it explains."),
+        f.text("file", "Page — file name", (c) => `chapter-${nn(showcaseChapter(c))}.pdf`),
+        f.text("page", "Page — page number", () => "p. 112"),
+        f.text("label", "Page — chapter", (c) => {
+          const ch = c.chapters.find((x) => x.number === showcaseChapter(c));
+          return ch ? `${nn(ch.number)} · ${ch.title}` : "05 · Orders: idempotency and state machines";
+        }),
+        f.text("heading", "Page — title", () => "Make checkout safe to retry"),
+        f.area("pageText", "Page — text", () => "Networks fail. A customer double-taps “Pay”, a mobile client retries after a timeout — and without protection you charge them twice."),
+        f.items("notes", "Notes", [{ key: "text", label: "Note", multiline: true }, { key: "lines", label: "Code lines it explains (e.g. 3-5)" }], () => [
+          { text: "Take an idempotency key from the client and check it first. Seen it before? Return the original order instead of creating a new one.", lines: "3-5" },
+          { text: "Only then charge. With `@Transactional`, the order and the payment both happen — or neither does.", lines: "9" },
+        ], { max: 4, hint: "Wrap code in `backticks`. The notes take turns; hovering one shows its lines." }),
+        f.text("codeFile", "Code — file name", () => "OrderService.java"),
+        f.text("codePath", "Code — folder", () => "src/main/java/shop/orders"),
+        f.code("code", "Code", () => CHAPTER_CODE),
+        f.text("test", "Test result — name", () => "CheckoutIdempotencyTest", "Leave empty to hide the result line."),
+        f.text("testResult", "Test result — details", () => "3 passed · 0.41s"),
+        f.items("cards", "Cards under the code", [{ key: "title", label: "Title" }, { key: "cmd", label: "Command" }, { key: "text", label: "Text", multiline: true }], () => [
+          { cmd: "$ git log --oneline", title: "One commit per chapter", text: "Stuck? Diff your code against the reference." },
+          { cmd: "$ ./mvnw test", title: "Tests in every chapter", text: "Unit and integration tests with Testcontainers." },
+          { cmd: "$ docker compose up", title: "Ends in production", text: "The last chapter ships what you built." },
+        ], { max: 4 }),
       ],
     },
     {
-      id: "build",
-      label: "What you build (cards)",
+      id: "files",
+      label: "What you get (files + folders)",
       optional: true,
       fields: [
-        f.text("eyebrow", "Small label", () => "WHAT YOU BUILD"),
-        f.text("title", "Title", () => "A real project, shaped like the ones you’ll work on."),
-        f.text("flowTitle", "Big card — title", () => "Layered architecture, end to end"),
-        f.text("flowText", "Big card — text", () => "Every layer is something you write and test yourself."),
-        f.list("flow", "Big card — diagram (left to right, 2nd is highlighted)", () => ["Client", "REST API", "Services", "Repositories", "PostgreSQL"]),
-        f.list("chips", "Big card — tags", () => ["Payments", "JWT auth", "Migrations", "Error handling"]),
-        f.text("commitsTitle", "Commits card — title", () => "One commit per chapter"),
-        f.text("commitsText", "Commits card — text", () => "Stuck? Diff against the reference."),
-        f.items("commits", "Commits", [{ key: "m", label: "Message" }, { key: "h", label: "Hash" }], (c) =>
-          (c.chapters.length ? c.chapters.slice(0, 5).map((ch) => `feat: ${ch.title.toLowerCase()}`) : ["feat: project setup", "feat: first endpoint", "test: integration tests"])
-            .map((m, i) => ({ h: ["c41e9a2", "9b07f13", "3fd2c80", "e6a1b45", "07c3d9e"][i] ?? "a1b2c3d", m })),
-          { max: 6 }),
-        f.text("testsTitle", "Tests card — title", () => "Tested like production code"),
-        f.text("testsText", "Tests card — text", () => "Unit and integration tests in every chapter."),
-        f.text("testsLabel", "Tests card — result", () => "42 passing · 0 failing"),
-        f.text("shipTitle", "Code card — title", () => "Ships in a container"),
-        f.text("shipText", "Code card — text", () => "The last chapter deploys what you built."),
-        f.code("shipCode", "Code card — code", () => `FROM eclipse-temurin:21-jre\nCOPY target/app.jar app.jar\nEXPOSE 8080\nENTRYPOINT ["java","-jar","app.jar"]`),
-        f.text("noteTitle", "Annotation card — title", () => "Code that reads well on paper"),
-        f.text("noteText", "Annotation card — text", () => "Syntax-highlighted listings, explained line by line."),
-        f.text("noteCode", "Annotation card — code line", () => "@Transactional"),
-        f.area("noteBody", "Annotation card — explanation", () => "Either the order and the payment both happen, or neither does. That’s the whole point of this annotation."),
+        f.text("eyebrow", "Small label", () => "What you get"),
+        f.text("title", "Title", () => "Everything you need *to follow along.*", HL),
+        f.area("text", "Text", () => "Every chapter is its own folder you can run — so you can start anywhere and always compare with working code."),
+        f.items("rows", "Files", [{ key: "name", label: "What it is" }, { key: "ext", label: "Type (e.g. .pdf)" }, { key: "size", label: "Size" }], () => [
+          { ext: ".pdf", name: "The book", size: "" },
+        ], { max: 6 }),
+        f.text("window", "Terminal — title", () => "~/books — zsh"),
+        f.text("root", "Terminal — folder", (c) => `${slugify(c.featured?.title ?? "project")}/`),
+        f.list("tree", "Terminal — what's inside", (c) => {
+          const ch = c.chapters.slice(0, 12);
+          if (!ch.length) return ["01-setup/", "02-first-feature/", "03-tests/", "README.md"];
+          const names = ch.map((x) => `${nn(x.number)}-${shortSlug(x.title)}/`);
+          const hi = Math.min(4, names.length - 1);
+          return [...names.map((n, i) => (i === hi ? `> ${n.padEnd(22)}# ← you saw this` : n)), "README.md"];
+        }, "One per line. Folders end with /. Start a line with > to highlight it; text after # is a comment."),
       ],
     },
     {
       id: "books",
       label: "Books",
       fields: [
-        f.text("eyebrow", "Small label", () => "THE BOOKS"),
-        f.text("title", "Title", () => "Pick a project. Ship it."),
-        f.list("bullets", "Featured book — bullet points", () => ["Build a real project chapter by chapter", "Every chapter ends with working code", "Source code included"]),
-        f.text("button", "Featured book — button", () => "Get the book →"),
+        f.text("eyebrow", "Small label", (c) => (c.products.length > 1 ? "The books" : "The book")),
+        f.text("note", "Small print", () => "prices in USD"),
+        f.text("title", "Title", () => "Pick a project. *Ship it.*", HL),
+        f.text("tag", "Tag on the first book", () => "start here", "Shown when there's more than one book. Leave empty to hide."),
+        f.text("button", "Card link", () => "View book →"),
       ],
     },
-    contentsSection("CONTENTS", (c) => (c.featured ? `Inside ${c.featured.title}` : "Contents")),
     {
       id: "about",
       label: "About the author",
       optional: true,
       fields: [
-        f.text("eyebrow", "Small label", () => "THE AUTHOR"),
-        f.text("title", "Name", (c) => c.who),
-        f.area("text", "Text", (c) => c.store.description || ""),
+        f.text("eyebrow", "Small label", () => "The author"),
+        f.area("quote", "Quote", (c) => (c.store.description ? `“${firstParagraph(c.store.description)}”` : ""), HL),
+        f.area("text", "Text under the quote", (c) => c.store.description?.split(/\n\s*\n/).slice(1).join("\n\n").trim() ?? ""),
       ],
     },
     faqSection(),
@@ -323,11 +330,18 @@ const code: StyleSchema = {
       label: "Closing call to action",
       optional: true,
       fields: [
-        f.text("title", "Title", (c) => (c.featured ? `Your first real project is ${c.chapters.length || "a few"} chapters away.` : "Start building today.")),
-        f.text("primary", "Main button", (c) => buy(c, "Get")),
-        f.text("secondary", "Second button", () => "All books"),
-        f.text("fine", "Small print", () => "PDF by email · Secure checkout by Stripe · Sold directly by the author"),
+        f.area("title", "Title", (c) => (c.chapters.length ? `Your first real project is *${c.chapters.length} chapters away.*` : "Start building *today.*"), HL),
+        f.text("primary", "Main button", () => "Get the book", "The price is added next to it."),
+        f.text("secondary", "Second button", (c) => (c.products.length > 1 ? "All books" : "")),
+        f.list("fine", "Small print", () => ["instant download", "stripe checkout", "sold directly by the author"]),
+        f.text("window", "Terminal — title", (c) => `chapter-${nn(c.chapters.at(-1)?.number ?? 12)} — zsh`),
+        f.code("terminal", "Terminal", () => SHIP_TERMINAL, "Lines starting with $ are commands; a line with SUCCESS takes the accent color. Leave empty to hide."),
       ],
+    },
+    {
+      id: "footer",
+      label: "Footer",
+      fields: [f.area("text", "About the store", (c) => firstSentence(c.store.description))],
     },
   ],
 };
@@ -624,6 +638,14 @@ const bold: StyleSchema = {
 };
 
 export const STYLES: Record<StyleId, StyleSchema> = { literary, code, minimal, modern, bold };
+
+/** A slug cut at a word, for folder names in the terminal listing. */
+function shortSlug(s: string, max = 18): string {
+  const full = slugify(s);
+  if (full.length <= max) return full;
+  const cut = full.slice(0, max + 1);
+  return cut.slice(0, cut.lastIndexOf("-") > 0 ? cut.lastIndexOf("-") : max);
+}
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 28) || "chapter";

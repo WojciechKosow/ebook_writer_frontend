@@ -45,11 +45,11 @@ export const PAGE_THEMES: Record<StyleId, PageTheme> = {
     cardRadius: "6px", cardBorder: "1px solid #DCD3C4", cardShadow: "none",
   },
   code: {
-    accentText: "accent", dark: true, bg: "#07080A", surface: "#0E1014", surface2: "#14171C", ink: "#E6EBF1", body: "#C9D1DC", muted: "#8B95A3",
-    line: "rgba(255,255,255,.09)", display: "var(--sd-geist), system-ui, sans-serif", text: "var(--sd-geist), system-ui, sans-serif",
-    mono: "var(--font-geist-mono), ui-monospace, monospace", displayWeight: 600, displayCase: "none", displayTracking: "-0.04em",
-    btnBg: "accent", btnFg: "#07080A", btnRadius: "10px", btnBorder: "none", btnShadow: "0 10px 30px -12px color-mix(in srgb, var(--pp-accent) 60%, transparent)",
-    cardRadius: "14px", cardBorder: "1px solid rgba(255,255,255,.09)", cardShadow: "none",
+    accentText: "accent", dark: true, bg: "#090B0E", surface: "#0D1014", surface2: "#101318", ink: "#E8EAED", body: "#C5CBD3", muted: "#8A939E",
+    line: "rgba(255,255,255,.08)", display: "var(--sd-geist), system-ui, sans-serif", text: "var(--sd-geist), system-ui, sans-serif",
+    mono: "var(--font-geist-mono), ui-monospace, monospace", displayWeight: 600, displayCase: "none", displayTracking: "-0.038em",
+    btnBg: "#EDEFF2", btnFg: "#090B0E", btnRadius: "12px", btnBorder: "none", btnShadow: "inset 0 -1px 0 rgba(0,0,0,.18), 0 10px 30px -10px rgba(237,239,242,.25)",
+    cardRadius: "16px", cardBorder: "1px solid rgba(255,255,255,.08)", cardShadow: "none",
   },
   minimal: {
     accentText: "accent", dark: false, bg: "#F5F4F0", surface: "#FFFFFF", surface2: "#ECEAE4", ink: "#111111", body: "#3F3D39", muted: "#6E6B65",
