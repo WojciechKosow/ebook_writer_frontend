@@ -169,7 +169,7 @@ export function LandingCraft() {
 
 export function LandingEditor() {
   const points: [string, string, string][] = [
-    ["i", "Rewrite anything", " — by hand, or ask for a tighter version of a paragraph."],
+    ["i", "Rewrite anything", " — a sentence, a paragraph or a whole chapter."],
     ["ii", "Add, remove or reorder chapters", " with drag and drop."],
     ["iii", "Place and resize images", ", change the cover text and style."],
   ];
@@ -225,11 +225,6 @@ export function LandingEditor() {
                 fully own
               </span>{" "}
               — before the inbox, before the calls.
-              <div className="mt-3.5 inline-flex flex-wrap gap-1.5 rounded-xl bg-ip-ink p-1.5 font-sans text-xs text-ip-bg">
-                <span className="rounded-lg bg-white/15 px-2.5 py-1.5">Tighten</span>
-                <span className="px-2.5 py-1.5 opacity-80">Warmer</span>
-                <span className="px-2.5 py-1.5 opacity-80">Add example</span>
-              </div>
             </div>
           </div>
         </div>
@@ -256,7 +251,7 @@ export function LandingSample() {
             A book you can <em>hold</em>, not a chat you copy.
           </h2>
           <p className="m-0 max-w-[440px] opacity-80">
-            Chapter openers, running heads, drop caps and a real table of contents — exported as
+            Chapter openers, page numbers and a real table of contents — exported as
             a 6×9″ PDF that&apos;s ready to read, share or self-publish.
           </p>
           <div className="flex flex-wrap gap-3">
@@ -294,7 +289,7 @@ export function LandingSample() {
             <div className="font-display text-xl leading-[1.1]">Meet your starter</div>
             <div className="mb-1 mt-0.5 h-px w-[26px] bg-[#c9a063]" />
             <div className="font-display text-[10px] leading-[1.65] text-[#4b453c]">
-              <span className="float-left pr-[5px] pt-[3px] text-[34px] leading-[.85] text-[#1b1814]">A</span> starter
+              A starter
               is a living thing, and like most living things it rewards attention more than
               precision. Feed it, watch it, learn its rhythm.
             </div>

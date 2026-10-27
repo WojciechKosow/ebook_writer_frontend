@@ -7,7 +7,7 @@ import { LEGAL_UPDATED } from "@/lib/legal";
 // you edit a page's copy. Google only trusts <lastmod> while it stays accurate,
 // so it must not move on every deploy.
 const UPDATED = {
-  home: "2026-10-11",
+  home: "2026-10-27",
   aiEbookGenerator: "2026-10-11",
   howToWriteAnEbook: "2026-10-11",
   aiBookWriter: "2026-10-27",

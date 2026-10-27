@@ -79,8 +79,7 @@ function HeroArt() {
         <div className="font-display text-[26px] leading-[1.1]">Designing your morning</div>
         <div className="my-1 h-px w-9 bg-ip-brass-l" />
         <div className="font-display text-[12.5px] leading-[1.65] text-ip-ink-2">
-          <span className="float-left pr-1.5 pt-1 text-[46px] leading-[.85] text-ip-ink">T</span>
-          he first hour sets the tone for everything that follows. Not because mornings are magic,
+          The first hour sets the tone for everything that follows. Not because mornings are magic,
           but because they are the only part of the day you fully own — before the inbox, before
           the calls, before anyone else&apos;s priorities arrive at your door.
         </div>
