@@ -10,6 +10,7 @@ const UPDATED = {
   home: "2026-10-11",
   aiEbookGenerator: "2026-10-11",
   howToWriteAnEbook: "2026-10-11",
+  aiBookWriter: "2026-10-27",
 };
 
 const day = (date: string) => new Date(`${date}T00:00:00Z`);
@@ -24,6 +25,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: `${SITE_URL}/ai-ebook-generator`,
       lastModified: day(UPDATED.aiEbookGenerator),
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
+    {
+      url: `${SITE_URL}/ai-book-writer`,
+      lastModified: day(UPDATED.aiBookWriter),
       changeFrequency: "monthly",
       priority: 0.9,
     },

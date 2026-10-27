@@ -17,6 +17,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     links: [
       { label: "Blog", href: "/blog" },
       { label: "AI ebook generator", href: "/ai-ebook-generator" },
+      { label: "AI book writer", href: "/ai-book-writer" },
       { label: "Write an ebook with AI", href: "/how-to-write-an-ebook-with-ai" },
     ],
   },
