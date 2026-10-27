@@ -35,7 +35,13 @@ Don't use ${BRAND} for anything illegal, to infringe others' rights, to create h
 
 ## 7. Credits and payments
 
-Writing books uses credits, as described on the [pricing page](/#pricing) at the time of purchase. Payments are processed by Stripe. Credits have no cash value and can't be transferred. If you're a consumer, starting a book generation is your request for us to perform the service immediately.
+AI work — writing books, AI images and covers — uses credits, as described on the [pricing page](/pricing) at the time of purchase. Credits measure AI usage, not pages, and we don't guarantee a book length for a number of credits. Payments are processed by Stripe. Credits have no cash value and can't be transferred.
+
+- **Pro** is a monthly subscription that renews until you cancel. Each paid billing period includes a set number of credits; unused monthly credits don't carry over to the next period and end when the subscription ends. If you cancel, Pro stays active until the end of the period you've paid for.
+- **Credit packs** are one-time purchases. Their credits don't expire.
+- Monthly credits are used before pack credits. If a paid step fails, its credits are returned. If a payment is refunded or reversed, we remove the credits it added that are still unused.
+
+If you're a consumer, starting a book generation is your request for us to perform the service immediately.
 
 ## 8. Liability
 

@@ -1,6 +1,6 @@
 import { BRAND } from "@/lib/brand";
 import { SITE_URL, SITE_DESCRIPTION } from "@/lib/site";
-import { PACKS, SUBSCRIPTION } from "@/lib/pricing";
+import { PACKS, PRO } from "@/lib/pricing";
 import { FAQ_ITEMS } from "./faq";
 
 /**
@@ -12,9 +12,7 @@ import { FAQ_ITEMS } from "./faq";
 
 // All published prices (subscription + one-time packs) as plain numbers, so the
 // AggregateOffer's low/high price band tracks the real pricing config.
-const PRICES = [SUBSCRIPTION.priceLabel, ...PACKS.map((p) => p.priceLabel)].map(
-  (label) => Number(label.replace(/[^0-9.]/g, "")),
-);
+const PRICES = [0, PRO.priceCents, ...PACKS.map((p) => p.priceCents)].map((cents) => cents / 100);
 
 export function StructuredData() {
   const graph = {

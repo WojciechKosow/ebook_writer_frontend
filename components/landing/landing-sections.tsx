@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PACKS, SUBSCRIPTION } from "@/lib/pricing";
+import { CreditNotes, CreditPacks, PricingPlans } from "@/components/landing/pricing";
 
 const card = "ip-card ip-rv min-w-0 rounded-3xl border border-ip-hair bg-ip-surface";
 const h2 = "ip-display m-0 text-[clamp(36px,4.4vw,60px)]";
@@ -421,70 +421,33 @@ export function LandingAudience() {
 }
 
 export function LandingPricing() {
-  const perks = [
-    "Full-length ebooks, cover to cover",
-    "Blueprint, chapters and an editorial pass",
-    "Typeset PDF export",
-    "Credits never expire",
-  ];
   return (
     <section id="pricing" className="mx-auto w-full max-w-[1200px] px-4 pb-10 pt-24 sm:px-6 md:pt-[110px]">
-      <div className="ip-rv mb-12 text-center">
+      <div className="ip-rv mb-12 flex flex-col items-center gap-4 text-center">
+        <span className="ip-eyebrow">Pricing</span>
         <h2 className={h2}>
-          Pay only for the <em className="text-ip-brass">pages you get</em>
+          Plan for free. Pay for the <em className="text-ip-brass">writing.</em>
         </h2>
-        <p className="mx-auto mb-0 mt-4 max-w-[560px] text-ip-ink-2">
-          Planning is free. 1 credit = 1 finished page, charged only for pages actually
-          produced. Credits never expire.
+        <p className="m-0 max-w-[600px] text-ip-ink-2">
+          Your brief, sources and blueprint cost nothing. Credits cover the AI work — chapters, images and
+          covers — and you always see the estimate before anything runs.
         </p>
       </div>
-      <div className="grid grid-cols-1 items-stretch gap-5 md:grid-cols-2">
-        <article className="ip-card ip-rv relative flex flex-col gap-[18px] rounded-[28px] border border-ip-brass-l bg-ip-surface p-7 ip-shadow sm:p-10">
-          <span className="absolute right-5 top-5 rounded-full bg-ip-brass-soft px-3 py-[5px] text-xs font-semibold text-ip-brass">
-            Best value
-          </span>
-          <h3 className="m-0 text-[15px] font-semibold text-ip-ink-2">Author plan</h3>
-          <div className="flex flex-wrap items-baseline gap-x-2">
-            <span className="font-display text-[clamp(52px,7vw,64px)] font-light leading-none tracking-[-0.03em]">
-              {SUBSCRIPTION.priceLabel}
-            </span>
-            <span className="text-ip-muted">/ {SUBSCRIPTION.period}</span>
-          </div>
-          <p className="m-0 text-ip-ink-2">
-            {SUBSCRIPTION.credits} credits every month — a full book or several shorter guides.
-          </p>
-          <ul className="m-0 mt-1 flex list-none flex-col gap-2.5 p-0 text-[15px]">
-            {perks.map((p) => (
-              <li key={p} className="flex gap-2.5">
-                <Check size={18} className="mt-0.5" />
-                {p}
-              </li>
-            ))}
-          </ul>
-          <Link href="/register" className="ip-cta mt-auto rounded-[14px] bg-ip-ink p-4 text-center font-semibold text-ip-bg">
-            Start writing
-          </Link>
-        </article>
-        <article className="ip-card ip-rv flex flex-col gap-[18px] rounded-[28px] border border-ip-hair bg-ip-surface p-7 sm:p-10">
-          <h3 className="m-0 text-[15px] font-semibold text-ip-ink-2">One-time credit packs</h3>
-          <p className="m-0 text-ip-ink-2">No subscription — top up when you need to.</p>
-          <div className="flex flex-col border-t border-ip-hair">
-            {PACKS.map((p) => (
-              <div key={p.credits} className="flex items-baseline justify-between border-b border-ip-hair py-[18px]">
-                <span>{p.credits} credits</span>
-                <span className="font-display text-[30px] font-light">{p.priceLabel}</span>
-              </div>
-            ))}
-          </div>
-          <Link href="/register" className="ip-cta mt-auto rounded-[14px] border border-ip-line p-4 text-center font-semibold">
-            Create an account
-          </Link>
-        </article>
+      <div className="flex flex-col gap-5">
+        <PricingPlans />
+        <CreditPacks />
       </div>
-      <p className="ip-rv mx-auto mb-0 mt-6 max-w-[640px] text-center text-sm text-ip-muted">
-        What you get: a blueprint you approved, every chapter, an editorial pass, a quality check
-        and a typeset PDF.
-      </p>
+      <div className="mt-16">
+        <CreditNotes />
+      </div>
+      <div className="ip-rv mt-12 flex justify-center">
+        <Link href="/pricing" className="inline-flex min-h-11 items-center gap-2 text-[15px] font-medium hover:text-ip-brass">
+          Compare plans and read the pricing FAQ
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </Link>
+      </div>
     </section>
   );
 }

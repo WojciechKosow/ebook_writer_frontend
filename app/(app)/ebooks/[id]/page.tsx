@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useCredits } from "@/lib/credits-context";
 import { ebookApi, ApiError } from "@/lib/api";
 import { useAssets } from "@/lib/use-assets";
+import { creditsUsedLabel } from "@/lib/pricing";
 import type { BookDepth, BookScopeResponse, EbookStatusResponse, ScopeDecision } from "@/lib/types";
 import { StatusBadge, ProgressBar } from "@/components/ebook-ui";
 import { AssetManager } from "@/components/asset-manager";
@@ -389,7 +390,7 @@ export default function EbookDetailPage() {
               )}{" "}
               {insufficient
                 ? `To generate, you need up to ${required} credits — the high end of the estimate, so the book is never cut short to fit your balance. Add credits or choose a lighter depth.`
-                : "These are estimates, not limits: the finished book may be shorter or longer if its content needs it. You're only billed for the pages actually produced (1 credit = 1 page)."}
+                : "These are estimates, not limits: the finished book may be shorter or longer if its content needs it. Credits are held when you start and settled at the end — you're only charged for the pages and images actually produced."}
               {estimate?.capped && " Your materials suggest more than one book can hold — consider splitting them into several books."}
             </p>
           </section>
@@ -480,7 +481,7 @@ export default function EbookDetailPage() {
           {ebook.actualPageCount > 0 && (
             <p className="mt-2 text-sm font-medium text-good">
               {ebook.actualPageCount} pages
-              {startEstimate ? ` (estimated ${startEstimate})` : ""} · {ebook.creditsCharged} credits used
+              {startEstimate ? ` (estimated ${startEstimate})` : ""} · {creditsUsedLabel(ebook)}
               {balance !== null && ` · ${balance} credits remaining`}
             </p>
           )}

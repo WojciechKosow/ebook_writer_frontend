@@ -10,4 +10,4 @@ export const OPERATOR = {
 };
 
 /** Date the current Privacy Policy and Terms took effect (YYYY-MM-DD). */
-export const LEGAL_UPDATED = "2026-10-11";
+export const LEGAL_UPDATED = "2026-10-27";

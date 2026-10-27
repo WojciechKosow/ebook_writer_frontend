@@ -119,8 +119,8 @@ export function EmptyLibrary({ balance }: { balance: number | null }) {
       {balance !== null && (
         <p className="border-t border-dashed border-hairline-2 bg-surface-2 px-5 py-4 text-center text-[13px] text-muted">
           You have <b className="font-semibold text-foreground">{balance.toLocaleString("en")} credits</b>
-          . 1 credit ≈ 1 page — Scrivetta estimates each book&apos;s length from its topic, materials and
-          depth, and you only pay for pages actually written.
+          . Credits cover the AI work, not pages — Scrivetta estimates each book from its topic, materials
+          and depth before you start, and you only pay for what is actually produced.
         </p>
       )}
     </section>
