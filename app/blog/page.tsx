@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingShell } from "@/components/marketing-shell";
 import { BRAND } from "@/lib/brand";
+import { SHARE_IMAGE } from "@/lib/site";
 import { BLOG_POSTS, formatPostDate } from "@/lib/blog";
 
 export const metadata: Metadata = {
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     description: `Guides on writing, planning, and publishing ebooks with AI.`,
     url: "/blog",
     type: "website",
+    images: [SHARE_IMAGE],
   },
 };
 

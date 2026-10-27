@@ -4,7 +4,7 @@ import { MarketingShell } from "@/components/marketing-shell";
 import { LandingDemo } from "@/components/landing/landing-demo";
 import { LandingPricing } from "@/components/landing/landing-sections";
 import { BRAND } from "@/lib/brand";
-import { SITE_URL } from "@/lib/site";
+import { SHARE_IMAGE, SITE_URL } from "@/lib/site";
 
 const PATH = "/ai-ebook-generator";
 const TITLE = "AI Ebook Generator";
@@ -31,6 +31,7 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     url: PATH,
     type: "website",
+    images: [SHARE_IMAGE],
   },
 };
 

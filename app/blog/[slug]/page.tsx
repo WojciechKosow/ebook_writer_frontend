@@ -5,7 +5,7 @@ import { marked } from "marked";
 import { MarketingShell } from "@/components/marketing-shell";
 import { Prose } from "@/components/prose";
 import { BRAND } from "@/lib/brand";
-import { SITE_URL } from "@/lib/site";
+import { SHARE_IMAGE, SITE_URL } from "@/lib/site";
 import { BLOG_SLUGS, getPost, formatPostDate, postModified } from "@/lib/blog";
 
 // Prerender every known post; unknown slugs 404 instead of rendering on demand.
@@ -33,6 +33,7 @@ export async function generateMetadata({
       url,
       publishedTime: post.date,
       modifiedTime: postModified(post),
+      images: [SHARE_IMAGE],
     },
   };
 }

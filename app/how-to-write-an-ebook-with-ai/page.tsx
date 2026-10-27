@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingShell } from "@/components/marketing-shell";
 import { BRAND } from "@/lib/brand";
-import { SITE_URL } from "@/lib/site";
+import { SHARE_IMAGE, SITE_URL } from "@/lib/site";
 
 const PATH = "/how-to-write-an-ebook-with-ai";
 const TITLE = "How to Write an Ebook with AI";
@@ -25,6 +25,7 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     url: PATH,
     type: "article",
+    images: [SHARE_IMAGE],
   },
 };
 

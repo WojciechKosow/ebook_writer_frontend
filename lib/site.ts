@@ -55,3 +55,9 @@ export const SHARE_TITLE = `${BRAND} — turn what you know into a finished book
 export const SHARE_DESCRIPTION =
   "Upload your notes, approve the chapter plan, and get a beautifully " +
   "typeset ebook written in your voice. Plan your first book free.";
+
+// The generated share image (app/opengraph-image.tsx). Next only attaches it
+// automatically to pages that don't declare their own `openGraph` — a page's
+// openGraph replaces the layout's wholesale — so pages that set openGraph list
+// it explicitly. The Twitter card falls back to it.
+export const SHARE_IMAGE = { url: "/opengraph-image", width: 1200, height: 630, alt: SHARE_TITLE };
