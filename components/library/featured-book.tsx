@@ -3,6 +3,7 @@ import type { EbookStatusResponse } from "@/lib/types";
 import { DEPTH_INFO, STAGE_MESSAGE, inBook } from "@/lib/ebook-format";
 import { PIPELINE, chapterStats, relativeDay, toDate } from "@/lib/library";
 import { Spinner } from "@/components/ui";
+import { creditsUsedLabel } from "@/lib/pricing";
 import { BookCover } from "./book-cover";
 import { IconCheck, IconDownload, IconEdit } from "./icons";
 
@@ -162,7 +163,7 @@ export function FinishedFeature({
         )}
         <div className="mt-4 flex flex-wrap gap-1.5 text-xs text-foreground-2">
           {book.actualPageCount > 0 && <Chip>{book.actualPageCount} pages</Chip>}
-          {book.creditsCharged > 0 && <Chip>{book.creditsCharged} credits used</Chip>}
+          {book.creditsCharged > 0 && <Chip>{creditsUsedLabel(book)}</Chip>}
           {updated && <Chip>Updated {relativeDay(updated)}</Chip>}
         </div>
       </div>

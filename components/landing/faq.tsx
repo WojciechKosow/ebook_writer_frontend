@@ -1,5 +1,5 @@
 import { BRAND } from "@/lib/brand";
-import { SUBSCRIPTION } from "@/lib/pricing";
+import { CREDIT_COSTS, PACKS, PRO, formatCredits, formatPrice } from "@/lib/pricing";
 
 // Single source of truth for the FAQ. The visible <details> list below and the
 // FAQPage JSON-LD (components/landing/structured-data.tsx) are both built from
@@ -77,10 +77,20 @@ export const FAQ_ITEMS: { q: string; a: string }[] = [
     a:
       `Planning is free: creating an account, adding materials, building your ` +
       `blueprint, and getting a length estimate cost nothing. Writing the book ` +
-      `uses credits — 1 credit is 1 finished page, and you're only charged for ` +
-      `the pages actually produced. Subscribe for ${SUBSCRIPTION.priceLabel}/` +
-      `${SUBSCRIPTION.period} for ${SUBSCRIPTION.credits} credits a month, or ` +
-      `buy one-time credit packs. Credits never expire.`,
+      `uses credits. Pro is ${PRO.priceLabel}/${PRO.period} with ` +
+      `${formatCredits(PRO.credits)} credits every billing period, plus your own ` +
+      `storefront for selling your ebooks. On any plan you can buy one-time credit ` +
+      `packs: ${PACKS.map((p) => `${formatCredits(p.credits)} for ${formatPrice(p.priceCents)}`).join(", ")}. ` +
+      `Pack credits never expire; unused monthly credits don't roll over.`,
+  },
+  {
+    q: "What is a credit?",
+    a:
+      `Credits measure AI work, not pages. Writing uses most of them — about ` +
+      `${CREDIT_COSTS.perPage} credits per finished page — and each AI image or ` +
+      `cover uses a few more. How many a book needs depends on its length, images ` +
+      `and material, so ${BRAND} shows you an estimate before it starts, and you ` +
+      `only pay for what is actually produced. If a step fails, its credits come back.`,
   },
   {
     q: "Do I need any writing or design experience?",

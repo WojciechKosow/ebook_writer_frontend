@@ -88,8 +88,13 @@ export interface EbookStatusResponse {
    * result of generation, not an order.
    */
   actualPageCount: number;
-  /** Credits actually charged for this generation (1 credit = 1 final page). */
+  /**
+   * Credits held while the book generates, then what it was charged: its final
+   * pages, AI illustrations and AI cover.
+   */
   creditsCharged: number;
+  /** The page rate the book is billed at; 1 for books made under the old (1 credit = 1 page) system. */
+  creditsPerPage: number;
   /** LEGACY = written from the brief; KNOWLEDGE = written from the author's knowledge + blueprint. */
   generationMode: "LEGACY" | "KNOWLEDGE";
   /** A failed generation that kept its written chapters and can be resumed. */
@@ -224,7 +229,8 @@ export type ScopeBasis = "BRIEF" | "SOURCE_TEXT" | "KNOWLEDGE" | "BLUEPRINT";
 
 /**
  * One length estimate. Every figure is an ESTIMATE: the real length follows the
- * content and may land outside the range. 1 credit ≈ 1 final page.
+ * content and may land outside the range. Credits are estimated from the pages
+ * (at `creditsPerPage`) plus the AI images reserve.
  */
 export interface ScopeEstimate {
   depth: BookDepth;
@@ -238,6 +244,8 @@ export interface ScopeEstimate {
   creditsHigh: number;
   /** Credits needed to start (the high end), so the book is never cut short for credits. */
   requiredCredits: number;
+  /** Current credits per finished page. */
+  creditsPerPage: number;
   basis: ScopeBasis;
   /** Provided material, in pages of source text. */
   sourcePages: number;
@@ -280,11 +288,15 @@ export type ScopeDecision = "CONTINUE" | "FIT" | "CANCEL";
 
 export type CreditTransactionType =
   | "SUBSCRIPTION_GRANT"
+  | "SUBSCRIPTION_EXPIRY"
   | "CREDIT_PURCHASE"
   | "GENERATION"
   | "GENERATION_REFUND"
   | "GENERATION_ADJUSTMENT"
-  | "SIGNUP_BONUS";
+  | "COVER_GENERATION"
+  | "REFUND_CLAWBACK"
+  | "SIGNUP_BONUS"
+  | "ECONOMY_MIGRATION";
 
 export interface CreditTransaction {
   type: CreditTransactionType;
@@ -296,7 +308,12 @@ export interface CreditTransaction {
 }
 
 export interface CreditBalanceResponse {
+  /** Spendable total. */
   balance: number;
+  /** This billing period's Pro credits — used first, replaced at renewal. */
+  subscriptionCredits: number;
+  /** Credits from packs — never expire (negative only during a small generation overdraft). */
+  purchasedCredits: number;
   transactions: CreditTransaction[];
 }
 

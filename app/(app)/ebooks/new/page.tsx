@@ -520,7 +520,7 @@ export default function NewEbookPage() {
             <p className={`mt-2.5 text-[11.5px] leading-normal ${insufficient ? "text-foreground-2" : "text-muted"}`}>
               {insufficient
                 ? `At ${depthName} depth this book is estimated to need up to ${required} credits. You can still continue — add your materials first (the estimate gets sharper) and top up before generating.`
-                : "Estimates only — Scrivetta refines them once you add materials, and the book is as long as its content needs. 1 credit = 1 final page, charged only for the pages actually produced."}
+                : "Estimates only — Scrivetta refines them once you add materials, and the book is as long as its content needs. Credits cover the AI work (mostly writing, plus images and the cover); you're only charged for what is actually produced and the rest of the hold comes back."}
             </p>
             {insufficient && (
               <Link href="/billing" className="mt-2.5 inline-block text-[12.5px] font-semibold text-accent hover:underline">

@@ -520,7 +520,6 @@ function Hero({ name, books, balance }: { name: string; books: EbookStatusRespon
         {balance !== null && books.length > 0 && (
           <p className="text-center text-xs text-muted sm:text-right">
             {balance.toLocaleString("en")} credits
-            {" · 1 credit ≈ 1 page"}
             {" · "}
             <Link href="/billing" className="font-semibold text-accent hover:underline">
               Buy
