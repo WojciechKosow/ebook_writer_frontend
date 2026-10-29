@@ -82,11 +82,23 @@ export function LandingDemo() {
           aria-labelledby={`how-tab-${step}`}
           className="relative min-h-[460px] min-w-0 flex-[999_1_560px] overflow-hidden rounded-[28px] border border-ip-hair bg-ip-surface p-5 ip-shadow sm:p-8"
         >
-          <div key={step}>
-            {step === 0 && <ShareStep />}
-            {step === 1 && <BlueprintStep />}
-            {step === 2 && <WritingStep />}
-            {step === 3 && <BookStep />}
+          {/* Every step sits in the same grid cell, so the panel is always as tall as the
+              tallest one and the page doesn't shift when the step changes. Only the active
+              step is visible; it remounts on activation so its entrance animation replays. */}
+          <div className="grid">
+            {STEP_VIEWS.map((View, i) => {
+              const active = i === step;
+              return (
+                <div
+                  key={`${i}-${active}`}
+                  className={`col-start-1 row-start-1 min-w-0 ${active ? "" : "invisible"}`}
+                  aria-hidden={!active || undefined}
+                  inert={!active}
+                >
+                  <View />
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -223,9 +235,11 @@ function WritingStep() {
   );
 }
 
+const STEP_VIEWS = [ShareStep, BlueprintStep, WritingStep, BookStep];
+
 function BookStep() {
   return (
-    <div className="flex min-h-[396px] flex-wrap items-center justify-center gap-7">
+    <div className="flex h-full min-h-[396px] flex-wrap items-center justify-center gap-7">
       <div
         className="ip-pop relative flex h-[310px] w-[210px] shrink-0 flex-col rounded-[3px_8px_8px_3px] bg-ip-cover px-[22px] py-[30px]"
         style={{ boxShadow: "0 40px 70px -30px rgba(20,14,40,.6)" }}
