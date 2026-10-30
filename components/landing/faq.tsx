@@ -78,8 +78,8 @@ export const FAQ_ITEMS: { q: string; a: string }[] = [
       `Planning is free: creating an account, adding materials, building your ` +
       `blueprint, and getting a length estimate cost nothing. Writing the book ` +
       `uses credits. Pro is ${PRO.priceLabel}/${PRO.period} with ` +
-      `${formatCredits(PRO.credits)} credits every billing period, plus your own ` +
-      `storefront for selling your ebooks. On any plan you can buy one-time credit ` +
+      `${formatCredits(PRO.credits)} credits every billing period, and your own ` +
+      `storefront for selling your ebooks is coming in a later version. On any plan you can buy one-time credit ` +
       `packs: ${PACKS.map((p) => `${formatCredits(p.credits)} for ${formatPrice(p.priceCents)}`).join(", ")}. ` +
       `Pack credits never expire; unused monthly credits don't roll over.`,
   },

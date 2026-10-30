@@ -167,7 +167,7 @@ export default function BillingPage() {
         {sub?.active ? (
           <div className="mt-2">
             <p className="text-sm text-foreground-2">
-              Pro is active — monthly credits and your Marketplace storefront.
+              Pro is active — monthly credits every billing period.
               {sub.currentPeriodEnd &&
                 ` ${sub.cancelAtPeriodEnd ? "Ends" : "Renews"} on ${new Date(sub.currentPeriodEnd).toLocaleDateString("en", { dateStyle: "medium" })}.`}
               {sub.cancelAtPeriodEnd &&
@@ -196,7 +196,7 @@ export default function BillingPage() {
             <p className="text-sm text-foreground-2">
               <span className="font-semibold text-foreground">Pro</span> — {PRO.priceLabel}/{PRO.period} with{" "}
               {formatCredits(PRO.credits)} credits every billing period ({perCredit(PRO.priceCents, PRO.credits)} per
-              credit), your own storefront on Scrivetta Marketplace, and top-ups whenever you need them.
+              credit) and top-ups whenever you need them. Your own storefront is coming in a later version.
             </p>
             <p className="mt-1 text-xs text-faint">
               Recurring monthly subscription — cancel anytime. Unused monthly credits don&apos;t roll over.
