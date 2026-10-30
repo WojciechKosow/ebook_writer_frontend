@@ -132,7 +132,43 @@ export function StripeStep({ token, store, onChange }: {
         <span className="text-xs text-faint">Opens Stripe. You&apos;ll come back here when it&apos;s done.</span>
       )}
       {error && <Alert>{error}</Alert>}
+      {state !== "NOT_CONNECTED" && <DisconnectStripe token={token} onChange={onChange} />}
     </div>
+  );
+}
+
+/**
+ * Unlinks the Stripe account from the store so another one can be connected.
+ * The account itself stays the author's; buyers can't pay until one is connected again.
+ */
+function DisconnectStripe({ token, onChange }: { token: string; onChange: (s: StoreDashboard) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function disconnect() {
+    if (!window.confirm(
+      "Disconnect this Stripe account from your store? Buyers can't pay until you connect an account again. " +
+      "Your Stripe account, its payouts and past orders stay as they are.",
+    )) return;
+    setBusy(true);
+    setError(null);
+    try {
+      onChange(await storeApi.disconnectStripe(token));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Could not disconnect Stripe.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <button type="button" onClick={disconnect} disabled={busy}
+        className="self-start text-sm font-medium text-muted underline decoration-hairline-2 underline-offset-4 hover:text-foreground hover:decoration-foreground disabled:opacity-60">
+        {busy ? "Disconnecting…" : "Disconnect Stripe"}
+      </button>
+      {error && <Alert>{error}</Alert>}
+    </>
   );
 }
 
@@ -162,6 +198,9 @@ export function PaymentsSummary({ token, store, onChange }: {
         className="text-sm font-medium underline decoration-hairline-2 underline-offset-4 hover:decoration-foreground">
         Refunds &amp; payouts in Stripe ↗
       </a>
+      <div className="flex w-full flex-col gap-2 sm:w-auto">
+        <DisconnectStripe token={token} onChange={onChange} />
+      </div>
     </section>
   );
 }
