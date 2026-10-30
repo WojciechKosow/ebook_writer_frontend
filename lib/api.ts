@@ -756,6 +756,10 @@ export const storeApi = {
   syncStripe(token: string) {
     return request<StoreDashboard>("/api/store/stripe/sync", { method: "POST", token });
   },
+  /** Unlink the connected Stripe account so a different one can be connected. */
+  disconnectStripe(token: string) {
+    return request<StoreDashboard>("/api/store/stripe", { method: "DELETE", token });
+  },
 };
 
 // ---- Creator store: buyer side (public, no account) --------------------------
