@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { ebookApi, storeApi } from "@/lib/api";
 import { useCredits } from "@/lib/credits-context";
 import { BRAND } from "@/lib/brand";
+import { STOREFRONTS_ENABLED } from "@/lib/store/availability";
 import { BrandMark } from "./brand-mark";
 import { ThemeToggle } from "./theme-toggle";
 import { AmbientLayer } from "./landing/ambient";
@@ -16,6 +17,8 @@ type NavItem = {
   label: string;
   icon: (p: { className?: string }) => React.ReactElement;
   isActive: (path: string) => boolean;
+  /** Small "Soon" tag for a section that isn't open yet. */
+  soon?: boolean;
 };
 
 const WORKSPACE: NavItem[] = [
@@ -30,6 +33,7 @@ const WORKSPACE: NavItem[] = [
     label: "Your store",
     icon: IconStore,
     isActive: (p) => p === "/store",
+    soon: !STOREFRONTS_ENABLED,
   },
 ];
 
@@ -191,7 +195,7 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
         {WORKSPACE.map((item) => (
           <div key={item.href}>
             <NavLink item={item} pathname={pathname} onNavigate={onNavigate} />
-            {item.href === "/store" && pathname === "/store" && (
+            {item.href === "/store" && pathname === "/store" && STOREFRONTS_ENABLED && (
               <div className="ml-[42px] flex flex-col gap-0.5 py-1">
                 <Link href="/store" onClick={onNavigate} aria-current="page" className="rounded-lg px-3 py-1.5 text-[13px] font-semibold text-ip-ink">Overview</Link>
                 <Link href="/store/design" onClick={onNavigate} className="rounded-lg px-3 py-1.5 text-[13px] text-ip-ink-2 hover:bg-ip-bg hover:text-ip-ink">Design</Link>
@@ -280,6 +284,11 @@ function NavLink({
     >
       <Icon className="h-[18px] w-[18px]" />
       {item.label}
+      {item.soon && (
+        <span className="ml-auto rounded-full border border-ip-hair px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-ip-muted">
+          Soon
+        </span>
+      )}
     </Link>
   );
 }

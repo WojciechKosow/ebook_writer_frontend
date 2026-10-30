@@ -10,7 +10,7 @@ const PATH = "/pricing";
 const TITLE = "Pricing";
 const DESCRIPTION =
   `${BRAND} pricing: plan your book free on Basic, or choose Pro at ${PRO.priceLabel}/month with ` +
-  `${formatCredits(PRO.credits)} credits every billing period and your own storefront. One-time credit packs ` +
+  `${formatCredits(PRO.credits)} credits every billing period. One-time credit packs ` +
   `from ${formatPrice(PACKS[0].priceCents)}.`;
 
 export const metadata: Metadata = {
@@ -38,7 +38,7 @@ const COMPARE: { feature: string; basic: string; pro: string }[] = [
   { feature: "Chapter writing and editorial pass", basic: "With pack credits", pro: "Included" },
   { feature: "AI images and covers", basic: "With pack credits", pro: "Included" },
   { feature: "Editor and typeset PDF export", basic: "Included", pro: "Included" },
-  { feature: "Storefront on Scrivetta Marketplace", basic: "Not included", pro: "Included" },
+  { feature: "Storefront on Scrivetta Marketplace", basic: "Not included", pro: "Coming soon" },
   { feature: "Scrivetta commission on your sales", basic: "—", pro: "0%" },
 ];
 
@@ -67,7 +67,7 @@ const PRICING_FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Can I buy credits without Pro?",
-    a: "Yes. Packs are one-time purchases and work on Basic too, with the full writing workflow. Pro adds a lower price per credit and your own storefront.",
+    a: "Yes. Packs are one-time purchases and work on Basic too, with the full writing workflow. Pro adds a lower price per credit, and your own storefront once stores open in a later version.",
   },
   {
     q: "What happens if a generation fails?",
@@ -79,7 +79,7 @@ const PRICING_FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yes, from your account. Pro stays active until the end of the period you've paid for. After that your storefront stops taking new orders, unused monthly credits end, and your books and pack credits stay yours.",
+    a: "Yes, from your account. Pro stays active until the end of the period you've paid for. After that unused monthly credits end, and your books and pack credits stay yours.",
   },
 ];
 
