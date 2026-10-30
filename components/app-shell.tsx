@@ -219,11 +219,8 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
               Top up
             </Link>
           </div>
-          <div className="mt-0.5 flex items-baseline gap-1.5">
-            <span className="font-display text-[34px] font-light leading-tight text-ip-ink tabular-nums">
-              {credits?.balance ?? "…"}
-            </span>
-            <span className="text-[13px] text-ip-muted">pages left</span>
+          <div className="mt-0.5 font-display text-[34px] font-light leading-tight text-ip-ink tabular-nums">
+            {credits?.balance ?? "…"}
           </div>
         </div>
       </div>
